@@ -17,24 +17,49 @@ Among the open options (armor vs none · beard vs clean · color vs white), the 
 | Headgear | **Gilded Corinthian helmet, pushed back** off the face (crest visible) | Instantly "Ares / war" without hiding the face; the pushed-back wear reads noble, not aggressive. |
 | Facial hair | **Bearded**, classical curls (white marble) | Mature, sovereign — distinguishes him from a youthful/clean look and from beardless Aristotle. |
 | Armor | **Gold cuirass / pauldrons** at the shoulders | Martial signal + the gold accent; keeps the silhouette a bust (gear only at the base/shoulders). |
-| Expression | Calm, commanding, eyes forward | Authority over aggression. |
-| Background | **Pure black** | The marble white and metallic gold both pop hard against it — the core of the look. |
+| Expression | Calm, commanding, **eyes to camera, head-on** | Authority over aggression. |
+| Pose | **Front-facing, dead-on, symmetrical** — no three-quarter turn, no profile, no tilt | Kills most of the variation; a frontal symmetric crest reads as an emblem. |
+| Framing | The **entire helmet, including the top of the crest, fully inside the frame** with empty margin above it; bust ends at the chest | Stop the helmet getting cropped. |
+| Base | **None** — the bust floats, no pedestal / plinth / stand / column | The "floating" look requested. |
+| Background | **Pure solid black** | The marble white and metallic gold both pop hard against it — the core of the look. |
 
 ## Copy-paste prompt
 
-> A museum-quality bust sculpture of **Ares, the Greek god of war**. The face, head and
-> beard are carved from pristine **white Carrara marble** with subtle natural grey veining —
-> mature, powerful male features, full classical curled beard, calm commanding forward gaze.
-> He wears **polished shiny gold war-gear**: a **gilded Corinthian helmet pushed back** on the
-> head so the face is fully visible, its crest rising behind, and an ornate **golden cuirass /
-> shoulder pauldrons** at the base of the bust. The contrast is the point — luminous white
-> marble skin against gleaming reflective gold metal. Photorealistic studio render, soft
-> directional key light from upper left, deep shadow, realistic marble micro-detail and faint
-> translucency, true metallic gold reflections and specular highlights on the armor.
-> **Isolated on a pure black background**, centered, head-and-shoulders bust, slight
-> three-quarter turn. Premium, cinematic, restrained — the gravitas of a sovereign emblem, not
-> a game asset. Gold appears on the metal gear ONLY; the skin and beard stay white marble. No
-> text, no logos.
+> **Front-facing marble bust of Ares, the Greek god of war, looking directly at the camera,
+> perfectly symmetrical head-on view, no tilt.** The face, head and full curled beard are
+> carved from pristine **white Carrara marble** with subtle grey veining — mature, powerful
+> male features, calm and commanding, eyes forward. He wears **polished shiny gold war-gear**:
+> a **gilded Corinthian helmet pushed back** to fully reveal the face, with a tall frontal
+> crest. **The ENTIRE helmet, including the very top of the crest, is fully visible inside the
+> frame with clear empty space (margin) above it — nothing is cropped or cut off.** An ornate
+> **golden cuirass with shoulder pauldrons** forms the base of the bust. Luminous white marble
+> skin contrasted against gleaming reflective metallic gold. **The bust ends cleanly at the
+> chest and FLOATS in the center of the image — there is NO pedestal, NO plinth, NO stand, NO
+> base of any kind**, only empty space around it on a **pure solid black background**.
+> Photorealistic studio product render, soft symmetrical key light, realistic marble
+> micro-detail and faint translucency, true metallic gold reflections and specular highlights
+> on the armor. Premium, cinematic, restrained — the gravitas of a sovereign emblem, not a
+> game asset. Single subject, centered, square 1:1. Gold appears on the metal gear ONLY; the
+> skin and beard stay white marble. No text, no logos, no watermark.
+
+**Negative prompt** (paste into Flux / Stable Diffusion / Ideogram negative field; for
+Midjourney use `--no …`; for ChatGPT just say "avoid these"):
+
+> pedestal, plinth, stand, base, column, podium, table, three-quarter view, side profile,
+> looking away, tilted head, cropped helmet, helmet cut off, crest cut off, out of frame,
+> multiple heads, multiple busts, extra figures, colored or textured background, gradient
+> background, text, letters, watermark, signature, blurry, low detail, modern clothing, gold skin
+
+### Per-generator settings (to cut variation)
+
+- **ChatGPT (GPT-4o image):** paste the prompt; if it drifts, reply "front-facing and
+  symmetrical, show the whole helmet with space above it, remove the pedestal — it should float
+  on black." It edits the same image coherently, so you converge instead of re-rolling.
+- **Midjourney:** append `--ar 1:1 --style raw --stylize 150 --no pedestal, base, stand, crop`.
+  Note the **`--seed <number>`** of a result you like and reuse it to keep iterating from the
+  same composition rather than getting fresh variations each time.
+- **Flux / SDXL / Ideogram:** put the paragraph in the positive field and the negative prompt
+  above in the negative field; 1:1; raise guidance/CFG a little for stricter adherence.
 
 ## Output / placement
 
