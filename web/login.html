@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="empire">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Ares Empire — Enter</title>
+<link rel="icon" type="image/png" href="brand/ares-bust.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root { color-scheme: dark; --mono: "JetBrains Mono", ui-monospace, monospace; --sans: "Space Grotesk", system-ui, sans-serif;
+    --imp: "Cinzel", serif;
+    --gold-hi: #fdf0c2; --gold: #e9c86b; --gold-2: #cda74c; --gold-deep: #9c7726;
+    --gold-text: linear-gradient(180deg, #fff7da 0%, #f4dd92 28%, #e4c264 52%, #bd9239 78%, #8c6620 100%); }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center;
+    font-family: var(--sans); color: #f4f1e9; background: #000; overflow: hidden; }
+  /* eclipse glow + faint stars behind the card */
+  body::before { content:""; position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(46% 38% at 50% 40%, rgba(233,170,70,0.16), transparent 62%),
+      radial-gradient(1.3px 1.3px at 22% 28%, rgba(255,248,225,0.7), transparent 60%),
+      radial-gradient(1.2px 1.2px at 74% 20%, rgba(255,255,255,0.5), transparent 60%),
+      radial-gradient(1.1px 1.1px at 60% 74%, rgba(255,246,210,0.5), transparent 60%),
+      radial-gradient(1px 1px at 33% 80%, rgba(255,240,200,0.45), transparent 60%); }
+  .card { position: relative; width: min(92vw, 384px); padding: 40px 34px 30px; text-align: center;
+    border: 1px solid transparent; border-radius: 20px;
+    background: linear-gradient(rgba(16,13,9,0.66), rgba(16,13,9,0.66)) padding-box,
+      linear-gradient(135deg, rgba(253,240,194,0.3), rgba(233,200,107,0.06) 36%, rgba(233,200,107,0.12)) border-box;
+    backdrop-filter: blur(28px) saturate(150%); -webkit-backdrop-filter: blur(28px) saturate(150%);
+    box-shadow: 0 34px 80px -28px rgba(0,0,0,0.94), 0 0 60px -22px rgba(233,200,107,0.4), inset 0 1px 0 rgba(253,240,194,0.14); }
+  .bust { width: 104px; height: 130px; object-fit: contain; margin: 0 auto 12px; display: block;
+    filter: drop-shadow(0 16px 34px rgba(0,0,0,0.6)) drop-shadow(0 0 26px rgba(233,200,107,0.18)); }
+  .word { font-family: var(--sans); font-weight: 700; font-size: 17px; letter-spacing: 0.22em; text-indent: 0.22em;
+    margin: 0 0 5px; background: var(--gold-text); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .sub { margin: 0 0 24px; font-size: 12.5px; color: #6f6a5d; font-family: var(--mono); letter-spacing: -0.01em; }
+  form { display: flex; flex-direction: column; gap: 11px; }
+  input[type=password] { height: 50px; padding: 0 16px; font-size: 15px; color: #f4f1e9; font-family: var(--mono);
+    letter-spacing: 0.06em; text-align: center; border: 1px solid rgba(233,200,107,0.16); border-radius: 12px;
+    background: rgba(233,200,107,0.04); outline: none; transition: border-color .18s, background .18s; }
+  input[type=password]:focus { border-color: rgba(233,200,107,0.55); background: rgba(233,200,107,0.07); }
+  button { height: 50px; font-size: 14px; font-weight: 650; letter-spacing: 0.06em; color: #1a1206; cursor: pointer;
+    border: none; border-radius: 12px; font-family: var(--imp); text-transform: uppercase;
+    background: linear-gradient(180deg, #fdf0c2, #cda74c); box-shadow: 0 12px 30px -10px rgba(233,200,107,0.42);
+    transition: filter .18s, transform .06s; }
+  button:hover { filter: brightness(1.05); }
+  button:active { transform: translateY(1px); }
+  .err { margin: 0 0 14px; padding: 9px 12px; font-size: 12.5px; color: #ffd7dc; font-family: var(--mono);
+    border-radius: 11px; background: rgba(255,45,75,0.14); border: 1px solid rgba(255,45,75,0.4); }
+  .foot { margin: 22px 0 0; font-family: var(--imp); font-size: 10px; color: #6f6a5d; letter-spacing: 0.3em; text-indent: 0.3em; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <img class="bust" src="brand/ares-bust.png" alt="Ares Empire" />
+    <p class="word">ARES EMPIRE</p>
+    <p class="sub">Speak the access key to enter the empire</p>
+    <!-- error slot: the auth server injects a .err paragraph here on a failed attempt -->
+    <form method="POST" action="/login" autocomplete="off">
+      <input type="password" name="password" placeholder="Access key" aria-label="Access key" autofocus required />
+      <button type="submit">Enter the empire</button>
+    </form>
+    <p class="foot">SOVEREIGN ACCESS</p>
+  </main>
+</body>
+</html>

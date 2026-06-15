@@ -1,0 +1,445 @@
+/* ============================================================================
+   ARES EMPIRE — the crown skin.
+
+   Inherits the empire's design language from Aresium + Arestoteles (pure-black
+   wall, Space Grotesk text, JetBrains Mono numbers, glassmorphism, tight negative
+   letter-spacing, restrained motion) and elevates it with the crown palette:
+   WHITE MARBLE + POLISHED GOLD + BLACK. Where the sub-products are silver-on-black,
+   the empire is gold-on-black. Cinzel adds an imperial Roman note on small caps.
+   ============================================================================ */
+
+[data-theme="empire"] {
+  --r-card: 16px; --r-row: 11px;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --sans: "Space Grotesk", system-ui, sans-serif;
+  --imp: "Cinzel", "Space Grotesk", serif;     /* imperial accent — status words, kickers */
+
+  --bg: #000000;   /* pure black wall — matches the bust's black ground so it floats seamlessly */
+  --ink: #f4f1e9; --ink-2: #b9b3a4; --ink-3: #6f6a5d;
+
+  /* the gold ramp — highlight → deep shadow */
+  --gold-hi: #fdf0c2;
+  --gold:    #e9c86b;
+  --gold-2:  #cda74c;
+  --gold-deep: #9c7726;
+  --gold-sh: #5b431b;
+  --gold-glow: rgba(233,200,107,0.42);
+
+  --card: rgba(18,16,12,0.55); --card-2: rgba(30,26,18,0.62);
+  --line-soft: rgba(233,200,107,0.12); --line-2: rgba(233,200,107,0.22);
+  --hover: rgba(233,200,107,0.06);
+  --shadow: 0 34px 80px -28px rgba(0,0,0,0.94);
+  --edge: rgba(253,240,194,0.14);
+  --glass-edge: linear-gradient(135deg, rgba(253,240,194,0.30), rgba(233,200,107,0.06) 34%, rgba(255,255,255,0.02) 70%, rgba(233,200,107,0.12));
+  --spec: radial-gradient(130% 90% at 0% 0%, rgba(253,240,194,0.10), transparent 48%);
+
+  /* gold text-clip gradient (used by .ares-word + .emp-crown) */
+  --gold-text: linear-gradient(180deg, #fff7da 0%, #f4dd92 28%, #e4c264 52%, #bd9239 78%, #8c6620 100%);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: var(--sans); background: var(--bg); color: var(--ink);
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  position: relative; overflow: hidden;
+}
+#root { height: 100%; position: relative; z-index: 1; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+.tnum { font-variant-numeric: tabular-nums; }
+a { color: inherit; text-decoration: none; }
+
+/* ============================================================================
+   The gold wordmark — ARES EMPIRE, slammed in gold (intro + bottom band + crown).
+   ============================================================================ */
+.ares-word { display: flex; justify-content: space-between; width: 100%; padding: 0 2px;
+  line-height: 0.74; font-weight: 700; letter-spacing: -0.01em; font-size: clamp(34px, 9.1vw, 150px); }
+.ares-word span {
+  display: block; position: relative;
+  background: var(--gold-text); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+/* a slow metallic glint travelling across the gold (the requested shimmer) */
+.ares-word.shimmer span, .emp-crown.shimmer {
+  background-image: var(--gold-text),
+    linear-gradient(105deg, transparent 38%, rgba(255,255,255,0.85) 47%, rgba(255,255,255,0.0) 56%);
+  background-size: 100% 100%, 220% 100%;
+  background-position: 0 0, -60% 0;
+  -webkit-background-clip: text; background-clip: text;
+  animation: goldGlint 5.5s ease-in-out 1.2s infinite;
+}
+@keyframes goldGlint {
+  0%, 62% { background-position: 0 0, -60% 0; }
+  82%, 100% { background-position: 0 0, 160% 0; }
+}
+
+/* ============================================================================
+   HUB layout
+   ============================================================================ */
+.emp-app { position: relative; height: 100%; display: flex; flex-direction: column; z-index: 1;
+  padding: clamp(14px, 2.4vh, 26px) clamp(16px, 3vw, 40px) clamp(8px, 1.6vh, 16px); }
+
+/* ---- top bar: oracle (top-left) · crown (centered) · runes (top-right) ---- */
+.emp-top { flex: none; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
+.emp-oracle-btn { justify-self: start; display: inline-flex; align-items: center; gap: 13px;
+  padding: 6px 8px 6px 6px; border-radius: 14px; transition: transform .2s ease, filter .25s ease; }
+.emp-oracle-btn:hover { transform: translateY(-1px); filter: drop-shadow(0 8px 22px var(--gold-glow)); }
+.emp-oracle-btn:active { transform: translateY(0) scale(.98); }
+.emp-oracle-face { width: 46px; height: 58px; position: relative; flex: none; }
+.emp-oracle-meta { display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.emp-oracle-k { font-family: var(--imp); font-size: 10.5px; font-weight: 600; letter-spacing: 0.34em;
+  text-indent: 0.34em; color: var(--gold-2); }
+.emp-oracle-s { font-size: 11px; color: var(--ink-3); font-weight: 500; }
+.emp-oracle-btn:hover .emp-oracle-s { color: var(--ink-2); }
+
+.emp-crown { justify-self: center; text-align: center; font-weight: 700; letter-spacing: 0.14em;
+  text-indent: 0.14em; font-size: clamp(18px, 2.5vw, 30px); line-height: 1;
+  background: var(--gold-text); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  filter: drop-shadow(0 2px 18px rgba(233,200,107,0.18)); white-space: nowrap; }
+
+.emp-runes { justify-self: end; display: inline-flex; align-items: center; gap: 9px; }
+.emp-rune {
+  width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line-soft); border-radius: 12px; background: var(--card); color: var(--ink-2);
+  -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%);
+  transition: all .2s;
+}
+.emp-rune:hover { color: var(--gold-hi); border-color: var(--line-2); background: var(--card-2);
+  box-shadow: 0 0 0 1px var(--line-soft), 0 8px 20px -10px var(--gold-glow); }
+.emp-rune.on { color: var(--gold-hi); border-color: var(--gold-2); background: rgba(233,200,107,0.10); }
+.emp-rune svg { width: 18px; height: 18px; }
+
+/* ---- center stage (the ring lives here) ---- */
+.emp-stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+
+/* ---- bottom: the big gold wordmark band, like the product pages ---- */
+.emp-band { flex: none; height: 15vh; min-height: 86px; display: flex; align-items: flex-end; justify-content: center;
+  overflow: hidden; user-select: none; margin-top: 4px; }
+.emp-band .ares-word { max-width: 1180px; }
+
+/* ============================================================================
+   The sky — the eclipse the ring orbits + drifting starfield (parallax).
+   Lives behind everything (#root z-1, sky z-0).
+   ============================================================================ */
+.emp-sky { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #000; }
+.emp-sky::after { /* vignette so the corners fall to black and UI reads clean */
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(120% 100% at 50% 46%, transparent 40%, rgba(0,0,0,0.55) 86%, #000 100%);
+}
+.emp-stars { position: absolute; inset: -10%; background-repeat: repeat;
+  background-image:
+    radial-gradient(1.4px 1.4px at 18% 24%, rgba(255,248,225,0.9), transparent 60%),
+    radial-gradient(1.2px 1.2px at 72% 16%, rgba(255,255,255,0.7), transparent 60%),
+    radial-gradient(1.1px 1.1px at 44% 62%, rgba(255,246,210,0.65), transparent 60%),
+    radial-gradient(1.5px 1.5px at 86% 72%, rgba(255,255,255,0.8), transparent 60%),
+    radial-gradient(1px 1px at 32% 84%, rgba(255,240,200,0.6), transparent 60%),
+    radial-gradient(1.2px 1.2px at 62% 44%, rgba(255,255,255,0.6), transparent 60%),
+    radial-gradient(1px 1px at 8% 56%, rgba(255,250,230,0.5), transparent 60%);
+  background-size: 100% 100%; opacity: 0.8; animation: starDrift 140s linear infinite; will-change: transform; }
+@keyframes starDrift { from { transform: translate3d(0,0,0); } to { transform: translate3d(-3%, -2%, 0); } }
+
+.emp-moon-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  will-change: transform; }
+.emp-moon { width: min(112vh, 96vw); height: min(112vh, 96vw); max-width: 1180px; max-height: 1180px;
+  object-fit: contain; opacity: 1; transform: translateY(-2%);
+  /* screen blend dissolves the PNG's near-black rectangle into the wall — only the gold
+     corona ring + flare survive, so the ring appears to orbit a floating ring of light;
+     the radial mask fades the image's straight edges so no rectangle seam remains */
+  mix-blend-mode: screen;
+  -webkit-mask-image: radial-gradient(closest-side, #000 68%, transparent 96%);
+  mask-image: radial-gradient(closest-side, #000 68%, transparent 96%);
+  filter: drop-shadow(0 0 60px rgba(233,170,70,0.28)) drop-shadow(0 0 160px rgba(233,150,50,0.18));
+  animation: moonBreathe 14s ease-in-out infinite; }
+@keyframes moonBreathe { 0%,100% { filter: drop-shadow(0 0 60px rgba(233,170,70,0.26)) drop-shadow(0 0 160px rgba(233,150,50,0.16)); }
+  50% { filter: drop-shadow(0 0 80px rgba(245,190,90,0.36)) drop-shadow(0 0 200px rgba(233,150,50,0.22)); } }
+/* the bright corona flare — a slow living pulse layered over the eclipse */
+.emp-corona { position: absolute; width: min(120vh, 104vw); height: min(120vh, 104vw); max-width: 1280px; max-height: 1280px;
+  border-radius: 50%; pointer-events: none; mix-blend-mode: screen; opacity: 0.5;
+  background: radial-gradient(closest-side, transparent 38%, rgba(255,196,96,0.10) 47%, rgba(255,150,50,0.16) 50%, transparent 58%);
+  animation: coronaPulse 9s ease-in-out infinite; }
+@keyframes coronaPulse { 0%,100% { opacity: 0.42; transform: scale(0.995); } 50% { opacity: 0.62; transform: scale(1.012); } }
+
+/* ============================================================================
+   THE ORBITAL RING — a true 3D carousel (CSS transforms, no WebGL).
+   JS sets each tab's transform + a --depth var (0 = front, 1 = back); the look
+   (dim / blur / focus glow) is driven from here.
+   ============================================================================ */
+.ring-scene { position: relative; width: 100%; height: 100%;
+  perspective: 1500px; perspective-origin: 50% 46%;
+  display: flex; align-items: center; justify-content: center; touch-action: pan-y; }
+.ring { position: relative; width: 0; height: 0; transform-style: preserve-3d;
+  transition: transform .04s linear; }
+.ring.settling { transition: transform .5s cubic-bezier(.22,.7,.2,1); }
+
+.ring-tab {
+  position: absolute; left: 0; top: 0; width: 190px; height: 232px; margin: -116px 0 0 -95px;
+  transform-style: preserve-3d; will-change: transform, opacity;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: 22px 16px; cursor: pointer; user-select: none;
+  border: 1px solid var(--line-soft); border-radius: 20px;
+  background: linear-gradient(rgba(16,14,10,0.42), rgba(16,14,10,0.42)) padding-box, var(--glass-edge) border-box;
+  -webkit-backdrop-filter: blur(8px) saturate(135%); backdrop-filter: blur(8px) saturate(135%);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--edge);
+  /* depth dimming — front tab full, rear tabs recede into the dark */
+  opacity: calc(1 - var(--depth, 0) * 0.82);
+  filter: blur(calc(var(--depth, 0) * 2.4px)) brightness(calc(1 - var(--depth, 0) * 0.42));
+  transition: border-color .25s, box-shadow .3s, background .25s;
+}
+.ring-tab::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: var(--spec); }
+.ring-tab.is-front {
+  border-color: var(--gold-2);
+  box-shadow: 0 0 0 1px rgba(233,200,107,0.35), 0 0 34px -2px var(--gold-glow),
+    0 40px 80px -30px rgba(0,0,0,0.95), inset 0 1px 0 var(--edge);
+  background: linear-gradient(rgba(26,22,14,0.5), rgba(20,17,11,0.5)) padding-box, var(--glass-edge) border-box;
+}
+.ring-tab.behind { pointer-events: none; }      /* far side — don't catch clicks */
+
+.tab-logo { width: 92px; height: 92px; display: flex; align-items: center; justify-content: center; flex: none; }
+.tab-logo img { width: 100%; height: 100%; object-fit: contain;
+  filter: drop-shadow(0 14px 26px rgba(0,0,0,0.6)); }
+.tab-mono { /* logo fallback monogram */ width: 84px; height: 84px; border-radius: 18px; display: flex;
+  align-items: center; justify-content: center; font-family: var(--imp); font-weight: 700; font-size: 38px;
+  color: var(--gold-hi); border: 1px solid var(--line-2);
+  background: radial-gradient(120% 120% at 30% 20%, rgba(233,200,107,0.18), rgba(0,0,0,0.2)); }
+.tab-name { font-weight: 700; font-size: 18px; letter-spacing: 0.01em; text-align: center;
+  background: var(--gold-text); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent; }
+.tab-status { font-family: var(--imp); font-size: 9.5px; font-weight: 600; letter-spacing: 0.26em;
+  text-indent: 0.26em; padding: 3px 0 0; }
+.tab-status .dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; margin-right: 7px;
+  vertical-align: middle; }
+.st-live  { color: #cfa94e; } .st-live  .dot { background: #6ee0a0; box-shadow: 0 0 7px #6ee0a0; }
+.st-wip   { color: #d8b45c; } .st-wip   .dot { background: var(--gold); box-shadow: 0 0 7px var(--gold); }
+.st-hold  { color: #b7a574; } .st-hold  .dot { background: #9fd0ff; box-shadow: 0 0 7px #9fd0ff; }
+.st-scout { color: var(--ink-3); } .st-scout .dot { background: var(--ink-3); }
+
+/* the CONQUER throne — an empty pedestal among the held provinces */
+.ring-tab.is-conquer { border-style: dashed; border-color: var(--line-2);
+  background: linear-gradient(rgba(14,12,8,0.34), rgba(14,12,8,0.34)) padding-box, var(--glass-edge) border-box; }
+.ring-tab.is-conquer .tab-name { letter-spacing: 0.16em; text-indent: 0.16em; }
+.conquer-mark { width: 84px; height: 84px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: var(--gold); border: 1.5px dashed var(--line-2); transition: all .25s; }
+.ring-tab.is-conquer.is-front .conquer-mark { color: var(--gold-hi); border-color: var(--gold-2);
+  box-shadow: 0 0 26px -4px var(--gold-glow); }
+.conquer-mark svg { width: 34px; height: 34px; }
+
+/* throne reveal — a freshly conquered province materialising onto its pedestal */
+@keyframes throneRise {
+  0% { opacity: 0; transform: scale(.6) translateY(24px); filter: brightness(2.4) drop-shadow(0 0 30px var(--gold)); }
+  55% { opacity: 1; filter: brightness(1.5) drop-shadow(0 0 22px var(--gold)); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+.tab-inner.rising { animation: throneRise 1s cubic-bezier(.2,.8,.25,1) both; }
+.tab-inner { display: contents; }
+
+/* ---- spin hint ---- */
+.ring-hint { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--ink-3);
+  display: inline-flex; align-items: center; gap: 9px; opacity: .8; pointer-events: none; }
+.ring-hint kbd { font-family: var(--mono); font-size: 10.5px; color: var(--ink-2);
+  border: 1px solid var(--line-soft); border-radius: 5px; padding: 1px 6px; }
+
+/* ============================================================================
+   STARS MODE — the ring scatters into a constellation. JS gives each tab a star
+   position; here is the look (glowing node + label + twinkle).
+   ============================================================================ */
+.ring-scene.stars { perspective: none; }
+.ring-scene.stars .ring { transform: none !important; }
+.ring-scene.stars .ring-tab {
+  width: auto; height: auto; margin: 0; padding: 0; gap: 8px; border: none; box-shadow: none;
+  background: none; -webkit-backdrop-filter: none; backdrop-filter: none; filter: none; opacity: 1;
+  transition: transform .9s cubic-bezier(.2,.7,.2,1), opacity .6s;
+}
+.ring-scene.stars .ring-tab::before { display: none; }
+.ring-scene.stars .ring-tab .tab-logo { display: none; }
+.ring-scene.stars .ring-tab .tab-status { display: none; }
+.ring-scene.stars .conquer-mark { display: none; }
+.star-node { width: 12px; height: 12px; border-radius: 50%; background: var(--gold-hi);
+  box-shadow: 0 0 10px 2px var(--gold), 0 0 24px 6px rgba(233,200,107,0.5); animation: twinkle 3.4s ease-in-out infinite; }
+.ring-scene.stars .ring-tab.is-front .star-node { width: 18px; height: 18px;
+  box-shadow: 0 0 16px 4px var(--gold-hi), 0 0 40px 10px var(--gold-glow); }
+@keyframes twinkle { 0%,100% { opacity: .7; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.15); } }
+.ring-scene.stars .star-node { display: block; }
+.star-node { display: none; }
+
+/* ============================================================================
+   PANELS — Oracle (modal) · War Council + Chronicle (side scrolls) · forge.
+   ============================================================================ */
+.scrim { position: fixed; inset: 0; z-index: 60; background: rgba(2,2,4,0.6);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); opacity: 0; animation: fadeIn .25s ease forwards; }
+@keyframes fadeIn { to { opacity: 1; } }
+
+/* side scroll panels (council / chronicle) */
+.panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 61; width: min(440px, 92vw);
+  display: flex; flex-direction: column; border-left: 1px solid var(--line-2);
+  background: linear-gradient(rgba(14,12,8,0.86), rgba(8,7,5,0.9));
+  -webkit-backdrop-filter: blur(26px) saturate(150%); backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: -40px 0 90px -30px rgba(0,0,0,0.9); transform: translateX(100%); animation: slideIn .34s cubic-bezier(.22,.7,.2,1) forwards; }
+@keyframes slideIn { to { transform: translateX(0); } }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 24px 24px 18px; border-bottom: 1px solid var(--line-soft); }
+.panel-k { font-family: var(--imp); font-size: 11px; font-weight: 600; letter-spacing: 0.3em; color: var(--gold-2); }
+.panel-h { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 5px;
+  background: var(--gold-text); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.panel-x { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line-soft); border-radius: 10px; color: var(--ink-2); transition: all .2s; }
+.panel-x:hover { color: var(--gold-hi); border-color: var(--line-2); }
+.panel-body { flex: 1; overflow-y: auto; padding: 16px 20px 24px; scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent; }
+.panel-body::-webkit-scrollbar { width: 8px; } .panel-body::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 8px; }
+
+.idea { width: 100%; text-align: left; display: block; padding: 16px 16px; border-radius: 14px;
+  border: 1px solid var(--line-soft); background: var(--hover); margin-bottom: 12px; transition: all .2s; }
+.idea:hover { border-color: var(--line-2); background: rgba(233,200,107,0.08); transform: translateY(-1px); }
+.idea-t { font-weight: 700; font-size: 15.5px; letter-spacing: -0.01em; color: var(--ink); display: flex;
+  align-items: center; justify-content: space-between; gap: 10px; }
+.idea-t .go { font-family: var(--imp); font-size: 10px; letter-spacing: 0.2em; color: var(--gold-2); opacity: 0;
+  transition: opacity .2s; }
+.idea:hover .idea-t .go { opacity: 1; }
+.idea-n { font-size: 13px; color: var(--ink-2); font-weight: 500; line-height: 1.55; margin-top: 6px; text-wrap: pretty; }
+
+.chron { position: relative; padding: 4px 4px 14px 22px; margin-bottom: 4px; border-left: 1px solid var(--line-soft); }
+.chron::before { content: ""; position: absolute; left: -4.5px; top: 9px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 8px var(--gold-glow); }
+.chron-meta { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.chron-proj { font-family: var(--imp); letter-spacing: 0.16em; color: var(--gold-2); font-size: 9.5px; font-weight: 600; }
+.chron-t { font-size: 13.5px; color: var(--ink-2); font-weight: 500; line-height: 1.55; margin-top: 5px; text-wrap: pretty; }
+
+/* Oracle modal */
+.oracle { position: fixed; inset: 0; z-index: 62; display: grid; place-items: center; padding: 24px; }
+.oracle-card { position: relative; width: min(94vw, 460px); padding: 34px 32px 28px; text-align: center;
+  border: 1px solid var(--line-2); border-radius: 22px;
+  background: linear-gradient(rgba(16,13,9,0.9), rgba(9,8,6,0.94));
+  -webkit-backdrop-filter: blur(30px) saturate(150%); backdrop-filter: blur(30px) saturate(150%);
+  box-shadow: var(--shadow), 0 0 60px -20px var(--gold-glow), inset 0 1px 0 var(--edge);
+  transform: translateY(10px) scale(.98); opacity: 0; animation: oracleIn .4s cubic-bezier(.2,.8,.25,1) forwards; }
+@keyframes oracleIn { to { transform: none; opacity: 1; } }
+.oracle-bust { width: 116px; height: 146px; margin: 0 auto 8px; position: relative;
+  filter: drop-shadow(0 18px 40px rgba(0,0,0,0.7)) drop-shadow(0 0 30px rgba(233,200,107,0.18)); }
+.oracle-k { font-family: var(--imp); font-size: 11px; font-weight: 600; letter-spacing: 0.36em; text-indent: 0.36em;
+  color: var(--gold-2); }
+.oracle-text { font-family: var(--imp); font-size: 19px; font-weight: 500; line-height: 1.5; color: var(--ink);
+  margin: 14px auto 22px; max-width: 360px; min-height: 2.6em; text-wrap: balance; }
+.oracle-suggest { font-size: 12.5px; color: var(--ink-2); font-weight: 500; border-top: 1px solid var(--line-soft);
+  padding-top: 16px; }
+.oracle-suggest b { color: var(--gold-hi); font-weight: 700; }
+.oracle-actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+
+/* ---- buttons / chips ---- */
+.emp-btn { height: 44px; padding: 0 20px; font-size: 13.5px; font-weight: 650; letter-spacing: 0.04em;
+  border-radius: 12px; color: #1a1206; font-family: var(--sans); transition: filter .18s, transform .06s, box-shadow .2s;
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold-2)); box-shadow: 0 12px 30px -10px var(--gold-glow); }
+.emp-btn:hover { filter: brightness(1.06); box-shadow: 0 14px 34px -10px var(--gold-glow); }
+.emp-btn:active { transform: translateY(1px); }
+.emp-btn-ghost { height: 44px; padding: 0 18px; font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+  border-radius: 12px; color: var(--ink-2); border: 1px solid var(--line-soft); background: var(--card); transition: all .2s; }
+.emp-btn-ghost:hover { color: var(--gold-hi); border-color: var(--line-2); background: var(--card-2); }
+
+/* ============================================================================
+   THE FORGE — CONQUER expands in place into this (no new page). Mounted as a
+   centered modal over a dimmed hub; the throne pedestal "opens" into it.
+   ============================================================================ */
+.forge { position: fixed; inset: 0; z-index: 62; display: grid; place-items: center; padding: 24px; }
+.forge-card { position: relative; width: min(96vw, 560px); max-height: 92vh; overflow-y: auto; padding: 30px 30px 26px;
+  border: 1px solid var(--line-2); border-radius: 22px;
+  background: linear-gradient(rgba(16,13,9,0.92), rgba(9,8,6,0.95));
+  -webkit-backdrop-filter: blur(30px) saturate(150%); backdrop-filter: blur(30px) saturate(150%);
+  box-shadow: var(--shadow), 0 0 70px -22px var(--gold-glow), inset 0 1px 0 var(--edge);
+  transform: scale(.96); opacity: 0; animation: oracleIn .4s cubic-bezier(.2,.8,.25,1) forwards; }
+.forge-k { font-family: var(--imp); font-size: 11px; font-weight: 600; letter-spacing: 0.34em; color: var(--gold-2); text-align: center; }
+.forge-h { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; text-align: center; margin: 6px 0 4px;
+  background: var(--gold-text); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.forge-sub { font-size: 13px; color: var(--ink-3); text-align: center; margin-bottom: 22px; text-wrap: pretty; }
+.forge-field { margin-bottom: 16px; }
+.forge-label { font-family: var(--imp); font-size: 10px; font-weight: 600; letter-spacing: 0.24em; color: var(--gold-2);
+  display: block; margin-bottom: 8px; }
+.forge-input, .forge-textarea { width: 100%; padding: 13px 15px; font-size: 15px; color: var(--ink); font-family: var(--sans);
+  border: 1px solid var(--line-soft); border-radius: 12px; background: rgba(255,255,255,0.03); outline: none;
+  transition: border-color .18s, background .18s; }
+.forge-input:focus, .forge-textarea:focus { border-color: var(--gold-2); background: rgba(233,200,107,0.05); }
+.forge-input.mono { font-family: var(--mono); letter-spacing: 0.02em; }
+.forge-textarea { resize: vertical; min-height: 78px; line-height: 1.5; }
+.forge-hintline { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); margin-top: 7px; }
+.forge-hintline b { color: var(--gold-2); }
+.forge-actions { display: flex; gap: 10px; margin-top: 22px; }
+.forge-actions .emp-btn { flex: 1; }
+
+/* the handoff: generated files + commands with copy buttons */
+.handoff { margin-top: 8px; }
+.handoff-step { margin-bottom: 18px; }
+.handoff-num { font-family: var(--imp); font-size: 10px; letter-spacing: 0.2em; color: var(--gold-2); }
+.handoff-h { font-size: 14.5px; font-weight: 650; color: var(--ink); margin: 4px 0 8px; }
+.codeblock { position: relative; border: 1px solid var(--line-soft); border-radius: 12px; background: rgba(0,0,0,0.4); }
+.codeblock pre { margin: 0; padding: 13px 15px; overflow-x: auto; font-family: var(--mono); font-size: 12px;
+  line-height: 1.6; color: var(--ink-2); white-space: pre; scrollbar-width: thin; }
+.copy-btn { position: absolute; top: 8px; right: 8px; height: 28px; padding: 0 11px; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.04em; border-radius: 8px; color: var(--ink-2); border: 1px solid var(--line-soft);
+  background: rgba(20,17,11,0.85); transition: all .18s; display: inline-flex; align-items: center; gap: 6px; }
+.copy-btn:hover { color: var(--gold-hi); border-color: var(--line-2); }
+.copy-btn.done { color: #6ee0a0; border-color: rgba(110,224,160,0.5); }
+.copy-btn svg { width: 13px; height: 13px; }
+
+/* ============================================================================
+   INTRO — molten-gold slam. Reuses the Arestoteles WAAPI+SVG technique (see
+   empire-intro.js); here the cracks run MOLTEN GOLD and the word slams in gold.
+   ============================================================================ */
+.intro-overlay { position: fixed; inset: 0; z-index: 9000; background: #000; overflow: hidden; }
+.intro-shake { position: absolute; inset: 0; will-change: transform; }
+.intro-stage { position: absolute; inset: 0; overflow: hidden; perspective: 1200px;
+  background: radial-gradient(72% 54% at 50% 42%, rgba(233,170,70,0.10), transparent 60%), #000; }
+.intro-bust { position: absolute; aspect-ratio: 0.785; transform-origin: center; will-change: transform, filter; }
+.intro-bust-ph, .intro-bust-img { position: absolute; inset: 0; }
+.intro-bust-img { width: 100%; height: 100%; object-fit: contain; transition: opacity .3s ease;
+  filter: drop-shadow(0 26px 54px rgba(0,0,0,0.72)) drop-shadow(0 6px 30px rgba(233,170,70,0.18)); }
+.intro-bust-ph { border-radius: 12px; overflow: hidden; transition: opacity .3s ease;
+  background: linear-gradient(143deg, #efece7 0%, #dad6cf 26%, #bdb8af 52%, #98938a 76%, #7a756d 100%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.55), inset 0 -16px 30px rgba(0,0,0,0.28), 0 30px 60px rgba(0,0,0,0.6); }
+.bust-ph-vein { position: absolute; inset: 0; opacity: 0.55; mix-blend-mode: soft-light;
+  background: linear-gradient(118deg, transparent 28%, rgba(255,255,255,0.5) 30%, transparent 33%),
+    linear-gradient(72deg, transparent 58%, rgba(70,66,60,0.5) 60%, transparent 63%); }
+.bust-ph-cap { position: absolute; left: 0; right: 0; bottom: 10%; text-align: center; font-family: var(--mono);
+  font-size: clamp(10px,1.5vw,15px); font-weight: 600; letter-spacing: 0.34em; color: rgba(50,46,40,0.62); text-indent: 0.34em; }
+
+/* the crater the slam digs — a scorched gold-rimmed depression */
+.intro-crater { position: absolute; will-change: transform, opacity;
+  background: radial-gradient(closest-side, rgba(0,0,0,0.7), rgba(40,24,4,0.4) 40%, rgba(233,150,50,0.10) 64%, transparent 80%); }
+.intro-glow { position: absolute; transform: translate(-50%,-50%); border-radius: 50%; will-change: transform, opacity;
+  background: radial-gradient(closest-side, rgba(255,210,120,0.42), rgba(233,150,50,0.16) 50%, transparent 76%); }
+
+/* MOLTEN GOLD cracks — bright gold core, radiant amber bloom, faint live flicker */
+.intro-cracks { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+  animation: moltenFlicker 2.6s ease-in-out infinite; }
+.intro-crack { fill: none; stroke: #ffd873; opacity: 0.98; stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 2px rgba(255,224,150,0.95)) drop-shadow(0 0 7px rgba(255,170,60,0.85))
+          drop-shadow(0 0 18px rgba(255,120,30,0.55)); }
+.intro-crack.core { stroke: #fff6df; opacity: 0.95; filter: drop-shadow(0 0 4px rgba(255,240,200,0.95)); }
+@keyframes moltenFlicker { 0%,100% { opacity: 1; } 45% { opacity: 0.9; } 70% { opacity: 1; } }
+
+.intro-dust { position: absolute; transform: translate(-50%,-50%); border-radius: 50%; will-change: transform, opacity;
+  background: radial-gradient(closest-side, rgba(255,210,140,0.42), rgba(233,170,70,0.12) 55%, transparent 75%); }
+.intro-flash { position: absolute; inset: 0; background: radial-gradient(60% 50% at 50% 52%, #fff3d0, #ffce7a 40%, transparent 72%);
+  opacity: 0; pointer-events: none; }
+.intro-band { position: absolute; left: 0; right: 0; bottom: 0; height: 16vh; min-height: 92px;
+  display: flex; align-items: flex-end; justify-content: center; padding: 0 clamp(16px,4vw,48px) 6vh; opacity: 0; }
+.intro-word { width: 100%; max-width: 1180px; }
+.intro-word span { will-change: transform, opacity; }
+
+/* ============================================================================
+   reduced motion + mobile
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .intro-overlay { display: none; }
+  .emp-stars, .emp-moon, .emp-corona, .ares-word.shimmer span, .emp-crown.shimmer { animation: none; }
+}
+
+@media (max-width: 720px) {
+  .emp-top { grid-template-columns: auto 1fr auto; }
+  .emp-oracle-meta { display: none; }
+  .emp-crown { font-size: clamp(15px, 5vw, 22px); letter-spacing: 0.08em; }
+  .ring-tab { width: 150px; height: 188px; margin: -94px 0 0 -75px; }
+  .tab-logo { width: 72px; height: 72px; }
+  .ring-hint { display: none; }
+  .emp-band { height: 12vh; min-height: 64px; }
+}
