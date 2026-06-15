@@ -24,8 +24,10 @@ fi
 
 cat > "$HOOK" <<EOF
 #!/bin/sh
-# ares-empire chronicle hook — commits with '[log] …' / '[status:…]' update the hub.
+# ares-empire chronicle hook — commits with '[log] …' / '[status:…]' update the hub; the
+# brief pass refreshes the detail boxes from this project's docs + commits (best-effort, async).
 "$EMPIRE_TOOL" hook --slug "$SLUG" --message "\$(git log -1 --pretty=%B)" >/dev/null 2>&1 || true
+"$EMPIRE_TOOL" brief "$SLUG" >/dev/null 2>&1 &
 EOF
 chmod +x "$HOOK"
 echo "installed empire post-commit hook → $HOOK  (slug: $SLUG)"

@@ -30,13 +30,41 @@ import re
 import subprocess
 import sys
 import tempfile
+import urllib.request
 from datetime import date
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _load_dotenv(path):
+    """Merge KEY=VALUE lines from the empire's .env into the environment (without overriding),
+    so config (EMPIRE_LLM_*, EMPIRE_STATE) is available even when run from a git hook."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+    except OSError:
+        pass
+
+
+_load_dotenv(os.path.join(REPO, ".env"))
+
 STATE_PATH = os.environ.get("EMPIRE_STATE", os.path.join(REPO, "data", "state.json"))
 SEED_JS = os.path.join(REPO, "web", "app", "empire-data.js")
 CHRONICLE_CAP = 60
 DETAIL_KEYS = ("about", "features", "setup", "wip", "ideas", "changelog")
+
+# ── Auto-fill (empire brief): a free LLM turns a project's docs + recent commits into its
+# detail boxes. Dormant until EMPIRE_LLM_KEY is set in .env. Supports Gemini & Groq free tiers.
+LLM_PROVIDER = os.environ.get("EMPIRE_LLM_PROVIDER", "gemini").lower()
+LLM_KEY = os.environ.get("EMPIRE_LLM_KEY", "")
+LLM_MODEL = os.environ.get("EMPIRE_LLM_MODEL", "")
+# where each province's repo lives (for git log + docs). Defaults scan /root and /opt by slug.
+REPO_ALIASES = {"arestemis": "/root/flatsniper", "arestoteles": "/opt/arestoteles", "empire": REPO}
 
 
 def _seed_from_js() -> dict | None:
@@ -152,6 +180,117 @@ def cmd_done(state, a):
     return f"{a.slug} · done · {match or a.text}"
 
 
+def _resolve_repo(slug):
+    if slug in REPO_ALIASES and os.path.isdir(REPO_ALIASES[slug]):
+        return REPO_ALIASES[slug]
+    for base in ("/root", "/opt"):
+        p = os.path.join(base, slug)
+        if os.path.isdir(p):
+            return p
+    return None
+
+
+def _read(path, limit=6000):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read()[:limit]
+    except OSError:
+        return ""
+
+
+def _gather_context(slug):
+    repo = _resolve_repo(slug)
+    ctx = {"claude_md": "", "readme": "", "commits": ""}
+    if repo:
+        ctx["claude_md"] = _read(os.path.join(repo, "CLAUDE.md"))
+        for name in ("README.md", "README.MD", "readme.md", "README"):
+            r = _read(os.path.join(repo, name))
+            if r:
+                ctx["readme"] = r
+                break
+        try:
+            out = subprocess.check_output(
+                ["git", "-C", repo, "log", "-30", "--pretty=%s"], stderr=subprocess.DEVNULL, timeout=10)
+            ctx["commits"] = out.decode("utf-8", "replace")
+        except Exception:
+            pass
+    return ctx, repo
+
+
+def _brief_prompt(name, ctx):
+    return (
+        f'You maintain a concise dashboard card for the software project "{name}".\n'
+        f"From its docs and recent commit subjects below, write the card fields. Rules: factual and "
+        f"terse, no marketing fluff; state only what the docs/commits support; features = concrete "
+        f"capabilities (present or clearly planned); wip = in-progress / pending items; ideas = "
+        f"potential add-ons; setup = one short line or empty. Lists <=6 items, strings <=140 chars.\n"
+        f'Output ONLY a JSON object: {{"about": str, "features": [str], "setup": str, "wip": [str], "ideas": [str]}}.\n\n'
+        f"=== CLAUDE.md ===\n{ctx['claude_md']}\n\n=== README ===\n{ctx['readme']}\n\n"
+        f"=== recent commits ===\n{ctx['commits']}\n"
+    )
+
+
+def _llm_json(prompt):
+    """Call the configured free LLM and return its raw JSON text (or None if unavailable)."""
+    if not LLM_KEY:
+        return None
+    if LLM_PROVIDER == "gemini":
+        model = LLM_MODEL or "gemini-2.0-flash"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={LLM_KEY}"
+        body = {"contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2}}
+        headers = {"Content-Type": "application/json"}
+        pick = lambda d: d["candidates"][0]["content"]["parts"][0]["text"]
+    elif LLM_PROVIDER == "groq":
+        model = LLM_MODEL or "llama-3.3-70b-versatile"
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        body = {"model": model, "messages": [{"role": "user", "content": prompt}],
+                "response_format": {"type": "json_object"}, "temperature": 0.2}
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {LLM_KEY}"}
+        pick = lambda d: d["choices"][0]["message"]["content"]
+    else:
+        sys.stderr.write(f"empire brief: unknown EMPIRE_LLM_PROVIDER '{LLM_PROVIDER}'\n")
+        return None
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
+    with urllib.request.urlopen(req, timeout=45) as r:
+        return pick(json.loads(r.read()))
+
+
+def _apply_brief(proj, fields):
+    d = ensure_detail(proj)
+    if isinstance(fields.get("about"), str) and fields["about"].strip():
+        d["about"] = fields["about"].strip()
+    if isinstance(fields.get("setup"), str):
+        d["setup"] = fields["setup"].strip()
+    for k in ("features", "wip", "ideas"):
+        v = fields.get(k)
+        if isinstance(v, list):
+            d[k] = [str(x).strip() for x in v if str(x).strip()][:6]
+    return d
+
+
+def cmd_brief(state, a):
+    proj = find_project(state, a.slug)
+    if proj is None:
+        sys.exit(f"empire: no project '{a.slug}'")
+    ctx, repo = _gather_context(a.slug)
+    if a.dry_run:
+        print(_brief_prompt(proj.get("name", a.slug), ctx)[:4000])
+        return None
+    if a.mock:                                  # test path: apply a local JSON instead of calling the LLM
+        fields = json.loads(_read(a.mock, 20000))
+    else:
+        if not LLM_KEY:
+            return None                         # dormant until a free key is configured
+        try:
+            fields = json.loads(_llm_json(_brief_prompt(proj.get("name", a.slug), ctx)) or "")
+        except Exception as e:
+            sys.stderr.write(f"empire brief: {a.slug} skipped ({e})\n")
+            return None
+    d = _apply_brief(proj, fields)
+    return f"briefed {a.slug} — about + {len(d.get('features', []))} features, {len(d.get('wip', []))} wip, {len(d.get('ideas', []))} ideas"
+
+
 def cmd_hook(state, a):
     # markers must START a line (after optional whitespace) so inline examples / quotes in a
     # commit body — like the ones in this tool's own docs — never trigger a false entry.
@@ -213,6 +352,9 @@ def main():
     st.add_argument("slug"); st.add_argument("state")
     hk = sub.add_parser("hook", help="git-hook entry: parse [log]/[status:] from a commit message")
     hk.add_argument("--slug", required=True); hk.add_argument("--message", required=True)
+    br = sub.add_parser("brief", help="LLM-summarise a project's docs+commits into its detail boxes")
+    br.add_argument("slug"); br.add_argument("--dry-run", action="store_true")
+    br.add_argument("--mock", help="apply a local JSON file instead of calling the LLM (testing)")
     sub.add_parser("show", help="print the current state")
     sub.add_parser("seed", help="(re)build state.json from empire-data.js")
 
@@ -224,13 +366,13 @@ def main():
     handlers = {
         "log": cmd_log, "status": cmd_status, "feature": cmd_feature, "idea": cmd_idea,
         "wip": cmd_wip, "done": cmd_done, "about": cmd_about, "hook": cmd_hook,
-        "show": cmd_show, "seed": cmd_seed,
+        "brief": cmd_brief, "show": cmd_show, "seed": cmd_seed,
     }
     state = load()
     result = handlers[a.cmd](state, a)
     if a.cmd not in ("show", "seed"):
-        if a.cmd == "hook" and result is None:
-            return                          # no markers → don't rewrite the file
+        if a.cmd in ("hook", "brief") and result is None:
+            return                          # no markers / nothing generated → don't rewrite the file
         save(state)
     if result:
         print(result)
