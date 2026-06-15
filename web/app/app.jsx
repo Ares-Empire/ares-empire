@@ -1,113 +1,85 @@
 /* Ares Empire — the hub (window.EmpireApp).
 
-   Composes the throne room: the eclipse sky (moon4 + corona + drifting stars + mouse
-   parallax) behind everything, the Oracle bust top-left, the gold ARES EMPIRE crown
-   top-center, the runes (stars mode · war council · chronicle) top-right, the orbital
-   ring at the centre, and the big gold wordmark band at the bottom. Panels + the CONQUER
-   forge mount over it. */
+   A clean, near-black room: ambient Mars-red/steel-blue wash, a marble bust standing at the
+   left edge, and — offset up & right — the orbital circle of provinces with the chronicle
+   timeline beneath it. The EXPAND control swaps the stage to the EXPANSIONS board (the plans);
+   clicking the focused province spreads the circle into the project board. */
 (function () {
-  const { useState, useEffect, useRef, useCallback } = React;
+  const { useState, useEffect, useCallback } = React;
 
   function EmpireApp() {
     const E = window.EMPIRE || {};
     const [projects, setProjects] = useState(() => (E.projects || []).slice());
-    const [stars, setStars] = useState(false);
-    const [panel, setPanel] = useState(null);        // "oracle" | "council" | "chronicle" | "forge" | null
-    const [forgeInit, setForgeInit] = useState(null);
+    const [view, setView] = useState("projects");      // "projects" | "expansions"
+    const [spread, setSpread] = useState(false);        // projects: circle (false) vs board (true)
+    const [forge, setForge] = useState(null);           // null | { open, init }
     const [rising, setRising] = useState(null);
-    const moonRef = useRef(null);
 
     useEffect(() => { try { window.lucide && window.lucide.createIcons(); } catch (_) {} });
 
-    // mouse parallax on the eclipse (skipped under reduced-motion)
-    useEffect(() => {
-      let reduced = false;
-      try { reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (_) {}
-      if (reduced) return;
-      let raf = 0, tx = 0, ty = 0;
-      const onMove = (e) => {
-        const nx = e.clientX / window.innerWidth - 0.5, ny = e.clientY / window.innerHeight - 0.5;
-        tx = nx * -16; ty = ny * -16;
-        if (!raf) raf = requestAnimationFrame(() => {
-          raf = 0; if (moonRef.current) moonRef.current.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
-        });
-      };
-      window.addEventListener("pointermove", onMove);
-      return () => { window.removeEventListener("pointermove", onMove); if (raf) cancelAnimationFrame(raf); };
+    const ideas = E.ideas || [];
+    const chronicle = E.chronicle || [];
+
+    const visit = useCallback((p) => { if (p && p.url) window.open(p.url, "_blank", "noopener"); }, []);
+    const openForge = useCallback((init) => setForge({ open: true, init: init || null }), []);
+
+    const toggleView = useCallback(() => {
+      setView((v) => (v === "projects" ? "expansions" : "projects"));
+      setSpread(false);
     }, []);
 
-    const moonSrc = (E.sky && E.sky.moon) || "brand/moon4.png";
-
-    const activate = useCallback((tab) => { if (tab.url) window.open(tab.url, "_blank", "noopener"); }, []);
-    const openForge = useCallback((init) => { setForgeInit(init || null); setPanel("forge"); }, []);
-
     const conquered = useCallback((proj) => {
-      setProjects((prev) => prev.some((p) => p.slug === proj.slug) ? prev : prev.concat(proj));
-      // optimistic Chronicle entry so the scroll reflects the new conquest immediately
+      setProjects((prev) => (prev.some((p) => p.slug === proj.slug) ? prev : prev.concat(proj)));
       try {
         (window.EMPIRE.chronicle = window.EMPIRE.chronicle || []).unshift({
           at: new Date().toISOString().slice(0, 10), project: proj.slug,
-          text: `Marched on ${proj.name}: charter forged, throne raised. Conquest underway.`,
+          text: `Began ${proj.name}: charter forged, added to the circle. Build underway.`,
         });
       } catch (_) {}
-      setPanel(null); setStars(false); setRising(proj.slug);
-      setTimeout(() => setRising(null), 1200);
+      setForge(null); setView("projects"); setSpread(false); setRising(proj.slug);
+      setTimeout(() => setRising(null), 1100);
     }, []);
+
+    const expanded = view === "expansions";
 
     return (
       <React.Fragment>
-        {/* ---- the sky ---- */}
-        <div className="emp-sky" aria-hidden="true">
-          <div className="emp-stars" />
-          <div className="emp-moon-wrap" ref={moonRef}>
-            <img className="emp-moon" src={moonSrc} alt="" onError={(e) => { e.target.style.display = "none"; }} />
-            <div className="emp-corona" />
-          </div>
+        <div className="emp-ambient" aria-hidden="true" />
+        <div className={"emp-figure" + (expanded || spread ? " recede" : "")} aria-hidden="true">
+          <img src="brand/head1.png" alt="" onError={(e) => { e.target.style.display = "none"; }} />
         </div>
 
-        {/* ---- the hub ---- */}
         <main className="emp-app">
           <header className="emp-top">
-            <button className="emp-oracle-btn" onClick={() => setPanel("oracle")} title="Consult the Oracle">
-              <span className="emp-oracle-face"><window.Bust label="ARES" /></span>
-              <span className="emp-oracle-meta">
-                <span className="emp-oracle-k">THE ORACLE</span>
-                <span className="emp-oracle-s">Consult Ares</span>
-              </span>
-            </button>
-
-            <div className="emp-crown shimmer">ARES EMPIRE</div>
-
-            <nav className="emp-runes">
-              <button className={"emp-rune" + (stars ? " on" : "")} onClick={() => setStars((s) => !s)}
-                      title={stars ? "Return to the ring" : "Stars mode"} aria-pressed={stars}>
-                <window.Icon name="sparkles" />
+            <div className="emp-top-l" />
+            <h1 className="emp-title">{expanded ? "EXPANSIONS" : "PROJECTS"}</h1>
+            <div className="emp-top-r">
+              <button className={"emp-toggle" + (expanded ? " on" : "")} onClick={toggleView}
+                      title={expanded ? "Back to projects" : "Show the empire's expansions"}>
+                {expanded
+                  ? <React.Fragment><window.Icon name="orbit" size={15} />Projects</React.Fragment>
+                  : <React.Fragment><window.Icon name="maximize-2" size={15} />Expand</React.Fragment>}
               </button>
-              <button className="emp-rune" onClick={() => setPanel("council")} title="War Council — ideas">
-                <window.Icon name="compass" />
-              </button>
-              <button className="emp-rune" onClick={() => setPanel("chronicle")} title="The Chronicle — changelog">
-                <window.Icon name="scroll-text" />
-              </button>
-            </nav>
+              <a className="emp-logout" href="/logout" title="Log out"><window.Icon name="log-out" size={16} /></a>
+            </div>
           </header>
 
           <section className="emp-stage">
-            <window.Ring projects={projects} starsMode={stars}
-                         onActivate={activate} onConquer={() => openForge(null)} risingSlug={rising} />
+            {expanded ? (
+              <window.CardGrid items={ideas} kind="expansion" onForge={openForge} />
+            ) : spread ? (
+              <window.CardGrid items={projects} kind="project" onBack={() => setSpread(false)} onVisit={visit} />
+            ) : (
+              <window.Ring projects={projects} onSpread={() => setSpread(true)} risingSlug={rising} />
+            )}
           </section>
 
-          <footer className="emp-band">
-            <window.Wordmark text="ARES EMPIRE" shimmer />
-          </footer>
+          {!expanded && !spread && <window.Timeline log={chronicle} />}
         </main>
 
-        {/* ---- overlays ---- */}
-        {panel === "oracle" && <window.Oracle onClose={() => setPanel(null)} onCouncil={() => setPanel("council")} />}
-        {panel === "council" && <window.WarCouncil onClose={() => setPanel(null)}
-                                  onPromote={(idea) => openForge(idea)} />}
-        {panel === "chronicle" && <window.Chronicle onClose={() => setPanel(null)} />}
-        {panel === "forge" && <window.Forge initial={forgeInit} onClose={() => setPanel(null)} onConquered={conquered} />}
+        {forge && forge.open && (
+          <window.Forge initial={forge.init} onClose={() => setForge(null)} onConquered={conquered} />
+        )}
       </React.Fragment>
     );
   }

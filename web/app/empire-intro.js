@@ -22,11 +22,11 @@
   let prefersReduced = false;
   try { prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (_) {}
 
-  // one crown treatment — a hard, cinematic slam
+  // one crown treatment — a hard, cinematic slam (gold as accent, not glare)
   const CFG = {
     total: 3400, fallMs: 860, fallEase: "cubic-bezier(.45,.05,.6,1)",
     startScale: 2.8, startCenter: 0.30, restCenter: 0.50,
-    shake: 20, crackN: 34, flash: 0.9, dust: 1.2,
+    shake: 18, crackN: 14, flash: 0.5, dust: 1.0,
   };
 
   function el(tag, cls, css) {
@@ -79,7 +79,8 @@
     crackSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     const crackPaths = [];
     const ox = cxPx, oy = craterCenterY;
-    const rx = bustW * 0.40, ry = bustH * 0.34, base = bustW, intensity = cfg.crackN;
+    // a TIGHT root so every fissure springs from one point (then grows outward, all at once)
+    const rx = bustW * 0.15, ry = bustH * 0.09, base = bustW, intensity = cfg.crackN;
 
     function jaggedOut(sx, sy, ang, L, segs, jitter) {
       let d = `M ${sx.toFixed(1)} ${sy.toFixed(1)}`;
@@ -104,14 +105,13 @@
     for (let i = 0; i < intensity; i++) {
       const ang = (Math.PI * 2 * i) / intensity + (Math.random() - 0.5) * (Math.PI / intensity) * 1.6;
       const sx = ox + Math.cos(ang) * rx, sy = oy + Math.sin(ang) * ry;
-      const reach = 0.55 + Math.random() * 0.95;
-      const L = reach * base * 1.6;
+      const reach = 0.5 + Math.random() * 0.8;
+      const L = reach * base * 1.35;
       const segs = 5 + Math.floor(Math.random() * 4);
-      const w = 2.6 + Math.random() * 2.2;
+      const w = 1.1 + Math.random() * 1.1;     // fine — gold as a thread, not a tendril
       const main = jaggedOut(sx, sy, ang, L, segs, 0.7);
-      addPath(main.d, w, false);              // the molten gold finger
-      addPath(main.d, Math.max(0.8, w * 0.4), true);  // a white-hot core down its centre
-      const nb = 1 + Math.floor(Math.random() * 2);
+      addPath(main.d, w, false);               // a fine gold fissure (no molten-core glare)
+      const nb = Math.floor(Math.random() * 2);  // 0–1 hairline branches
       for (let b = 0; b < nb; b++) {
         const k = 2 + Math.floor(Math.random() * (main.pts.length - 3));
         const bp = main.pts[k];
@@ -198,12 +198,12 @@
       { opacity: 1, transform: "translate(-50%,-50%) scale(1)" },
     ], { duration: 640, delay: fall, easing: "cubic-bezier(.18,.9,.3,1)", fill: "both" });
 
-    // 4) molten cracks draw outward (stroke-dashoffset), staggered like a tearing fault
-    crackPaths.forEach((p, i) => {
+    // 4) cracks draw outward — ALL at once from the root (no clockwise stagger), then grow
+    crackPaths.forEach((p) => {
       const len = p.getTotalLength();
       p.style.strokeDasharray = len; p.style.strokeDashoffset = len;
       p.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
-        { duration: 620 + Math.random() * 280, delay: fall + 16 + i * 8, easing: "cubic-bezier(.2,.7,.2,1)", fill: "both" });
+        { duration: 720 + Math.random() * 360, delay: fall + Math.random() * 50, easing: "cubic-bezier(.2,.7,.2,1)", fill: "both" });
     });
 
     // 5) dust
@@ -219,18 +219,20 @@
     flash.animate([{ opacity: 0 }, { opacity: cfg.flash, offset: 0.1 }, { opacity: 0 }],
       { duration: 460, delay: fall - 20, easing: "ease-out", fill: "both" });
 
-    // 7) ARES EMPIRE slams in, letter by letter, in gold
-    const wordIn = fall + 340;
+    // 7) ARES EMPIRE SLAMS in — near-simultaneous (like the bust), with a single gold shine
+    const wordIn = fall + 300;
     band.style.opacity = "1";
     const spans = word.querySelectorAll("span");
     spans.forEach((s, i) => {
       s.animate([
-        { opacity: 0, transform: "translateY(30px) scale(.9)" },
-        { opacity: 1, transform: "translateY(-3px)", offset: 0.58 },
-        { opacity: 1, transform: "translateY(2px)", offset: 0.8 },
+        { opacity: 0, transform: "translateY(48px) scale(.85)", filter: "blur(3px)" },
+        { opacity: 1, transform: "translateY(-6px) scale(1.02)", filter: "blur(0)", offset: 0.55 },
+        { opacity: 1, transform: "translateY(2px)", offset: 0.78 },
         { opacity: 1, transform: "translateY(0) scale(1)" },
-      ], { duration: 380, delay: wordIn + i * 40, easing: "cubic-bezier(.3,1.4,.5,1)", fill: "both" });
+      ], { duration: 470, delay: wordIn + i * 12, easing: "cubic-bezier(.26,1.42,.42,1)", fill: "both" });
     });
+    // the specular sweep crosses the gold once, as the letters settle
+    setTimeout(() => { word.classList.add("shine"); }, wordIn + 300);
 
     // 8) finish → morph (crossfade) into the hub
     const forceFinal = () => {

@@ -1,91 +1,87 @@
-/* Ares Empire — the orbital ring (window.Ring).
+/* Ares Empire — the orbital circle (window.Ring).
 
-   A true 3D carousel built on CSS transforms (no WebGL). Every province is a tab on a
-   horizontal circle; the front one faces you, the one opposite sits at the back. Spin it by
-   dragging, scrolling, or with ← / →. One tab is CONQUER — the empty throne. A `stars` prop
-   scatters the whole ring into a constellation.
+   The provinces ride a stretched ellipse, FACE-ON (a 2-D orbit, not a depth carousel),
+   so even two of them read as "a circle of projects". The lower-centre slot is the focus;
+   items higher on the ellipse recede (smaller, dimmer) for an orbit feel. Drag, scroll or
+   ← / → to revolve. Click a back province to bring it forward; click the focused one to
+   spread the whole circle into the project board.
 
-   Props: { projects, starsMode, onActivate(tab), onConquer(), risingSlug } */
+   Props: { projects, onSpread(), risingSlug } */
 (function () {
   const { useState, useRef, useEffect, useMemo, useCallback } = React;
-  const TAB_W = 190;               // keep in step with .ring-tab width in styles.css
-  const SENS = 0.34;               // degrees of spin per pixel dragged
-  const norm = (d) => { d = ((d + 180) % 360 + 360) % 360 - 180; return d; };   // → (-180,180]
+  const SENS = 0.32;                 // degrees of revolve per pixel dragged
+  const FRONT = 90;                  // the focus slot, in degrees (bottom-centre of the ellipse)
+  const norm = (d) => ((d % 360) + 360) % 360;          // → [0,360)
 
   function statusClass(tone) {
     return { live: "st-live", wip: "st-wip", hold: "st-hold", scout: "st-scout" }[tone] || "st-scout";
   }
 
-  function TabInner({ tab, rising }) {
+  function TabFace({ tab }) {
     const S = (window.EMPIRE && window.EMPIRE.STATUS) || {};
-    const st = tab.type === "project" ? (S[tab.status] || null) : null;
-    const [imgErr, setImgErr] = useState(false);   // missing logo → gold monogram
+    const st = S[tab.status] || null;
+    const [imgErr, setImgErr] = useState(false);
     return (
-      <div className={"tab-inner" + (rising ? " rising" : "")}>
-        {tab.type === "conquer" ? (
-          <div className="conquer-mark"><window.Icon name="swords" size={34} /></div>
-        ) : (
-          <div className="tab-logo">
-            {tab.logo && !imgErr
-              ? <img src={tab.logo} alt={tab.name} onError={() => setImgErr(true)} />
-              : <div className="tab-mono">{(tab.name || "?")[0]}</div>}
-          </div>
-        )}
-        <div className="star-node" />
-        <div className="tab-name">{tab.name}</div>
-        {st && (
-          <div className={"tab-status " + statusClass(st.tone)}>
-            <span className="dot" />{st.label}
-          </div>
-        )}
-      </div>
+      <React.Fragment>
+        <div className="tab-logo">
+          {tab.logo && !imgErr
+            ? <img src={tab.logo} alt={tab.name} onError={() => setImgErr(true)} />
+            : <div className="tab-mono">{(tab.name || "?")[0]}</div>}
+        </div>
+        <div className="tab-body">
+          <div className="tab-name">{tab.name}</div>
+          {st && <div className={"tab-status " + statusClass(st.tone)}>{st.label}</div>}
+        </div>
+      </React.Fragment>
     );
   }
 
-  function Ring({ projects, starsMode, onActivate, onConquer, risingSlug }) {
-    // tabs = the provinces in orbit + the CONQUER throne
-    const tabs = useMemo(() => {
-      const t = (projects || []).map((p) => ({ type: "project", ...p }));
-      t.push({ type: "conquer", slug: "__conquer", name: "CONQUER" });
-      return t;
-    }, [projects]);
-    const count = tabs.length;
+  function Ring({ projects, onSpread, risingSlug }) {
+    const tabs = projects || [];
+    const count = Math.max(tabs.length, 1);
     const step = 360 / count;
 
-    // radius grows with the number of provinces so tabs never crowd
-    const radius = Math.max(330, (TAB_W * 1.18) / (2 * Math.tan(Math.PI / count)));
-
-    const [rotation, setRotation] = useState(0);
+    const [rotation, setRotation] = useState(0);          // degrees; 0 → item 0 at the focus slot
     const [settling, setSettling] = useState(true);
     const drag = useRef({ on: false, startX: 0, startRot: 0, moved: 0 });
     const wheelAt = useRef(0);
 
+    const measure = () => {
+      const W = window.innerWidth, H = window.innerHeight;
+      // wide & shallow — a stretched orbit that stays clear of the header/timeline
+      return { rx: Math.min(W * 0.30, 460), ry: Math.min(H * 0.21, 188) };
+    };
+    const [dims, setDims] = useState(measure);
+    useEffect(() => {
+      const onR = () => setDims(measure());
+      window.addEventListener("resize", onR);
+      return () => window.removeEventListener("resize", onR);
+    }, []);
+
+    // focus = the item whose orbital angle is nearest the front slot
     const frontIndex = useMemo(() => {
       let best = 0, bestD = Infinity;
       for (let i = 0; i < count; i++) {
-        const d = Math.abs(norm(rotation + i * step));
+        const m = norm(i * step + rotation);              // 0 when item i is at the focus
+        const d = Math.min(m, 360 - m);
         if (d < bestD) { bestD = d; best = i; }
       }
       return best;
     }, [rotation, count, step]);
 
-    // bring base index i to the front by the shortest arc
-    const toFront = useCallback((i) => {
-      const p = -rotation / step;                 // current continuous front position
-      let delta = (i - p) % count; if (delta > count / 2) delta -= count; if (delta < -count / 2) delta += count;
-      setSettling(true); setRotation(-(p + delta) * step);
-    }, [rotation, step, count]);
-
     const stepBy = useCallback((n) => {
-      const k = Math.round(-rotation / step);
-      setSettling(true); setRotation(-(k + n) * step);
+      const k = Math.round(rotation / step);
+      setSettling(true); setRotation((k + n) * step);
     }, [rotation, step]);
 
-    // ---- drag to spin ----
+    const toFront = useCallback((i) => {                  // shortest arc to put item i at the focus
+      const target = -i * step;
+      let delta = norm(target - rotation); if (delta > 180) delta -= 360;
+      setSettling(true); setRotation(rotation + delta);
+    }, [rotation, step]);
+
+    // ---- revolve by dragging ----
     const onPointerDown = (e) => {
-      // NOTE: deliberately NO setPointerCapture — capturing on the scene would steal the
-      // click event from the tabs (a known gotcha), breaking tap-to-focus / tap-to-open.
-      // Drag still tracks fine via pointermove bubbling up to the scene.
       drag.current = { on: true, startX: e.clientX, startRot: rotation, moved: 0 };
       setSettling(false);
     };
@@ -98,8 +94,8 @@
     const endDrag = () => {
       if (!drag.current.on) return;
       drag.current.on = false;
-      const k = Math.round(-rotation / step);     // snap to nearest tab
-      setSettling(true); setRotation(-k * step);
+      const k = Math.round(rotation / step);              // snap to nearest province
+      setSettling(true); setRotation(k * step);
     };
 
     const onWheel = (e) => {
@@ -112,62 +108,48 @@
 
     useEffect(() => {
       const onKey = (e) => {
-        if (e.key === "ArrowRight") { stepBy(1); }
-        else if (e.key === "ArrowLeft") { stepBy(-1); }
+        if (e.key === "ArrowRight") stepBy(1);
+        else if (e.key === "ArrowLeft") stepBy(-1);
       };
       window.addEventListener("keydown", onKey);
       return () => window.removeEventListener("keydown", onKey);
     }, [stepBy]);
 
-    const clickTab = (i, tab) => {
-      if (drag.current.moved > 6) return;          // it was a spin, not a tap
-      if (i !== frontIndex) { toFront(i); return; }
-      if (tab.type === "conquer") onConquer && onConquer();
-      else onActivate && onActivate(tab);
+    const clickTab = (i) => {
+      if (drag.current.moved > 6) return;                 // it was a revolve, not a tap
+      if (i !== frontIndex) toFront(i);
+      else if (onSpread) onSpread();
     };
 
-    // ---- stars-mode scatter positions (deterministic per index) ----
-    const stars = useMemo(() => {
-      const W = window.innerWidth, H = window.innerHeight, R = Math.min(W, H);
-      return tabs.map((_, i) => {
-        const a = (i * 137.508) * Math.PI / 180;
-        const r = (0.2 + ((i * 0.11) % 0.24)) * R;
-        return { x: Math.cos(a) * r * 1.35, y: Math.sin(a) * r * 0.82 };
-      });
-    }, [tabs]);
-
+    const { rx, ry } = dims;
     return (
-      <div className={"ring-scene" + (starsMode ? " stars" : "")}
+      <div className="ring-scene"
            onPointerDown={onPointerDown} onPointerMove={onPointerMove}
            onPointerUp={endDrag} onPointerLeave={endDrag} onWheel={onWheel}>
-        <div className={"ring" + (settling ? " settling" : "")}
-             style={{ transform: starsMode ? "none" : `translateZ(-${radius}px) rotateY(${rotation}deg)` }}>
-          {tabs.map((tab, i) => {
-            const world = norm(rotation + i * step);
-            const depth = Math.abs(world) / 180;
-            const behind = Math.abs(world) > 90;
-            const transform = starsMode
-              ? `translate3d(${stars[i].x}px, ${stars[i].y}px, 0)`
-              : `rotateY(${i * step}deg) translateZ(${radius}px)`;
-            return (
-              <div key={tab.slug}
-                   className={"ring-tab"
-                     + (i === frontIndex ? " is-front" : "")
-                     + (behind && !starsMode ? " behind" : "")
-                     + (tab.type === "conquer" ? " is-conquer" : "")}
-                   style={{ transform, "--depth": starsMode ? 0 : depth }}
-                   onClick={() => clickTab(i, tab)}>
-                <TabInner tab={tab} rising={tab.slug === risingSlug} />
-              </div>
-            );
-          })}
-        </div>
-
-        {!starsMode && (
-          <div className="ring-hint">
-            <span>drag</span><span>·</span><kbd>←</kbd><kbd>→</kbd><span>·</span><span>scroll to spin</span>
+        <div className="ring-shift">
+          <div className="ring-orbit" style={{ "--orbit-w": (2 * rx + 70) + "px", "--orbit-h": (2 * ry + 64) + "px" }} />
+          <div className={"ring" + (settling ? " settling" : "")}>
+            {tabs.map((tab, i) => {
+              const a = (FRONT + i * step + rotation) * Math.PI / 180;
+              const x = rx * Math.cos(a), y = ry * Math.sin(a);
+              const depth = (Math.sin(a) + 1) / 2;          // 1 at focus (front), 0 at the back
+              const scale = 0.58 + 0.42 * depth;
+              const opacity = 0.24 + 0.76 * depth;
+              return (
+                <div key={tab.slug}
+                     className={"ring-tab" + (i === frontIndex ? " is-front" : "") + (tab.slug === risingSlug ? " rising" : "")}
+                     style={{ transform: `translate(calc(-50% + ${x.toFixed(1)}px), calc(-50% + ${y.toFixed(1)}px)) scale(${scale.toFixed(3)})`,
+                              opacity: opacity.toFixed(3), zIndex: Math.round(depth * 100) }}
+                     onClick={() => clickTab(i)}>
+                  <TabFace tab={tab} />
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
+        <div className="ring-hint">
+          <span>drag</span><span>·</span><kbd>←</kbd><kbd>→</kbd><span>·</span><span>click to open the board</span>
+        </div>
       </div>
     );
   }

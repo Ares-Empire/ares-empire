@@ -32,10 +32,12 @@ Short forms: directory `ares-empire`, future domain candidate `ares-empire.*` /
 
 ## Design language
 
-Shared "Ares Empire" look already used by Aresium + Arestoteles: black wall, marble,
-glassmorphism, Space Grotesk + JetBrains Mono, restrained motion. Each *product* gets its
-own marble bust of a fitting figure (Arestoteles → Aristotle). The **empire itself** gets
-the **Ares bust** as its crown mark (see below).
+Shared "Ares Empire" look from Aresium + Arestoteles: near-black wall, glassmorphism,
+Space Grotesk + JetBrains Mono, restrained motion. The hub is **clean / modern / professional**
+— **polished gold used sparingly as an accent** (not glare) over black, lit by faint Mars-red +
+steel-blue ambient, with a monochrome marble bust embedded at the left edge. Each *product* gets
+its own marble bust of a fitting figure (Arestoteles → Aristotle); the **empire** keeps the
+**Ares bust** as its mark (the intro's slamming figure + the favicon).
 
 ## Logo
 
@@ -72,20 +74,21 @@ python3 -m http.server 8099 --directory web    # → http://localhost:8099
 
 **What's there**
 
-- **Molten-gold slam intro** (`web/app/empire-intro.js`) — the bust slams the black wall, the
-  cracks run radiant molten gold, "ARES EMPIRE" slams in gold, then it morphs into the hub.
-- **Orbital ring** (`web/app/ring.jsx`) — every service as a 3D tab on a spinnable ring (drag /
-  scroll / ← →); the front one faces you, the far one sits at the back. One tab is **CONQUER**.
-- **The Oracle** (the bust, top-left), **stars mode**, **War Council** (ideas) and **The Chronicle**
-  (changelog) — `web/app/panels.jsx`.
+- **Slam intro** (`web/app/empire-intro.js`) — the bust drops; fine gold fissures burst from the
+  root all at once and grow outward; "ARES EMPIRE" slams in in polished gold (single shine), then it morphs into the hub.
+- **The figure** — a monochrome marble bust (`brand/head1.png`) embedded flush at the left edge
+  (screen-blend + edge mask), gazing toward the circle (`web/app/app.jsx`).
+- **Orbital circle** (`web/app/ring.jsx`) — the provinces ride a stretched, offset ellipse as
+  horizontal tabs (mark · GOLD NAME · status). Drag / scroll / ← → to revolve; click the focused one to spread into the **project board**.
+- **Boards** (`web/app/panels.jsx`) — a count-adaptive card grid (2 → L/R, 3 → L/M/R, 4 → quadrants …)
+  with context, reused for the project board and the **EXPANSIONS** view (the plans, via **EXPAND**).
+- **Timeline** — the chronicle as a clean horizontal ribbon below the circle.
 - **CONQUER forge** — name a province → it generates the seed `CLAUDE.md`, the manifest entry and
-  the Claude Code handoff (copy buttons), then crowns it onto the ring (throne reveal).
-- Backdrop: the gold eclipse (`brand/moon4.png`) the ring orbits; corona glow + parallax + shimmer.
-- **Login** — `web/login.html`, matching the Arestoteles access-key screen; gate it at deploy with
-  the same scrypt + HMAC-cookie server from `arestoteles/webauth/`.
+  the Claude Code handoff (copy buttons), then adds it to the circle.
+- **Login / logout** — `web/login.html` (scrypt + HMAC-cookie gate, `webauth/`); a logout control sits top-right.
 
 **Source of truth** — [`EMPIRE.md`](EMPIRE.md) (narrative) + `web/app/empire-data.js`
-(`window.EMPIRE`, the manifest the ring renders from). Add a province by appending to both; the ring
+(`window.EMPIRE`, the manifest the circle renders from). Add a province by appending to both; the circle
 grows on its own.
 
 **Deploy** (live on this server, behind the shared `insureai_nginx` — see `deploy/`)
