@@ -9,3 +9,7 @@ __pycache__/
 
 # local-only render/screenshot + compile-check harness (never served, never shipped)
 .tooling/
+
+# runtime hub state (written by the empire CLI / git hooks)
+data/state.json
+data/*.tmp

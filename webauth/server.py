@@ -53,6 +53,13 @@ PROVINCES = {
     "arestoteles": "https://arestoteles.de",
 }
 
+# ── Live hub data ────────────────────────────────────────────────────────────
+# GET /api/empire serves this JSON (projects · ideas · chronicle), updated out-of-band by
+# the `empire` CLI / git hooks — so working on a project reaches the site without code edits.
+# The frontend falls back to the embedded empire-data.js seed when this isn't present.
+STATE_PATH = os.environ.get(
+    "EMPIRE_STATE", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "state.json"))
+
 # scrypt params (must match gen_password.py)
 SCRYPT_N, SCRYPT_R, SCRYPT_P, SCRYPT_DKLEN, SCRYPT_MAXMEM = 16384, 8, 1, 32, 64 * 1024 * 1024
 
@@ -200,7 +207,23 @@ class Handler(SimpleHTTPRequestHandler):
             return self._redirect(sso_destination(to) or "/")
         if not self._authed() and not self._is_open(path):
             return self._redirect("/login")
+        if path == "/api/empire":
+            return self._send_state()
         return super().do_GET()
+
+    def _send_state(self) -> None:
+        try:
+            with open(STATE_PATH, "rb") as f:
+                body = f.read()
+        except OSError:
+            body = b"{}"
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def do_HEAD(self):
         path = urlparse(self.path).path

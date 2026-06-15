@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Install the Ares Empire post-commit hook into a project repo, so commits whose
+# message contains '[log] <text>' (or '[status:<STATE>]') update the hub automatically.
+#
+#   tools/install-empire-hook <repo-path> <slug>
+#   e.g.  tools/install-empire-hook /root/aresium aresium
+#
+# Re-runnable. Backs up any existing non-empire post-commit hook to post-commit.bak.
+set -euo pipefail
+
+REPO="${1:?usage: install-empire-hook <repo-path> <slug>}"
+SLUG="${2:?usage: install-empire-hook <repo-path> <slug>}"
+EMPIRE_TOOL="$(cd "$(dirname "$0")" && pwd)/empire"
+
+GITDIR="$(git -C "$REPO" rev-parse --git-dir 2>/dev/null)" || { echo "not a git repo: $REPO" >&2; exit 1; }
+case "$GITDIR" in /*) ;; *) GITDIR="$REPO/$GITDIR" ;; esac   # make absolute
+HOOK="$GITDIR/hooks/post-commit"
+mkdir -p "$GITDIR/hooks"
+
+if [ -f "$HOOK" ] && ! grep -q "ares-empire chronicle hook" "$HOOK"; then
+  cp "$HOOK" "$HOOK.bak"
+  echo "backed up existing post-commit → $HOOK.bak"
+fi
+
+cat > "$HOOK" <<EOF
+#!/bin/sh
+# ares-empire chronicle hook — commits with '[log] …' / '[status:…]' update the hub.
+"$EMPIRE_TOOL" hook --slug "$SLUG" --message "\$(git log -1 --pretty=%B)" >/dev/null 2>&1 || true
+EOF
+chmod +x "$HOOK"
+echo "installed empire post-commit hook → $HOOK  (slug: $SLUG)"

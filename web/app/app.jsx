@@ -10,8 +10,8 @@
   const { useState, useEffect, useCallback } = React;
 
   function EmpireApp() {
-    const E = window.EMPIRE || {};
-    const [projects, setProjects] = useState(() => (E.projects || []).slice());
+    const [data, setData] = useState(() => window.EMPIRE || {});
+    const [projects, setProjects] = useState(() => ((window.EMPIRE || {}).projects || []).slice());
     const [view, setView] = useState("projects");      // "projects" | "expansions"
     const [spread, setSpread] = useState(false);        // projects: circle (false) vs board (true)
     const [forge, setForge] = useState(null);           // null | { open, init }
@@ -20,8 +20,21 @@
 
     useEffect(() => { try { window.lucide && window.lucide.createIcons(); } catch (_) {} });
 
-    const ideas = E.ideas || [];
-    const chronicle = E.chronicle || [];
+    // live data from the hub API (GET /api/empire), updated by the `empire` CLI / git hooks.
+    // Falls back silently to the embedded empire-data.js seed when the API isn't reachable.
+    useEffect(() => {
+      let alive = true;
+      fetch("/api/empire", { credentials: "same-origin" })
+        .then((r) => (r.ok && /json/.test(r.headers.get("content-type") || "")) ? r.json() : null)
+        .then((d) => {
+          if (alive && d && Array.isArray(d.projects)) { window.EMPIRE = d; setData(d); setProjects(d.projects.slice()); }
+        })
+        .catch(() => {});
+      return () => { alive = false; };
+    }, []);
+
+    const ideas = data.ideas || [];
+    const chronicle = data.chronicle || [];
 
     // leave the hub for a province — via the empire SSO mint (/sso?to=<slug>), which signs a
     // short-lived hand-off token so the province starts a session with no second login. Falls
@@ -41,12 +54,13 @@
 
     const conquered = useCallback((proj) => {
       setProjects((prev) => (prev.some((p) => p.slug === proj.slug) ? prev : prev.concat(proj)));
-      try {
-        (window.EMPIRE.chronicle = window.EMPIRE.chronicle || []).unshift({
-          at: new Date().toISOString().slice(0, 10), project: proj.slug,
-          text: `Began ${proj.name}: charter forged, added to the circle. Build underway.`,
-        });
-      } catch (_) {}
+      setData((d) => {
+        const entry = { at: new Date().toISOString().slice(0, 10), project: proj.slug,
+          text: `Began ${proj.name}: charter forged, added to the circle. Build underway.` };
+        const next = { ...d, chronicle: [entry, ...(d.chronicle || [])] };
+        window.EMPIRE = next;
+        return next;
+      });
       setForge(null); setView("projects"); setSpread(false); setRising(proj.slug);
       setTimeout(() => setRising(null), 1100);
     }, []);

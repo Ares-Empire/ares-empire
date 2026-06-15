@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+"""empire — update the Ares Empire hub without editing code.
+
+Writes a small JSON state file (data/state.json) that the hub serves over GET /api/empire
+and renders live. The frontend falls back to the embedded web/app/empire-data.js seed when
+the API isn't reachable, so this never has to touch application code.
+
+Examples
+  empire log aresium "Shipped the PayPal reconciler"     # add a chronicle entry
+  empire log empire "Wired the chronicle log to the API"  # 'empire' = the hub itself
+  empire status arestoteles FORTIFYING                    # change a province's status
+  empire feature aresium "CSV + XML import"               # add to a project's detail
+  empire wip aresium "Recurring-transaction detection"    # add an in-progress item
+  empire done aresium "Recurring-transaction detection"   # finish it (drops from WIP, logs it)
+  empire idea aresium "Budget forecasting"                # add an add-on / idea
+  empire show                                             # print the current state
+
+Git hook entry point (installed per repo by tools/install-empire-hook):
+  empire hook --slug aresium --message "$(git log -1 --pretty=%B)"
+  …picks up '[log] <text>' and '[status:<STATE>]' markers in the commit message.
+
+State path: $EMPIRE_STATE, else <repo>/data/state.json. Writes are atomic.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from datetime import date
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STATE_PATH = os.environ.get("EMPIRE_STATE", os.path.join(REPO, "data", "state.json"))
+SEED_JS = os.path.join(REPO, "web", "app", "empire-data.js")
+CHRONICLE_CAP = 60
+DETAIL_KEYS = ("about", "features", "setup", "wip", "ideas", "changelog")
+
+
+def _seed_from_js() -> dict | None:
+    """Best-effort: build the initial state by evaluating the empire-data.js seed via node."""
+    if not os.path.exists(SEED_JS):
+        return None
+    try:
+        out = subprocess.check_output(
+            ["node", "-e", f'globalThis.window={{}};require({json.dumps(SEED_JS)});'
+                            f'process.stdout.write(JSON.stringify(globalThis.window.EMPIRE))'],
+            stderr=subprocess.DEVNULL, timeout=15)
+        return json.loads(out.decode("utf-8"))
+    except Exception:
+        return None
+
+
+def load() -> dict:
+    if os.path.exists(STATE_PATH):
+        with open(STATE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    seeded = _seed_from_js()
+    if seeded is None:
+        seeded = {"name": "ARES EMPIRE", "projects": [], "ideas": [], "chronicle": [], "STATUS": {}}
+    save(seeded)
+    return seeded
+
+
+def save(state: dict) -> None:
+    os.makedirs(os.path.dirname(STATE_PATH), exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(STATE_PATH), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, STATE_PATH)         # atomic
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
+def find_project(state: dict, slug: str) -> dict | None:
+    return next((p for p in state.get("projects", []) if p.get("slug") == slug), None)
+
+
+def ensure_detail(proj: dict) -> dict:
+    d = proj.setdefault("detail", {})
+    d.setdefault("about", "")
+    for k in ("features", "wip", "ideas", "changelog"):
+        d.setdefault(k, [])
+    d.setdefault("setup", "")
+    return d
+
+
+def add_chronicle(state: dict, slug: str, text: str, when: str | None = None) -> None:
+    entry = {"at": when or date.today().isoformat(), "project": slug, "text": text}
+    chron = state.setdefault("chronicle", [])
+    chron.insert(0, entry)                  # newest first
+    del chron[CHRONICLE_CAP:]
+    proj = find_project(state, slug)        # mirror into the province's own change log
+    if proj is not None:
+        ensure_detail(proj)["changelog"].insert(0, {"at": entry["at"], "text": text})
+
+
+# ---- commands ----------------------------------------------------------------
+def cmd_log(state, a):
+    add_chronicle(state, a.slug, a.text)
+    return f"logged · {a.slug} · {a.text}"
+
+
+def cmd_status(state, a):
+    proj = find_project(state, a.slug)
+    if proj is None:
+        sys.exit(f"empire: no project '{a.slug}'")
+    valid = set(state.get("STATUS", {}).keys())
+    st = a.state.upper()
+    if valid and st not in valid:
+        sys.exit(f"empire: status must be one of {', '.join(sorted(valid))}")
+    proj["status"] = st
+    add_chronicle(state, a.slug, f"Status → {st}.")
+    return f"{a.slug} status → {st}"
+
+
+def _append(state, slug, key, text, label):
+    proj = find_project(state, slug)
+    if proj is None:
+        sys.exit(f"empire: no project '{slug}'")
+    ensure_detail(proj)[key].append(text)
+    return f"{slug} · {label} +1 · {text}"
+
+
+def cmd_feature(state, a): return _append(state, a.slug, "features", a.text, "feature")
+def cmd_idea(state, a):    return _append(state, a.slug, "ideas", a.text, "idea")
+def cmd_wip(state, a):     return _append(state, a.slug, "wip", a.text, "wip")
+
+
+def cmd_about(state, a):
+    proj = find_project(state, a.slug)
+    if proj is None:
+        sys.exit(f"empire: no project '{a.slug}'")
+    ensure_detail(proj)["about"] = a.text
+    return f"{a.slug} overview updated"
+
+
+def cmd_done(state, a):
+    proj = find_project(state, a.slug)
+    if proj is None:
+        sys.exit(f"empire: no project '{a.slug}'")
+    d = ensure_detail(proj)
+    needle = a.text.lower()
+    match = next((w for w in d["wip"] if needle in w.lower()), None)
+    if match:
+        d["wip"].remove(match)
+    add_chronicle(state, a.slug, f"Done: {match or a.text}")
+    return f"{a.slug} · done · {match or a.text}"
+
+
+def cmd_hook(state, a):
+    msg = a.message or ""
+    out = []
+    for m in re.finditer(r"\[log\]\s*([^\[\n]+)", msg, re.IGNORECASE):
+        text = m.group(1).strip()
+        if text:
+            add_chronicle(state, a.slug, text)
+            out.append(f"logged · {text}")
+    sm = re.search(r"\[status:\s*([A-Za-z]+)\s*\]", msg, re.IGNORECASE)
+    if sm:
+        proj = find_project(state, a.slug)
+        st = sm.group(1).upper()
+        if proj is not None and st in set(state.get("STATUS", {}).keys()):
+            proj["status"] = st
+            out.append(f"status → {st}")
+    return "\n".join(out) if out else None     # None → nothing to write
+
+
+def cmd_show(state, a):
+    print(f"projects: {', '.join(p['slug'] + ' [' + p.get('status','?') + ']' for p in state.get('projects', []))}")
+    print(f"chronicle ({len(state.get('chronicle', []))}):")
+    for c in state.get("chronicle", [])[:10]:
+        print(f"  {c['at']}  {c.get('project','empire'):14} {c['text']}")
+    return None      # read-only, no save
+
+
+def cmd_seed(state, a):
+    fresh = _seed_from_js()
+    if fresh is None:
+        sys.exit("empire: could not seed from empire-data.js (node + the file required)")
+    save(fresh)
+    print(f"re-seeded {STATE_PATH} from empire-data.js")
+    sys.exit(0)
+
+
+def main():
+    p = argparse.ArgumentParser(prog="empire", description="Update the Ares Empire hub.")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    def slug_text(name, help):
+        s = sub.add_parser(name, help=help)
+        s.add_argument("slug")
+        s.add_argument("text", nargs="+")
+        return s
+
+    slug_text("log", "add a chronicle entry")
+    slug_text("feature", "add a feature to a project's detail")
+    slug_text("idea", "add an add-on / idea")
+    slug_text("wip", "add an in-progress item")
+    slug_text("done", "finish an in-progress item (drops it, logs it)")
+    slug_text("about", "set a project's overview text")
+    st = sub.add_parser("status", help="set a project's status")
+    st.add_argument("slug"); st.add_argument("state")
+    hk = sub.add_parser("hook", help="git-hook entry: parse [log]/[status:] from a commit message")
+    hk.add_argument("--slug", required=True); hk.add_argument("--message", required=True)
+    sub.add_parser("show", help="print the current state")
+    sub.add_parser("seed", help="(re)build state.json from empire-data.js")
+
+    a = p.parse_args()
+    # join multi-word text args
+    if hasattr(a, "text") and isinstance(a.text, list):
+        a.text = " ".join(a.text)
+
+    handlers = {
+        "log": cmd_log, "status": cmd_status, "feature": cmd_feature, "idea": cmd_idea,
+        "wip": cmd_wip, "done": cmd_done, "about": cmd_about, "hook": cmd_hook,
+        "show": cmd_show, "seed": cmd_seed,
+    }
+    state = load()
+    result = handlers[a.cmd](state, a)
+    if a.cmd not in ("show", "seed"):
+        if a.cmd == "hook" and result is None:
+            return                          # no markers → don't rewrite the file
+        save(state)
+    if result:
+        print(result)
+
+
+if __name__ == "__main__":
+    main()
