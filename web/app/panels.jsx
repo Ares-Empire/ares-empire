@@ -102,20 +102,121 @@
     );
   }
 
-  // ---------------------------------------------------------------- the timeline (chronicle)
-  function Timeline({ log }) {
+  // ---------------------------------------------------------------- the chronicle log
+  // A bright golden line under the circle with golden dust radiating off it (canvas), the
+  // busts of the updated projects as its markers, and the log entry beneath each.
+
+  const LINE_Y = 34;          // px from the top of the log band — the busts' centre line
+
+  // a self-contained canvas: the shiny line + a live shower of golden dust rising off it
+  function GoldDust() {
+    const ref = useRef(null);
+    useEffect(() => {
+      const canvas = ref.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      let w = 0, h = 0, raf = 0, t = 0;
+      const parts = [];
+
+      function resize() {
+        const r = canvas.getBoundingClientRect();
+        w = Math.max(1, r.width); h = Math.max(1, r.height);
+        canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resize();
+      const ro = new ResizeObserver(resize); ro.observe(canvas);
+
+      function lineGrad() {
+        const g = ctx.createLinearGradient(0, 0, w, 0);
+        g.addColorStop(0.00, "rgba(255,206,110,0)");
+        g.addColorStop(0.10, "rgba(255,214,128,0.9)");
+        g.addColorStop(0.50, "rgba(255,244,206,1)");
+        g.addColorStop(0.90, "rgba(255,214,128,0.9)");
+        g.addColorStop(1.00, "rgba(255,206,110,0)");
+        return g;
+      }
+
+      function frame() {
+        ctx.clearRect(0, 0, w, h);
+        ctx.globalCompositeOperation = "lighter";
+        ctx.lineCap = "round";
+        const grad = lineGrad();
+        ctx.strokeStyle = grad;
+        // layered glow → bright core
+        ctx.globalAlpha = 0.22; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(0, LINE_Y); ctx.lineTo(w, LINE_Y); ctx.stroke();
+        ctx.globalAlpha = 0.55; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(0, LINE_Y); ctx.lineTo(w, LINE_Y); ctx.stroke();
+        ctx.globalAlpha = 1.0;  ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(0, LINE_Y); ctx.lineTo(w, LINE_Y); ctx.stroke();
+
+        if (!reduce) {
+          // a specular glint travelling along the line (round, so it fades smoothly all round)
+          const sx = (((t * 0.0009) % 1.5) - 0.25) * w;
+          const sr = 96;
+          const sg = ctx.createRadialGradient(sx, LINE_Y, 0, sx, LINE_Y, sr);
+          sg.addColorStop(0, "rgba(255,255,244,0.85)"); sg.addColorStop(0.5, "rgba(255,238,190,0.32)"); sg.addColorStop(1, "rgba(255,238,190,0)");
+          ctx.globalAlpha = 1; ctx.fillStyle = sg;
+          ctx.beginPath(); ctx.arc(sx, LINE_Y, sr, 0, 6.2832); ctx.fill();
+
+          // emit + advance dust
+          const n = Math.max(1, Math.round(w / 320));
+          for (let k = 0; k < n; k++) {
+            const x = Math.random() * w;
+            parts.push({ x, y: LINE_Y + (Math.random() * 2 - 1) * 1.4,
+              vx: (Math.random() - 0.5) * 0.3, vy: -(0.2 + Math.random() * 0.8),
+              life: 1, size: 0.6 + Math.random() * 1.9, warm: Math.random() });
+          }
+          for (let i = parts.length - 1; i >= 0; i--) {
+            const p = parts[i];
+            p.x += p.vx; p.y += p.vy; p.vy -= 0.0016; p.vx *= 0.992; p.life -= 0.011;
+            if (p.life <= 0) { parts.splice(i, 1); continue; }
+            const a = p.life * p.life;
+            ctx.globalAlpha = a * 0.95;
+            ctx.fillStyle = "rgb(255," + (212 - (p.warm * 36 | 0)) + "," + (120 + (p.warm * 70 | 0)) + ")";
+            ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.2, p.size * a), 0, 6.2832); ctx.fill();
+          }
+        } else {
+          for (let i = 0; i < 26; i++) {
+            ctx.globalAlpha = 0.5; ctx.fillStyle = "rgb(255,224,150)";
+            ctx.beginPath(); ctx.arc(((i + 0.5) / 26) * w, LINE_Y - 6 - (i % 3) * 5, 1.1, 0, 6.2832); ctx.fill();
+          }
+        }
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+        t += 16;
+        raf = requestAnimationFrame(frame);
+      }
+      raf = requestAnimationFrame(frame);
+      return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+    }, []);
+    return <canvas ref={ref} className="log-dust" aria-hidden="true" />;
+  }
+
+  function Chronicle({ log, projects }) {
+    useIcons();
     if (!log || !log.length) return null;
+    // marker = the bust of the updated project; empire entries wear the Ares bust
+    const bySlug = {};
+    (projects || []).forEach((p) => { if (p.logo) bySlug[p.slug] = p.logo; });
+    const BUST = { aresium: "brand/hermes.png", arestoteles: "brand/arestoteles_transparent.png" };
+    const bustFor = (slug) => BUST[slug] || bySlug[slug] || "brand/ares_transparent.png";
+    const items = log.slice(0, 6);
     return (
-      <div className="emp-timeline">
-        <div className="tl-rail">
-          {log.map((c, i) => (
-            <div className="tl-item" key={i}>
-              <span className="tl-node" />
-              <div className="tl-meta">
-                <span className="tl-proj">{c.project || "empire"}</span>
-                <span className="tl-date">{c.at}</span>
+      <div className="emp-log" aria-label="Chronicle">
+        <GoldDust />
+        <div className="log-track">
+          {items.map((c, i) => (
+            <div className="log-node" key={i}>
+              <span className="log-bust">
+                <img src={bustFor(c.project)} alt={c.project || "empire"}
+                     onError={(e) => { e.target.style.visibility = "hidden"; }} />
+              </span>
+              <div className="log-meta">
+                <span className="log-proj">{c.project || "empire"}</span>
+                <span className="log-dot">·</span>
+                <span className="log-date">{c.at}</span>
               </div>
-              <div className="tl-text">{c.text}</div>
+              <div className="log-text">{c.text}</div>
             </div>
           ))}
         </div>
@@ -345,7 +446,7 @@ TODO — stack, deploy, domain.
   }
 
   window.CardGrid = CardGrid;
-  window.Timeline = Timeline;
+  window.Chronicle = Chronicle;
   window.ProjectDetail = ProjectDetail;
   window.Forge = Forge;
 })();

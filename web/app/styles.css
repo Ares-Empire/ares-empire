@@ -70,21 +70,16 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ============================================================================
-   THE FIGURE — the marble bust, flush to the left edge, blended into the wall.
-   `screen` dissolves its near-black ground into the black so it's embedded, not
-   pasted; the red ambient glows through its shadowed side; a soft mask melts its
-   right edge toward the circle; a warm rim catches the light it faces.
+   THE FIGURE — the marble bust, flush to the left edge. It's a true cut-out PNG
+   (transparent ground), so pure black wraps perfectly around it — no blend tricks,
+   no mask. Dimmed so it sits in the wall as atmosphere rather than a lit subject.
    ============================================================================ */
 .emp-figure { position: fixed; left: 0; top: 0; bottom: 0; z-index: 0; pointer-events: none;
   display: flex; align-items: flex-end; overflow: hidden; transition: opacity .4s ease; }
 .emp-figure.recede { opacity: 0.3; }       /* step back so the card board reads clean */
 .emp-figure img {
-  height: 98%; width: auto; object-fit: contain; object-position: left bottom;
-  mix-blend-mode: screen;                          /* dark ground dissolves into the black wall */
-  filter: brightness(0.46) contrast(1.14) saturate(0.55);   /* darker + near-monochrome — embedded, not lit */
-  /* fade only the empty margin past the nose — keep the face (incl. the nose, ~80% across) solid */
-  -webkit-mask-image: linear-gradient(95deg, #000 46%, rgba(0,0,0,0.9) 82%, transparent 100%);
-  mask-image: linear-gradient(95deg, #000 46%, rgba(0,0,0,0.9) 82%, transparent 100%);
+  height: 100%; width: auto; object-fit: contain; object-position: left bottom;
+  filter: brightness(0.5) contrast(1.05);          /* dim marble — embedded in the black, not lit */
 }
 
 /* ============================================================================
@@ -96,7 +91,10 @@ a { color: inherit; text-decoration: none; }
 
 /* ---- top bar: spacer · centered section title · controls ---- */
 .emp-top { flex: none; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
-.emp-top-l { justify-self: start; }
+.emp-top-l { justify-self: start; display: inline-flex; align-items: center; }
+/* the Ares bust — the empire's crest, top-left */
+.emp-crest { height: clamp(44px, 6.6vh, 66px); width: auto; object-fit: contain;
+  filter: drop-shadow(0 5px 14px rgba(0,0,0,0.65)) drop-shadow(0 0 18px rgba(255,205,110,0.18)); }
 .emp-mark { display: inline-flex; align-items: center; gap: 10px; opacity: 0.9; }
 .emp-mark-dot { width: 9px; height: 9px; border-radius: 50%;
   background: linear-gradient(180deg, var(--gold-hi), var(--gold-2)); box-shadow: 0 0 12px -2px var(--gold-glow); }
@@ -274,22 +272,32 @@ button.proj-card { cursor: pointer; }
 .pc-new-mark svg { width: 24px; height: 24px; }
 
 /* ============================================================================
-   THE TIMELINE — the chronicle, parallel just under the circle. Markers are thin
-   steel ticks on a hairline (echoing the wheel rim), not gold points.
+   THE CHRONICLE LOG — under the circle, on the right. A bright golden line with
+   live golden dust radiating off it (canvas), the busts of the updated projects as
+   its markers (sitting on the line), and the log entry beneath each.
+   --log-line-y must match LINE_Y in panels.jsx (the busts' centre on the line).
    ============================================================================ */
-.emp-timeline { flex: none; }
-.tl-rail { position: relative; display: flex; gap: clamp(18px, 2.6vw, 44px); align-items: flex-start;
-  overflow-x: auto; padding: 16px 2px 2px; scrollbar-width: none; }
-.tl-rail::-webkit-scrollbar { display: none; }
-.tl-rail::before { content: ""; position: absolute; left: 2px; right: 2px; top: 8px; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(150,170,235,0.30) 8%, var(--line-soft) 90%, transparent); }
-.tl-item { position: relative; flex: 1 1 0; min-width: 168px; max-width: 340px; padding-top: 21px; }
-.tl-tick { position: absolute; left: 0; top: 3px; width: 1.5px; height: 12px; border-radius: 1px;
-  background: linear-gradient(180deg, rgba(150,172,238,0.95), rgba(150,172,238,0)); }
-.tl-meta { display: flex; align-items: baseline; gap: 9px; margin-bottom: 6px; }
-.tl-date { font-family: var(--mono); font-size: 11px; color: var(--ink-2); letter-spacing: 0.02em; }
-.tl-proj { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
-.tl-text { font-size: 12.5px; line-height: 1.55; color: var(--ink-2); font-weight: 450; text-wrap: pretty;
+.emp-log { position: absolute; left: 39vw; right: 3vw; bottom: clamp(28px, 7vh, 92px);
+  height: 178px; --log-line-y: 34px; z-index: 1; pointer-events: none; }
+.log-dust { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.log-track { position: relative; z-index: 1; height: 100%; display: flex; align-items: flex-start;
+  justify-content: space-around; gap: clamp(14px, 2vw, 40px); padding: 0 clamp(8px, 2vw, 30px); }
+.log-node { flex: 1 1 0; min-width: 0; max-width: 250px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+/* the marker: the project's bust in a glowing golden coin, centred on the line */
+.log-bust { width: 50px; height: 50px; margin-top: calc(var(--log-line-y) - 25px); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; overflow: hidden; flex: none;
+  background: radial-gradient(circle at 50% 38%, rgba(255,228,160,0.22), rgba(8,7,5,0.55));
+  border: 1.5px solid rgba(255,222,150,0.75);
+  box-shadow: 0 0 16px -2px rgba(255,206,112,0.65), 0 0 4px rgba(255,232,170,0.5), inset 0 0 9px rgba(255,224,150,0.22); }
+.log-bust img { width: 84%; height: 84%; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.65)); }
+
+.log-meta { display: flex; align-items: baseline; gap: 7px; margin-top: 14px; }
+.log-proj { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--gold-2); }
+.log-dot { color: var(--ink-3); font-size: 10px; }
+.log-date { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.02em; }
+.log-text { font-size: 12px; line-height: 1.55; color: var(--ink-2); font-weight: 450; text-wrap: pretty; margin-top: 6px;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* ============================================================================
@@ -491,4 +499,6 @@ button.proj-card { cursor: pointer; }
   .card-grid { grid-template-columns: 1fr !important; align-content: start; overflow-y: auto; }
   .ring-hint { display: none; }
   .pd-grid { grid-template-columns: 1fr; }
+  .emp-log { left: 3vw; right: 3vw; bottom: 10px; height: 150px; }
+  .emp-crest { height: 40px; }
 }

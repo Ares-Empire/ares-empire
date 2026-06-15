@@ -1,7 +1,8 @@
 /* Ares Empire — the hub (window.EmpireApp).
 
-   A clean, pure-black room: a dark marble bust sunk into the wall at the left edge, and —
-   offset up & right — the orbital circle of provinces with the chronicle timeline beneath it.
+   A clean, pure-black room: a dark marble bust (transparent cut-out) at the left edge, the
+   Ares crest top-left, and — offset up & right — the orbital circle of provinces with the
+   chronicle log (a golden line + radiating dust, busts as markers) under it on the right.
    The default screen is THE EMPIRE; clicking the title (or a province) opens the PROJECTS
    board and clicking PROJECTS returns. The EXPAND control swaps the stage to the EXPANSIONS
    board (the plans). */
@@ -64,12 +65,15 @@
       <React.Fragment>
         <div className="emp-ambient" aria-hidden="true" />
         <div className={"emp-figure" + (expanded || spread ? " recede" : "")} aria-hidden="true">
-          <img src="brand/head1.png" alt="" onError={(e) => { e.target.style.display = "none"; }} />
+          <img src="brand/head_transparent_real.png" alt="" onError={(e) => { e.target.style.display = "none"; }} />
         </div>
 
         <main className="emp-app">
           <header className="emp-top">
-            <div className="emp-top-l" />
+            <div className="emp-top-l">
+              <img className="emp-crest" src="brand/ares_transparent.png" alt="Ares Empire"
+                   onError={(e) => { e.target.style.display = "none"; }} />
+            </div>
             <button className={"emp-title" + (home ? " is-empire" : "")} onClick={onTitle}
                     title={home ? "Open the projects" : "Back to the empire"}>
               {titleText}
@@ -95,7 +99,7 @@
             )}
           </section>
 
-          {!expanded && !spread && <window.Timeline log={chronicle} />}
+          {!expanded && !spread && <window.Chronicle log={chronicle} projects={projects} />}
         </main>
 
         {forge && forge.open && (
