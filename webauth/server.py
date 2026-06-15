@@ -40,6 +40,19 @@ SESSION_SECS = 30 * 24 * 60 * 60  # 30 days
 HASH = os.environ.get("AUTH_PASSWORD_HASH", "")
 SECRET = os.environ.get("AUTH_SESSION_SECRET", "").encode()
 
+# ── Empire SSO (issuer) ──────────────────────────────────────────────────────
+# When an authed visitor enters a province from the hub, the empire mints a short-lived,
+# HMAC-signed token bound to that province (audience). The province verifies it with the
+# SAME shared SSO_SECRET and starts its own session — so there's no second login. The
+# token is signed over its base64url payload string, so the verifier never has to
+# reproduce our JSON formatting (cross-language safe). Empty SSO_SECRET → plain redirect.
+SSO_SECRET = os.environ.get("SSO_SECRET", "").encode()
+SSO_TTL = 90  # seconds — just long enough for the redirect hop
+PROVINCES = {
+    "aresium": "https://aresium.de",
+    "arestoteles": "https://arestoteles.de",
+}
+
 # scrypt params (must match gen_password.py)
 SCRYPT_N, SCRYPT_R, SCRYPT_P, SCRYPT_DKLEN, SCRYPT_MAXMEM = 16384, 8, 1, 32, 64 * 1024 * 1024
 
@@ -77,6 +90,24 @@ def make_session_cookie() -> str:
 
 def clear_cookie() -> str:
     return f"{COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"
+
+
+def _sso_sign(payload: str) -> str:
+    return urlsafe_b64encode(hmac.new(SSO_SECRET, payload.encode(), hashlib.sha256).digest()).decode().rstrip("=")
+
+
+def mint_sso(aud: str) -> str:
+    payload = urlsafe_b64encode(json.dumps({"aud": aud, "exp": int(time()) + SSO_TTL}).encode()).decode().rstrip("=")
+    return f"{payload}.{_sso_sign(payload)}"
+
+
+def sso_destination(to: str) -> str | None:
+    """The province URL to send the visitor to — with a fresh SSO token when one can be minted.
+    Returns None for an unknown province (so we never open-redirect to an arbitrary host)."""
+    base = PROVINCES.get(to)
+    if not base:
+        return None
+    return f"{base}/sso?token={mint_sso(to)}" if SSO_SECRET else f"{base}/"
 
 
 def _b64pad(s: str) -> bytes:
@@ -161,6 +192,12 @@ class Handler(SimpleHTTPRequestHandler):
             return self._send_html(login_page())
         if path == "/logout":
             return self._redirect("/login", cookie=clear_cookie())
+        if path == "/sso":
+            # mint a province hand-off token — only for an authed empire visitor
+            if not self._authed():
+                return self._redirect("/login")
+            to = (parse_qs(urlparse(self.path).query).get("to") or [""])[0]
+            return self._redirect(sso_destination(to) or "/")
         if not self._authed() and not self._is_open(path):
             return self._redirect("/login")
         return super().do_GET()

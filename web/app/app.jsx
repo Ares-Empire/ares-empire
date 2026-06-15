@@ -22,9 +22,14 @@
     const ideas = E.ideas || [];
     const chronicle = E.chronicle || [];
 
-    // leave the hub for a province's own site. The auth hand-off (SSO) hooks in here once it
-    // exists; until then this navigates straight to the province.
-    const goTo = useCallback((p) => { if (p && p.url) window.location.assign(p.url); }, []);
+    // leave the hub for a province — via the empire SSO mint (/sso?to=<slug>), which signs a
+    // short-lived hand-off token so the province starts a session with no second login. Falls
+    // back to the raw URL for anything without a slug.
+    const goTo = useCallback((p) => {
+      if (!p) return;
+      if (p.slug) window.location.assign("/sso?to=" + encodeURIComponent(p.slug));
+      else if (p.url) window.location.assign(p.url);
+    }, []);
     const openDetail = useCallback((p, rect) => setDetail({ project: p, rect }), []);
     const openForge = useCallback((init) => setForge({ open: true, init: init || null }), []);
 
