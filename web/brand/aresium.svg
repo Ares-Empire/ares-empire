@@ -1,0 +1,36 @@
+<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aresium">
+  <!-- Aresium — the rising line. Its crimson markets identity, redrawn as a clean glowing
+       vector mark (transparent ground) so it sits as a true logo in the empire ring. -->
+  <defs>
+    <linearGradient id="aresium-line" x1="20" y1="90" x2="98" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e01030"/>
+      <stop offset="0.55" stop-color="#ff2d4b"/>
+      <stop offset="1" stop-color="#ff5e76"/>
+    </linearGradient>
+    <radialGradient id="aresium-dot" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#ffe3e7"/>
+      <stop offset="0.7" stop-color="#ff2d4b"/>
+      <stop offset="1" stop-color="#ff2d4b"/>
+    </radialGradient>
+    <filter id="aresium-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="aresium-soft" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- soft red aura under the apex -->
+  <circle cx="95" cy="33" r="13" fill="#ff2d4b" opacity="0.45" filter="url(#aresium-soft)"/>
+
+  <!-- the rising zigzag -->
+  <path d="M22 86 L47 57 L63 71 L95 33"
+        stroke="url(#aresium-line)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"
+        filter="url(#aresium-glow)"/>
+
+  <!-- the live apex: red glow + white-hot core -->
+  <circle cx="95" cy="33" r="9.5" fill="url(#aresium-dot)" filter="url(#aresium-glow)"/>
+  <circle cx="95" cy="33" r="4.2" fill="#ffffff"/>
+</svg>

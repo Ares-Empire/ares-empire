@@ -1,0 +1,23 @@
+# /etc/systemd/system/ares-empire.service
+# The Ares Empire hub — the gated static site (webauth/server.py), served on the insureai
+# docker-bridge gateway so only the containerized nginx can reach it (off every public
+# interface). Mirrors aresium.service. Secrets come from /root/ares-empire/.env (never in git).
+[Unit]
+Description=Ares Empire hub (gated static site)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/ares-empire
+EnvironmentFile=/root/ares-empire/.env
+Environment=HOST=172.18.0.1
+Environment=PORT=5185
+Environment=WEB_ROOT=/root/ares-empire/web
+ExecStart=/usr/bin/python3 webauth/server.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

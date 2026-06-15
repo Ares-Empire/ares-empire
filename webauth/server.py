@@ -30,6 +30,9 @@ from time import time
 from urllib.parse import parse_qs, urlparse
 
 WEB_ROOT = os.environ.get("WEB_ROOT", "web")
+# bind the docker-bridge gateway in prod (172.18.0.1) so only the containerized nginx can
+# reach it — off every public interface; default 0.0.0.0 for local dev.
+HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8090"))
 COOKIE_NAME = "empire_session"
 SESSION_SECS = 30 * 24 * 60 * 60  # 30 days
@@ -186,8 +189,8 @@ def main() -> None:
         sys.stderr.write("!! WARNING: AUTH_PASSWORD_HASH / AUTH_SESSION_SECRET not set — serving OPEN (no login gate)\n")
     else:
         sys.stderr.write("Ares Empire web: login gate ACTIVE\n")
-    httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    sys.stderr.write(f"Ares Empire web serving {WEB_ROOT} on :{PORT}\n")
+    httpd = ThreadingHTTPServer((HOST, PORT), Handler)
+    sys.stderr.write(f"Ares Empire web serving {WEB_ROOT} on {HOST}:{PORT}\n")
     httpd.serve_forever()
 
 

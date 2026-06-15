@@ -58,7 +58,7 @@ for **the mark + "Ares Empire"** (mark-only is too ambiguous before the brand is
 
 ---
 
-## The hub website (`web/`) — built
+## The hub website (`web/`) — built & **live at https://www.ares-empire.de**
 
 The hub is built, in the empire's house style — **no build step** (React-from-CDN + Babel-in-browser
 + vanilla `window`-global modules, exactly like Aresium / Arestoteles). The Ares bust now lives
@@ -87,3 +87,15 @@ python3 -m http.server 8099 --directory web    # → http://localhost:8099
 **Source of truth** — [`EMPIRE.md`](EMPIRE.md) (narrative) + `web/app/empire-data.js`
 (`window.EMPIRE`, the manifest the ring renders from). Add a province by appending to both; the ring
 grows on its own.
+
+**Deploy** (live on this server, behind the shared `insureai_nginx` — see `deploy/`)
+
+- `ares-empire.service` (`deploy/systemd/`) runs `webauth/server.py` on the docker bridge
+  `172.18.0.1:5185`, reading secrets from `.env`. The gate is **active** (password set).
+- nginx vhost `deploy/nginx/ares-empire.conf` (lives in `insureai/.../nginx/conf.d/`) proxies the
+  domain → the service; TLS via `deploy/enable-tls-ares-empire.sh` (Let's Encrypt; the
+  `insureai_certbot` container auto-renews).
+- **Firewall:** each host-service port needs a UFW allow from the bridge or nginx 504s —
+  `ufw allow from 172.18.0.0/16 to any port 5185 proto tcp`.
+- **Updating the site:** edit `web/…`; the service serves from disk live (no rebuild). On a fresh
+  box, regenerate `.env` with `python3 webauth/gen_password.py 'the-password' > .env`.

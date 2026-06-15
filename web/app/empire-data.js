@@ -28,7 +28,7 @@
         slug: "aresium",
         name: "Aresium",
         url: "https://aresium.de",
-        logo: "brand/aresium.png",
+        logo: "brand/aresium.svg",
         status: "CONQUERED",
         domain: "aresium.de",
         blurb: "Personal finance command — VR Bank + PayPal, imported and understood.",
@@ -53,6 +53,7 @@
 
     // ── Chronicle: what was done to conquer what (Claude Code appends here) ──
     chronicle: [
+      { at: "2026-06-15", project: "empire", text: "Went live at www.ares-empire.de — TLS, gated by the empire access key, behind the shared nginx. Aresium took its crimson rising-line mark." },
       { at: "2026-06-15", project: "empire", text: "Raised the hub: molten-gold slam intro, the orbital project ring, the Oracle, stars mode and the CONQUER forge." },
       { at: "2026-06-15", project: "empire", text: "Adopted the marble-gold-black crown language from Aresium + Arestoteles; the Ares bust takes the throne." },
     ],

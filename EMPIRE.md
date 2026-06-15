@@ -96,6 +96,7 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y").
 
+- **2026-06-15 · empire** — Went live at https://www.ares-empire.de — TLS, gated by the empire access key, behind the shared nginx. Aresium took its crimson rising-line mark (`web/brand/aresium.svg`).
 - **2026-06-15 · empire** — Raised the hub: molten-gold slam intro, the orbital project ring, the Oracle, stars mode and the CONQUER forge.
 - **2026-06-15 · empire** — Adopted the marble-gold-black crown language from Aresium + Arestoteles; the Ares bust takes the throne.
 
@@ -103,8 +104,9 @@ Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 
 ## Notes for later
 
-- **Login:** an empire sign-in (`web/login.html`) matches the Arestoteles access-key
-  screen; it'll be gated by the same scrypt + HMAC-cookie auth server (ports from
-  `arestoteles/webauth/server.py`). Patrik provides the password + domain.
+- **Login:** live — the empire sign-in (`web/login.html`) is gated by `webauth/server.py`
+  (scrypt + HMAC-signed cookie), run by `ares-empire.service` and reverse-proxied by the shared
+  `insureai_nginx` at https://www.ares-empire.de. Secrets live in `.env` (never committed; on a
+  fresh box regenerate with `webauth/gen_password.py`).
 - **SSO:** the hub becomes the shared identity provider so entering a province from the
   hub doesn't ask you to log in again. Routes are left room for this; not built yet.
