@@ -15,13 +15,17 @@
     const [spread, setSpread] = useState(false);        // projects: circle (false) vs board (true)
     const [forge, setForge] = useState(null);           // null | { open, init }
     const [rising, setRising] = useState(null);
+    const [detail, setDetail] = useState(null);         // null | { project, rect } — the full-screen province page
 
     useEffect(() => { try { window.lucide && window.lucide.createIcons(); } catch (_) {} });
 
     const ideas = E.ideas || [];
     const chronicle = E.chronicle || [];
 
-    const visit = useCallback((p) => { if (p && p.url) window.open(p.url, "_blank", "noopener"); }, []);
+    // leave the hub for a province's own site. The auth hand-off (SSO) hooks in here once it
+    // exists; until then this navigates straight to the province.
+    const goTo = useCallback((p) => { if (p && p.url) window.location.assign(p.url); }, []);
+    const openDetail = useCallback((p, rect) => setDetail({ project: p, rect }), []);
     const openForge = useCallback((init) => setForge({ open: true, init: init || null }), []);
 
     const toggleView = useCallback(() => {
@@ -80,9 +84,9 @@
             {expanded ? (
               <window.CardGrid items={ideas} kind="expansion" onForge={openForge} />
             ) : spread ? (
-              <window.CardGrid items={projects} kind="project" onBack={() => setSpread(false)} onVisit={visit} />
+              <window.CardGrid items={projects} kind="project" onBack={() => setSpread(false)} onOpen={openDetail} />
             ) : (
-              <window.Ring projects={projects} onOpen={() => setSpread(true)} risingSlug={rising} />
+              <window.Ring projects={projects} onOpen={goTo} risingSlug={rising} />
             )}
           </section>
 
@@ -91,6 +95,11 @@
 
         {forge && forge.open && (
           <window.Forge initial={forge.init} onClose={() => setForge(null)} onConquered={conquered} />
+        )}
+
+        {detail && (
+          <window.ProjectDetail project={detail.project} originRect={detail.rect}
+                                onClose={() => setDetail(null)} onVisit={goTo} />
         )}
       </React.Fragment>
     );

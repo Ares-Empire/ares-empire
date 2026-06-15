@@ -32,6 +32,23 @@
         status: "CONQUERED",
         domain: "aresium.de",
         blurb: "Personal finance command — VR Bank + PayPal, imported and understood.",
+        // detail: the full-screen province page. Any field may be omitted — the page shows a
+        // tidy empty state for what isn't filled in yet. `changelog` falls back to the chronicle
+        // entries tagged with this slug.
+        detail: {
+          about: "The empire's personal-finance command. Aresium imports VR Bank and PayPal " +
+            "activity, reconciles it, and turns raw statements into an understood picture of " +
+            "balances, cash flow and where the money actually goes.",
+          features: [
+            "VR Bank + PayPal import",
+            "Transaction categorisation & reconciliation",
+            "Balance and cash-flow overview",
+          ],
+          setup: "",
+          wip: [],
+          ideas: [],
+          changelog: [],
+        },
       },
       {
         slug: "arestoteles",
@@ -41,6 +58,20 @@
         status: "CONQUERED",
         domain: "arestoteles.de",
         blurb: "AI portfolio strategist — theses, falsifiers, conviction.",
+        detail: {
+          about: "An AI portfolio strategist. Arestoteles forms theses, names the falsifiers " +
+            "that would break them, and tracks conviction — so positions are held or cut for " +
+            "stated reasons rather than noise.",
+          features: [
+            "Thesis + falsifier tracking",
+            "Conviction scoring",
+            "Telegram control",
+          ],
+          setup: "",
+          wip: [],
+          ideas: [],
+          changelog: [],
+        },
       },
     ],
 

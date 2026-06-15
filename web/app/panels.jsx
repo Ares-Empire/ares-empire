@@ -25,12 +25,13 @@
   function Mono({ name }) { return <div className="tab-mono">{(name || "?")[0]}</div>; }
 
   // ---------------------------------------------------------------- a project card
-  function ProjectCard({ p, i, onVisit }) {
+  function ProjectCard({ p, i, onOpen }) {
     const S = E().STATUS || {};
     const st = S[p.status] || null;
     const [imgErr, setImgErr] = useState(false);
     return (
-      <button className="proj-card" style={{ animationDelay: i * 70 + "ms" }} onClick={() => onVisit(p)}>
+      <button className="proj-card" style={{ animationDelay: i * 70 + "ms" }}
+              onClick={(e) => onOpen(p, e.currentTarget.getBoundingClientRect())}>
         <div className="pc-top">
           <div className="pc-logo">
             {p.logo && !imgErr ? <img src={p.logo} alt={p.name} onError={() => setImgErr(true)} /> : <Mono name={p.name} />}
@@ -43,7 +44,7 @@
         <div className="pc-blurb">{p.blurb}</div>
         <div className="pc-foot">
           <span className="pc-domain">{p.domain || (p.url || "").replace(/^https?:\/\//, "") || "—"}</span>
-          {p.url && <span className="pc-visit">Visit<window.Icon name="arrow-up-right" size={13} /></span>}
+          <span className="pc-visit">Details<window.Icon name="maximize-2" size={13} /></span>
         </div>
       </button>
     );
@@ -79,7 +80,7 @@
     );
   }
 
-  function CardGrid({ items, kind, onBack, onVisit, onForge }) {
+  function CardGrid({ items, kind, onBack, onOpen, onForge }) {
     useIcons();
     const list = items || [];
     const total = list.length + (kind === "expansion" ? 1 : 0);
@@ -93,7 +94,7 @@
         )}
         <div className="card-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
           {list.map((it, i) => kind === "project"
-            ? <ProjectCard key={it.slug || i} p={it} i={i} onVisit={onVisit} />
+            ? <ProjectCard key={it.slug || i} p={it} i={i} onOpen={onOpen} />
             : <ExpansionCard key={i} idea={it} i={i} onForge={onForge} />)}
           {kind === "expansion" && <NewCard i={list.length} onForge={onForge} />}
         </div>
@@ -117,6 +118,113 @@
               <div className="tl-text">{c.text}</div>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------- the province page (detail)
+  // A board card morphs to a full-screen page: its rect animates to fill the viewport, then the
+  // content fades in. Sections degrade to a tidy empty state for anything not yet written.
+  function pdEmpty(text) { return <div className="pd-empty">{text}</div>; }
+
+  function PdList({ items, empty }) {
+    if (!items || !items.length) return pdEmpty(empty);
+    return <ul className="pd-list">{items.map((t, i) => <li key={i}>{t}</li>)}</ul>;
+  }
+
+  function PdSection({ icon, title, wide, children }) {
+    return (
+      <div className={"pd-section" + (wide ? " wide" : "")}>
+        <div className="pd-sec-h"><window.Icon name={icon} size={14} /><span>{title}</span></div>
+        <div className="pd-sec-body">{children}</div>
+      </div>
+    );
+  }
+
+  function ProjectDetail({ project, originRect, onClose, onVisit }) {
+    const p = project || {};
+    const d = p.detail || {};
+    const st = (E().STATUS || {})[p.status] || null;
+    const [imgErr, setImgErr] = useState(false);
+    const [open, setOpen] = useState(false);
+    const full = () => ({ top: 0, left: 0, width: window.innerWidth, height: window.innerHeight, radius: 0 });
+    const fromCard = () => originRect
+      ? { top: originRect.top, left: originRect.left, width: originRect.width, height: originRect.height, radius: 16 }
+      : full();
+    const [box, setBox] = useState(fromCard);
+    useIcons();
+
+    const close = () => { setOpen(false); setBox(fromCard()); setTimeout(onClose, 380); };
+
+    useEffect(() => {
+      // two rAFs so the initial (card-sized) box paints before we animate it to full screen
+      const id = requestAnimationFrame(() => requestAnimationFrame(() => { setBox(full()); setOpen(true); }));
+      const onKey = (e) => { if (e.key === "Escape") close(); };
+      window.addEventListener("keydown", onKey);
+      return () => { cancelAnimationFrame(id); window.removeEventListener("keydown", onKey); };
+    }, []);
+
+    // change log: the province's own, else the empire chronicle entries tagged with its slug
+    const log = (d.changelog && d.changelog.length)
+      ? d.changelog
+      : (E().chronicle || []).filter((c) => c.project === p.slug);
+
+    return (
+      <div className="pd-scrim" onClick={close}>
+        <div className={"pd-panel" + (open ? " open" : "")} onClick={(e) => e.stopPropagation()}
+             style={{ top: box.top, left: box.left, width: box.width, height: box.height, borderRadius: box.radius }}>
+          <button className="pd-close" onClick={close} aria-label="Close"><window.Icon name="x" size={18} /></button>
+          <div className="pd-inner">
+            <header className="pd-head">
+              <div className="pd-logo">
+                {p.logo && !imgErr
+                  ? <img src={p.logo} alt={p.name} onError={() => setImgErr(true)} />
+                  : <div className="tab-mono">{(p.name || "?")[0]}</div>}
+              </div>
+              <div className="pd-id">
+                <button className="pd-name" onClick={() => onVisit(p)} title={"Open " + (p.domain || p.name || "the site")}>
+                  <span className="pd-name-t">{p.name}</span><window.Icon name="arrow-up-right" size={22} />
+                </button>
+                <div className="pd-sub">
+                  {st && <span className={"pc-status " + statusClass(st.tone)}>{st.label}</span>}
+                  {p.domain && <span className="pd-domain">{p.domain}</span>}
+                </div>
+              </div>
+            </header>
+
+            <div className="pd-grid">
+              <PdSection icon="scroll-text" title="Overview" wide>
+                <p className="pd-p">{d.about || p.blurb || "—"}</p>
+                {d.features && d.features.length ? (
+                  <React.Fragment>
+                    <div className="pd-subh">Features</div>
+                    <PdList items={d.features} />
+                  </React.Fragment>
+                ) : null}
+              </PdSection>
+
+              <PdSection icon="terminal" title="Setup">
+                {d.setup ? <p className="pd-p">{d.setup}</p> : pdEmpty("No setup notes yet.")}
+              </PdSection>
+              <PdSection icon="loader" title="In progress · pending">
+                <PdList items={d.wip} empty="No open items." />
+              </PdSection>
+              <PdSection icon="lightbulb" title="Add-ons · ideas">
+                <PdList items={d.ideas} empty="No ideas captured yet." />
+              </PdSection>
+
+              <PdSection icon="history" title="Change log" wide>
+                {log && log.length ? (
+                  <ul className="pd-log">
+                    {log.map((c, i) => (
+                      <li key={i}><span className="pd-log-date">{c.at}</span><span>{c.text}</span></li>
+                    ))}
+                  </ul>
+                ) : pdEmpty("No entries yet.")}
+              </PdSection>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -238,5 +346,6 @@ TODO — stack, deploy, domain.
 
   window.CardGrid = CardGrid;
   window.Timeline = Timeline;
+  window.ProjectDetail = ProjectDetail;
   window.Forge = Forge;
 })();

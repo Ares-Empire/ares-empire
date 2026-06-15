@@ -94,7 +94,6 @@
       <div className="ring-scene" ref={sceneRef}
            onPointerDown={onPointerDown} onPointerMove={onPointerMove}
            onPointerUp={endDrag} onPointerLeave={endDrag} onWheel={onWheel}>
-        <div className="ring-rail" style={{ "--rail-w": (2 * SPREAD_X) + "px", "--rail-h": (2 * RISE_Y) + "px", "--rail-rise": RISE_Y + "px" }} />
         <div className={"ring" + (settling ? " settling" : "")}>
           {tabs.map((tab, i) => {
             const phi = norm180(i * step + rotation);
