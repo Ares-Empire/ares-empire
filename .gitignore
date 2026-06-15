@@ -6,3 +6,6 @@ __pycache__/
 
 # secrets (none yet, but never commit them)
 .env
+
+# local-only render/screenshot + compile-check harness (never served, never shipped)
+.tooling/
