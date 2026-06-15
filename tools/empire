@@ -153,14 +153,16 @@ def cmd_done(state, a):
 
 
 def cmd_hook(state, a):
+    # markers must START a line (after optional whitespace) so inline examples / quotes in a
+    # commit body — like the ones in this tool's own docs — never trigger a false entry.
     msg = a.message or ""
     out = []
-    for m in re.finditer(r"\[log\]\s*([^\[\n]+)", msg, re.IGNORECASE):
+    for m in re.finditer(r"^[ \t]*\[log\][ \t]*([^\[\n]+)", msg, re.IGNORECASE | re.MULTILINE):
         text = m.group(1).strip()
         if text:
             add_chronicle(state, a.slug, text)
             out.append(f"logged · {text}")
-    sm = re.search(r"\[status:\s*([A-Za-z]+)\s*\]", msg, re.IGNORECASE)
+    sm = re.search(r"^[ \t]*\[status:\s*([A-Za-z]+)\s*\]", msg, re.IGNORECASE | re.MULTILINE)
     if sm:
         proj = find_project(state, a.slug)
         st = sm.group(1).upper()
