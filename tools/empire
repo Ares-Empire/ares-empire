@@ -184,8 +184,12 @@ def cmd_seed(state, a):
     fresh = _seed_from_js()
     if fresh is None:
         sys.exit("empire: could not seed from empire-data.js (node + the file required)")
+    # structure (projects · ideas · STATUS) comes from the JS seed, but keep the accumulated
+    # runtime chronicle so re-seeding after a structural edit never erases the log.
+    if state.get("chronicle"):
+        fresh["chronicle"] = state["chronicle"]
     save(fresh)
-    print(f"re-seeded {STATE_PATH} from empire-data.js")
+    print(f"re-seeded {STATE_PATH} from empire-data.js (chronicle preserved)")
     sys.exit(0)
 
 

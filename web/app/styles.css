@@ -194,6 +194,7 @@ a { color: inherit; text-decoration: none; }
   filter: drop-shadow(0 1px 1px rgba(0,0,0,0.55)); }
 .tab-status { font-size: 9.5px; font-weight: 600; letter-spacing: 0.22em; text-indent: 0.22em; text-transform: uppercase; }
 .st-live  { color: #6fcf9b; } .st-wip { color: var(--gold-2); } .st-hold { color: #84b6ff; } .st-scout { color: var(--ink-3); }
+.st-muster { color: #c8a25f; }    /* declared, gearing up — a muted bronze (not the live/building tones) */
 /* in the ring tabs, the WIP status word drops its gold for a neutral tone (no glimmer) */
 .tab-status.st-wip { color: var(--ink-2); }
 

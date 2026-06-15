@@ -12,7 +12,7 @@
   const E = () => window.EMPIRE || {};
   const useIcons = () => useEffect(() => { try { window.lucide && window.lucide.createIcons(); } catch (_) {} });
   const slugify = (s) => (s || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  const statusClass = (tone) => ({ live: "st-live", wip: "st-wip", hold: "st-hold", scout: "st-scout" }[tone] || "st-scout");
+  const statusClass = (tone) => ({ live: "st-live", wip: "st-wip", hold: "st-hold", scout: "st-scout", muster: "st-muster" }[tone] || "st-scout");
 
   // columns per the requested patterns: 2→2 · 3→3 · 4→2×2 · then a balanced grid
   function columnsFor(n) {

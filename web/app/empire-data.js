@@ -12,10 +12,11 @@
 
   // status vocabulary — the empire's martial states (drives the gold status word on each tab)
   const STATUS = {
-    SCOUTED:    { label: "SCOUTED",    tone: "scout" },   // an idea, not yet built
-    BESIEGING:  { label: "BESIEGING",  tone: "wip"   },   // under active conquest (WIP)
-    CONQUERED:  { label: "CONQUERED",  tone: "live"  },   // live and held
-    FORTIFYING: { label: "FORTIFYING", tone: "hold"  },   // live, under maintenance
+    SCOUTED:    { label: "SCOUTED",    tone: "scout"  },  // an idea, not yet built
+    MUSTERING:  { label: "MUSTERING",  tone: "muster" },  // declared & gearing up — not started yet
+    BESIEGING:  { label: "BESIEGING",  tone: "wip"    },  // under active conquest (WIP)
+    CONQUERED:  { label: "CONQUERED",  tone: "live"   },  // live and held
+    FORTIFYING: { label: "FORTIFYING", tone: "hold"   },  // live, under maintenance
   };
 
   const EMPIRE = {
@@ -71,6 +72,100 @@
           wip: [],
           ideas: [],
           changelog: [],
+        },
+      },
+
+      // ── MUSTERING: declared provinces, gearing up — not built yet ──────────────
+      {
+        slug: "arestemis",
+        name: "Arestemis",
+        url: "",
+        logo: "brand/artemis.png",
+        status: "MUSTERING",
+        domain: "",
+        blurb: "Apartment sniper — claims new flat listings the moment they post.",
+        detail: {
+          about: "The huntress. Arestemis (the Flatsniper bot) watches the housing portals and " +
+            "pounces on a new listing the instant it appears — first to the viewing, first to apply. " +
+            "Already running as flatsniper; linking it into the empire is the next step.",
+          features: ["Real-time listing watch", "Instant alerts", "Fast-track applying"],
+          setup: "", wip: [], ideas: [], changelog: [],
+        },
+      },
+      {
+        slug: "arescribe",
+        name: "Arescribe",
+        url: "",
+        logo: "brand/athena.png",
+        status: "MUSTERING",
+        domain: "",
+        blurb: "Maps-review scribe — text it a place and notes, it writes the review.",
+        detail: {
+          about: "Athena's craft. Text the Arescribe bot a place plus a few notes and it composes " +
+            "a fitting Google Maps review automatically — and can post it for you.",
+          features: ["Telegram bot input", "Place-aware review generation", "Google Maps posting"],
+          setup: "", wip: [], ideas: [], changelog: [],
+        },
+      },
+      {
+        slug: "aresolus",
+        name: "Aresolus",
+        url: "",
+        logo: "brand/aeolus.png",
+        status: "MUSTERING",
+        domain: "",
+        blurb: "Flight finder — hunts the best flights; trains and more to come.",
+        detail: {
+          about: "Keeper of the winds. Aresolus searches for the best flights for a trip and " +
+            "surfaces the strongest options; rail and other modes are planned.",
+          features: ["Best-fare flight search", "Flexible date / route hunting"],
+          ideas: ["Trains & buses", "Price-drop alerts"],
+          setup: "", wip: [], changelog: [],
+        },
+      },
+      {
+        slug: "arescrypt",
+        name: "Arescrypt",
+        url: "",
+        logo: "brand/cerberus.png",
+        status: "MUSTERING",
+        domain: "",
+        blurb: "Personal password vault — the empire's three-headed guard.",
+        detail: {
+          about: "Cerberus at the gate. Arescrypt is a personal password manager — a single, " +
+            "guarded vault for every credential.",
+          features: ["Encrypted vault", "Personal credential store"],
+          setup: "", wip: [], ideas: [], changelog: [],
+        },
+      },
+      {
+        slug: "aresync",
+        name: "Aresync",
+        url: "",
+        logo: "brand/janus.png",
+        status: "MUSTERING",
+        domain: "",
+        blurb: "File sync across Windows & Mac — one filesystem, two machines.",
+        detail: {
+          about: "The two-faced god of thresholds. Aresync keeps one set of files in step across " +
+            "the Windows Lenovo at home and the MacBook on the go — edit anywhere, it's everywhere.",
+          features: ["Windows ⇄ macOS sync", "Conflict-aware updates"],
+          setup: "", wip: [], ideas: [], changelog: [],
+        },
+      },
+      {
+        slug: "aresus",
+        name: "Aresus",
+        url: "",
+        logo: "brand/zeus.png",
+        status: "MUSTERING",
+        domain: "",
+        blurb: "The watchtower — monitors every province, alerts when one falls.",
+        detail: {
+          about: "Zeus on the throne, watching all. Aresus is the empire's watchtower: it monitors " +
+            "every project, alerts the moment something goes down, and gathers status in one place.",
+          features: ["Uptime & health monitoring", "Down alerts", "Single status board"],
+          setup: "", wip: [], ideas: [], changelog: [],
         },
       },
     ],

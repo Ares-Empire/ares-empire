@@ -13,7 +13,7 @@
   const VISIBLE = 104;                 // beyond this many degrees from front, a province is hidden (far side)
   const norm180 = (d) => ((d + 180) % 360 + 360) % 360 - 180;   // → (-180, 180]
 
-  const statusClass = (tone) => ({ live: "st-live", wip: "st-wip", hold: "st-hold", scout: "st-scout" }[tone] || "st-scout");
+  const statusClass = (tone) => ({ live: "st-live", wip: "st-wip", hold: "st-hold", scout: "st-scout", muster: "st-muster" }[tone] || "st-scout");
 
   function TabFace({ tab }) {
     const S = (window.EMPIRE && window.EMPIRE.STATUS) || {};
