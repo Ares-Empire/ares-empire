@@ -282,8 +282,15 @@ button.proj-card { cursor: pointer; }
   height: 178px; --log-line-y: 34px; z-index: 1; pointer-events: none; }
 .log-dust { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 .log-track { position: relative; z-index: 1; height: 100%; display: flex; align-items: flex-start;
-  justify-content: space-around; gap: clamp(14px, 2vw, 40px); padding: 0 clamp(8px, 2vw, 30px); }
-.log-node { flex: 1 1 0; min-width: 0; max-width: 250px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  justify-content: flex-start; gap: clamp(16px, 2vw, 40px); padding: 0 clamp(10px, 2vw, 28px);
+  overflow-x: auto; overflow-y: hidden; scroll-behavior: smooth; overscroll-behavior-x: contain;
+  scrollbar-width: thin; scrollbar-color: rgba(237,202,119,0.32) transparent; }
+.log-track::-webkit-scrollbar { height: 6px; }
+.log-track::-webkit-scrollbar-track { background: transparent; }
+.log-track::-webkit-scrollbar-thumb { background: rgba(237,202,119,0.28); border-radius: 4px; }
+.log-track::-webkit-scrollbar-thumb:hover { background: rgba(237,202,119,0.5); }
+/* fixed-width nodes so the strip scrolls instead of squeezing — newest is the left-most */
+.log-node { flex: 0 0 clamp(178px, 17vw, 224px); display: flex; flex-direction: column; align-items: center; text-align: center; }
 
 /* the marker: the project's bust in a glowing golden coin, centred on the line */
 .log-bust { width: 50px; height: 50px; margin-top: calc(var(--log-line-y) - 25px); border-radius: 50%;

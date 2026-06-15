@@ -197,17 +197,25 @@
 
   function Chronicle({ log, projects }) {
     useIcons();
+    const trackRef = useRef(null);
+    // a vertical wheel scrolls the strip horizontally (newest stays left; scroll right for older)
+    const onWheel = (e) => {
+      const el = trackRef.current;
+      if (el && el.scrollWidth > el.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        el.scrollLeft += e.deltaY;
+      }
+    };
     if (!log || !log.length) return null;
     // marker = the bust of the updated project; empire entries wear the Ares bust
     const bySlug = {};
     (projects || []).forEach((p) => { if (p.logo) bySlug[p.slug] = p.logo; });
     const BUST = { aresium: "brand/hermes.png", arestoteles: "brand/arestoteles_transparent.png" };
     const bustFor = (slug) => BUST[slug] || bySlug[slug] || "brand/ares_transparent.png";
-    const items = log.slice(0, 6);
+    const items = log.slice(0, 50);   // newest-first → newest pinned left; the rest scroll off to the right
     return (
       <div className="emp-log" aria-label="Chronicle">
         <GoldDust />
-        <div className="log-track">
+        <div className="log-track" ref={trackRef} onWheel={onWheel}>
           {items.map((c, i) => (
             <div className="log-node" key={i}>
               <span className="log-bust">
