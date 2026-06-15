@@ -28,7 +28,7 @@
         slug: "aresium",
         name: "Aresium",
         url: "https://aresium.de",
-        logo: "brand/aresium.svg",
+        logo: "brand/hermes.png",
         status: "CONQUERED",
         domain: "aresium.de",
         blurb: "Personal finance command — VR Bank + PayPal, imported and understood.",

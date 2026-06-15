@@ -1,21 +1,19 @@
 /* Ares Empire — the orbital circle (window.Ring).
 
-   The provinces ride a stretched ellipse, FACE-ON (a 2-D orbit, not a depth carousel),
-   so even two of them read as "a circle of projects". The lower-centre slot is the focus;
-   items higher on the ellipse recede (smaller, dimmer) for an orbit feel. Drag, scroll or
-   ← / → to revolve. Click a back province to bring it forward; click the focused one to
-   spread the whole circle into the project board.
+   A wheel laid flat on a table, seen FROM THE FRONT — so the orbit reads almost as a line.
+   The province revolved to the front is sharp and centred; its neighbours fall away to the
+   sides (smaller · paler · blurred) and the far side of the wheel is out of sight. Drag /
+   scroll / ← → to revolve; click the focused province to open it, click a neighbour to bring
+   it round.
 
-   Props: { projects, onSpread(), risingSlug } */
+   Props: { projects, onOpen(project), risingSlug } */
 (function () {
   const { useState, useRef, useEffect, useMemo, useCallback } = React;
-  const SENS = 0.32;                 // degrees of revolve per pixel dragged
-  const FRONT = 90;                  // the focus slot, in degrees (bottom-centre of the ellipse)
-  const norm = (d) => ((d % 360) + 360) % 360;          // → [0,360)
+  const SENS = 0.34;                   // degrees of revolve per pixel dragged
+  const VISIBLE = 104;                 // beyond this many degrees from front, a province is hidden (far side)
+  const norm180 = (d) => ((d + 180) % 360 + 360) % 360 - 180;   // → (-180, 180]
 
-  function statusClass(tone) {
-    return { live: "st-live", wip: "st-wip", hold: "st-hold", scout: "st-scout" }[tone] || "st-scout";
-  }
+  const statusClass = (tone) => ({ live: "st-live", wip: "st-wip", hold: "st-hold", scout: "st-scout" }[tone] || "st-scout");
 
   function TabFace({ tab }) {
     const S = (window.EMPIRE && window.EMPIRE.STATUS) || {};
@@ -36,120 +34,91 @@
     );
   }
 
-  function Ring({ projects, onSpread, risingSlug }) {
+  function Ring({ projects, onOpen, risingSlug }) {
     const tabs = projects || [];
     const count = Math.max(tabs.length, 1);
     const step = 360 / count;
 
-    const [rotation, setRotation] = useState(0);          // degrees; 0 → item 0 at the focus slot
+    const [rotation, setRotation] = useState(0);
     const [settling, setSettling] = useState(true);
     const drag = useRef({ on: false, startX: 0, startRot: 0, moved: 0 });
     const wheelAt = useRef(0);
+    const sceneRef = useRef(null);
+    const [dim, setDim] = useState({ w: 880, h: 300 });
 
-    const measure = () => {
-      const W = window.innerWidth, H = window.innerHeight;
-      // wide & shallow — a stretched orbit that stays clear of the header/timeline
-      return { rx: Math.min(W * 0.30, 460), ry: Math.min(H * 0.21, 188) };
-    };
-    const [dims, setDims] = useState(measure);
     useEffect(() => {
-      const onR = () => setDims(measure());
-      window.addEventListener("resize", onR);
-      return () => window.removeEventListener("resize", onR);
+      const m = () => { const el = sceneRef.current; if (el) setDim({ w: el.offsetWidth, h: el.offsetHeight }); };
+      m(); window.addEventListener("resize", m);
+      return () => window.removeEventListener("resize", m);
     }, []);
 
-    // focus = the item whose orbital angle is nearest the front slot
     const frontIndex = useMemo(() => {
       let best = 0, bestD = Infinity;
-      for (let i = 0; i < count; i++) {
-        const m = norm(i * step + rotation);              // 0 when item i is at the focus
-        const d = Math.min(m, 360 - m);
-        if (d < bestD) { bestD = d; best = i; }
-      }
+      for (let i = 0; i < count; i++) { const d = Math.abs(norm180(i * step + rotation)); if (d < bestD) { bestD = d; best = i; } }
       return best;
     }, [rotation, count, step]);
 
-    const stepBy = useCallback((n) => {
-      const k = Math.round(rotation / step);
-      setSettling(true); setRotation((k + n) * step);
-    }, [rotation, step]);
+    const stepBy = useCallback((n) => { const k = Math.round(rotation / step); setSettling(true); setRotation((k + n) * step); }, [rotation, step]);
+    const toFront = useCallback((i) => { setSettling(true); setRotation(rotation + norm180(-i * step - rotation)); }, [rotation, step]);
 
-    const toFront = useCallback((i) => {                  // shortest arc to put item i at the focus
-      const target = -i * step;
-      let delta = norm(target - rotation); if (delta > 180) delta -= 360;
-      setSettling(true); setRotation(rotation + delta);
-    }, [rotation, step]);
-
-    // ---- revolve by dragging ----
-    const onPointerDown = (e) => {
-      drag.current = { on: true, startX: e.clientX, startRot: rotation, moved: 0 };
-      setSettling(false);
-    };
+    const onPointerDown = (e) => { drag.current = { on: true, startX: e.clientX, startRot: rotation, moved: 0 }; setSettling(false); };
     const onPointerMove = (e) => {
       if (!drag.current.on) return;
       const dx = e.clientX - drag.current.startX;
       drag.current.moved = Math.max(drag.current.moved, Math.abs(dx));
       setRotation(drag.current.startRot + dx * SENS);
     };
-    const endDrag = () => {
-      if (!drag.current.on) return;
-      drag.current.on = false;
-      const k = Math.round(rotation / step);              // snap to nearest province
-      setSettling(true); setRotation(k * step);
-    };
-
+    const endDrag = () => { if (!drag.current.on) return; drag.current.on = false; setSettling(true); setRotation(Math.round(rotation / step) * step); };
     const onWheel = (e) => {
-      const now = Date.now();
-      if (now - wheelAt.current < 240) return;
-      wheelAt.current = now;
+      const now = Date.now(); if (now - wheelAt.current < 240) return; wheelAt.current = now;
       const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       stepBy(d > 0 ? 1 : -1);
     };
 
     useEffect(() => {
-      const onKey = (e) => {
-        if (e.key === "ArrowRight") stepBy(1);
-        else if (e.key === "ArrowLeft") stepBy(-1);
-      };
+      const onKey = (e) => { if (e.key === "ArrowRight") stepBy(1); else if (e.key === "ArrowLeft") stepBy(-1); };
       window.addEventListener("keydown", onKey);
       return () => window.removeEventListener("keydown", onKey);
     }, [stepBy]);
 
     const clickTab = (i) => {
-      if (drag.current.moved > 6) return;                 // it was a revolve, not a tap
+      if (drag.current.moved > 6) return;        // it was a revolve, not a tap
       if (i !== frontIndex) toFront(i);
-      else if (onSpread) onSpread();
+      else if (onOpen) onOpen(tabs[i]);
     };
 
-    const { rx, ry } = dims;
+    const SPREAD_X = Math.min(dim.w * 0.42, 560);   // how far neighbours fan out along the line
+    const RISE_Y = Math.max(28, Math.min(dim.h * 0.18, 52));  // shallow — keeps the wheel near a line
+
     return (
-      <div className="ring-scene"
+      <div className="ring-scene" ref={sceneRef}
            onPointerDown={onPointerDown} onPointerMove={onPointerMove}
            onPointerUp={endDrag} onPointerLeave={endDrag} onWheel={onWheel}>
-        <div className="ring-shift">
-          <div className="ring-orbit" style={{ "--orbit-w": (2 * rx + 70) + "px", "--orbit-h": (2 * ry + 64) + "px" }} />
-          <div className={"ring" + (settling ? " settling" : "")}>
-            {tabs.map((tab, i) => {
-              const a = (FRONT + i * step + rotation) * Math.PI / 180;
-              const x = rx * Math.cos(a), y = ry * Math.sin(a);
-              const depth = (Math.sin(a) + 1) / 2;          // 1 at focus (front), 0 at the back
-              const scale = 0.58 + 0.42 * depth;
-              const opacity = 0.24 + 0.76 * depth;
-              return (
-                <div key={tab.slug}
-                     className={"ring-tab" + (i === frontIndex ? " is-front" : "") + (tab.slug === risingSlug ? " rising" : "")}
-                     style={{ transform: `translate(calc(-50% + ${x.toFixed(1)}px), calc(-50% + ${y.toFixed(1)}px)) scale(${scale.toFixed(3)})`,
-                              opacity: opacity.toFixed(3), zIndex: Math.round(depth * 100) }}
-                     onClick={() => clickTab(i)}>
-                  <TabFace tab={tab} />
-                </div>
-              );
-            })}
-          </div>
+        <div className="ring-rail" style={{ "--rail-w": (2 * SPREAD_X) + "px", "--rail-h": (2 * RISE_Y) + "px", "--rail-rise": RISE_Y + "px" }} />
+        <div className={"ring" + (settling ? " settling" : "")}>
+          {tabs.map((tab, i) => {
+            const phi = norm180(i * step + rotation);
+            const r = phi * Math.PI / 180;
+            const off = Math.min(Math.abs(phi) / VISIBLE, 1);
+            const hidden = Math.abs(phi) > VISIBLE;
+            const x = Math.sin(r) * SPREAD_X;
+            const y = -(1 - Math.cos(r)) * RISE_Y;     // front lowest, neighbours rise back toward the horizon
+            const scale = 1 - 0.42 * off;
+            const opacity = hidden ? 0 : 1 - 0.84 * off;
+            const blur = off * 3.2;
+            return (
+              <div key={tab.slug}
+                   className={"ring-tab" + (i === frontIndex ? " is-front" : "") + (tab.slug === risingSlug ? " rising" : "")}
+                   style={{ transform: `translate(calc(-50% + ${x.toFixed(1)}px), calc(-50% + ${y.toFixed(1)}px)) scale(${scale.toFixed(3)})`,
+                            opacity: opacity.toFixed(3), filter: blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : "none",
+                            zIndex: Math.round((Math.cos(r) + 1) * 50), pointerEvents: hidden ? "none" : "auto" }}
+                   onClick={() => clickTab(i)}>
+                <TabFace tab={tab} />
+              </div>
+            );
+          })}
         </div>
-        <div className="ring-hint">
-          <span>drag</span><span>·</span><kbd>←</kbd><kbd>→</kbd><span>·</span><span>click to open the board</span>
-        </div>
+        <div className="ring-hint"><span>drag</span><span>·</span><kbd>←</kbd><kbd>→</kbd><span>·</span><span>click to open</span></div>
       </div>
     );
   }

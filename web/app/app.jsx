@@ -1,9 +1,10 @@
 /* Ares Empire — the hub (window.EmpireApp).
 
-   A clean, near-black room: ambient Mars-red/steel-blue wash, a marble bust standing at the
-   left edge, and — offset up & right — the orbital circle of provinces with the chronicle
-   timeline beneath it. The EXPAND control swaps the stage to the EXPANSIONS board (the plans);
-   clicking the focused province spreads the circle into the project board. */
+   A clean, pure-black room: a dark marble bust sunk into the wall at the left edge, and —
+   offset up & right — the orbital circle of provinces with the chronicle timeline beneath it.
+   The default screen is THE EMPIRE; clicking the title (or a province) opens the PROJECTS
+   board and clicking PROJECTS returns. The EXPAND control swaps the stage to the EXPANSIONS
+   board (the plans). */
 (function () {
   const { useState, useEffect, useCallback } = React;
 
@@ -41,6 +42,14 @@
     }, []);
 
     const expanded = view === "expansions";
+    const home = !expanded && !spread;                  // the default screen: THE EMPIRE
+    const titleText = expanded ? "EXPANSIONS" : spread ? "PROJECTS" : "THE EMPIRE";
+
+    // the title is the primary toggle: THE EMPIRE (default) ⇄ PROJECTS (the board)
+    const onTitle = useCallback(() => {
+      if (expanded) { setView("projects"); setSpread(false); return; }
+      setSpread((s) => !s);
+    }, [expanded]);
 
     return (
       <React.Fragment>
@@ -52,7 +61,10 @@
         <main className="emp-app">
           <header className="emp-top">
             <div className="emp-top-l" />
-            <h1 className="emp-title">{expanded ? "EXPANSIONS" : "PROJECTS"}</h1>
+            <button className={"emp-title" + (home ? " is-empire" : "")} onClick={onTitle}
+                    title={home ? "Open the projects" : "Back to the empire"}>
+              {titleText}
+            </button>
             <div className="emp-top-r">
               <button className={"emp-toggle" + (expanded ? " on" : "")} onClick={toggleView}
                       title={expanded ? "Back to projects" : "Show the empire's expansions"}>
@@ -70,7 +82,7 @@
             ) : spread ? (
               <window.CardGrid items={projects} kind="project" onBack={() => setSpread(false)} onVisit={visit} />
             ) : (
-              <window.Ring projects={projects} onSpread={() => setSpread(true)} risingSlug={rising} />
+              <window.Ring projects={projects} onOpen={() => setSpread(true)} risingSlug={rising} />
             )}
           </section>
 

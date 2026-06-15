@@ -3,9 +3,10 @@
 
    House language carried over from Aresium + Arestoteles: near-black wall,
    Space Grotesk text, JetBrains Mono numbers, glassmorphism, tight negative
-   letter-spacing, restrained motion. Here the accent is POLISHED GOLD — used
-   sparingly, as wealth, not glare — over a black field lit by faint Mars-red
-   and steel-blue ambient. A monochrome marble bust stands at the left edge.
+   letter-spacing, restrained motion. The field is now PURE BLACK — no ambient
+   washes. Polished gold survives only in the title wordmark; the provinces ride
+   neutral white-glass tabs (à la Arestoteles). A dark marble bust, sunk into the
+   black, stands at the left edge.
    ============================================================================ */
 
 [data-theme="empire"] {
@@ -25,9 +26,7 @@
   --gold-text: linear-gradient(176deg, #fff6db 0%, #f6dd9c 19%, #e8c778 38%, #cca052 55%, #a87c31 72%, #ecce85 88%, #8c6420 100%);
   --gold-glow: rgba(237,202,119,0.16);
 
-  /* ambient — Mars-red (war / the figure) + steel-blue (the circle). faint washes only. */
-  --amb-red:  rgba(214,42,58,0.16);
-  --amb-blue: rgba(58,104,224,0.15);
+  /* background is pure black now — no Mars-red / steel-blue ambient washes. */
 
   --card: rgba(17,16,20,0.55); --card-2: rgba(27,25,31,0.62);
   --line-soft: rgba(236,224,196,0.10); --line-2: rgba(236,212,150,0.20);
@@ -60,17 +59,11 @@ a { color: inherit; text-decoration: none; }
    AMBIENT — fixed colour wash behind everything (Mars-red left, steel-blue right),
    plus a vignette so the corners fall to black and the UI stays clean.
    ============================================================================ */
-.emp-ambient { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: var(--bg); }
-.emp-ambient::before {
-  content: ""; position: absolute; inset: 0;
-  background:
-    radial-gradient(48% 42% at 14% 64%, var(--amb-red), transparent 72%),     /* red — over the bust */
-    radial-gradient(52% 48% at 80% 40%, var(--amb-blue), transparent 74%),    /* blue — over the circle */
-    radial-gradient(38% 30% at 70% 16%, rgba(237,202,119,0.05), transparent 72%); /* faint gold high-right */
-}
+.emp-ambient { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: #000; }
+/* pure black field — no Mars-red / steel-blue / gold washes. just a soft vignette for depth. */
 .emp-ambient::after {
   content: ""; position: absolute; inset: 0;
-  background: radial-gradient(125% 110% at 50% 44%, transparent 44%, rgba(0,0,0,0.55) 88%, #000 100%);
+  background: radial-gradient(125% 110% at 50% 44%, transparent 52%, rgba(0,0,0,0.6) 90%, #000 100%);
 }
 
 /* ============================================================================
@@ -84,14 +77,10 @@ a { color: inherit; text-decoration: none; }
 .emp-figure.recede { opacity: 0.3; }       /* step back so the card board reads clean */
 .emp-figure img {
   height: 98%; width: auto; object-fit: contain; object-position: left bottom;
-  mix-blend-mode: screen;
-  filter: contrast(1.12) brightness(1.02) saturate(0.9);
-  -webkit-mask-image: linear-gradient(95deg, #000 36%, rgba(0,0,0,0.82) 56%, transparent 84%);
-  mask-image: linear-gradient(95deg, #000 36%, rgba(0,0,0,0.82) 56%, transparent 84%);
-}
-.emp-figure::after {        /* warm rim light on the lit (right) side of the face */
-  content: ""; position: absolute; inset: 0; mix-blend-mode: screen; pointer-events: none;
-  background: linear-gradient(96deg, transparent 40%, rgba(237,202,119,0.07) 60%, transparent 76%);
+  mix-blend-mode: screen;                          /* dark ground dissolves into the black wall */
+  filter: brightness(0.46) contrast(1.14) saturate(0.55);   /* darker + near-monochrome — embedded, not lit */
+  -webkit-mask-image: linear-gradient(95deg, #000 32%, rgba(0,0,0,0.7) 54%, transparent 80%);
+  mask-image: linear-gradient(95deg, #000 32%, rgba(0,0,0,0.7) 54%, transparent 80%);
 }
 
 /* ============================================================================
@@ -109,11 +98,22 @@ a { color: inherit; text-decoration: none; }
   background: linear-gradient(180deg, var(--gold-hi), var(--gold-2)); box-shadow: 0 0 12px -2px var(--gold-glow); }
 .emp-mark-k { font-size: 10.5px; font-weight: 600; letter-spacing: 0.32em; text-indent: 0.32em; color: var(--ink-3); }
 
-.emp-title { justify-self: center; margin: 0; text-align: center; font-weight: 700;
-  font-size: clamp(20px, 2.7vw, 34px); letter-spacing: 0.30em; text-indent: 0.30em; line-height: 1;
-  background: var(--gold-text); -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent; white-space: nowrap;
-  transition: opacity .3s ease; }
+/* the section title doubles as the primary nav toggle (THE EMPIRE ⇄ PROJECTS) */
+.emp-title { justify-self: center; margin: 0; padding: 4px 6px; text-align: center; font-weight: 700;
+  font-size: clamp(20px, 2.7vw, 34px); letter-spacing: 0.34em; text-indent: 0.34em; line-height: 1;
+  white-space: nowrap; cursor: pointer;
+  /* bright, luminous champagne-gold with a travelling sheen — premium, not muddy */
+  background: linear-gradient(95deg, #fff4cf 0%, #ffe7a0 19%, #f6cf73 38%, #fff2c8 51%, #f0c662 66%, #ffeaad 85%, #f7d07a 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  filter: drop-shadow(0 1px 16px rgba(255,226,150,0.24));
+  animation: titleSheen 6.5s ease-in-out infinite;
+  transition: filter .2s, opacity .2s; }
+.emp-title:hover { filter: drop-shadow(0 1px 18px rgba(255,226,150,0.4)) brightness(1.06); }
+.emp-title:active { opacity: 0.85; }
+/* default landing reads THE EMPIRE — smaller than the PROJECTS / EXPANSIONS section titles */
+.emp-title.is-empire { font-size: clamp(15px, 1.85vw, 22px); letter-spacing: 0.4em; text-indent: 0.4em; }
+@keyframes titleSheen { 0%, 100% { background-position: 0% 0; } 50% { background-position: 100% 0; } }
 
 .emp-top-r { justify-self: end; display: inline-flex; align-items: center; gap: 10px; }
 
@@ -139,66 +139,66 @@ a { color: inherit; text-decoration: none; }
 .emp-stage { flex: 1; min-height: 0; position: relative; }
 
 /* ============================================================================
-   THE CIRCLE — projects ride a stretched ellipse, face-on (a 2-D orbit, not a
-   depth carousel), offset up & to the right. Drag / scroll / arrows revolve it;
-   the front (lower-centre) province is focused. An ambient ellipse lights the
-   field so the circle never sits on pure black.
+   THE CIRCLE — a wheel laid on a table, seen FROM THE FRONT, so the orbit reads
+   almost as a line. The focused province sits at the front (low-centre); neighbours
+   fall away to the sides; the far side is hidden (JS). The timeline runs parallel
+   just beneath it — both live in .orbit-zone, on the right, clear of the bust.
    ============================================================================ */
-.ring-scene { position: absolute; inset: 0; touch-action: pan-y; user-select: none; }
-.ring-shift { position: absolute; inset: 0;
-  transform: translate(9%, -4%); }                 /* the whole orbit, nudged right & up */
-.ring { position: absolute; inset: 0; }            /* tabs are positioned from its centre */
+.orbit-zone { position: absolute; left: 39%; right: 3%; top: 0; bottom: 0;
+  display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: clamp(10px, 2vh, 26px); }
 
-/* the ambient ring the provinces orbit — a soft elliptical glow + hairline (the colour in the circle) */
-.ring-orbit { position: absolute; left: 50%; top: 50%;
-  width: var(--orbit-w, 760px); height: var(--orbit-h, 470px); transform: translate(-50%, -50%);
-  border-radius: 50%; pointer-events: none;
-  background: radial-gradient(closest-side, rgba(58,104,224,0.16), rgba(70,90,200,0.05) 56%, transparent 76%); }
-.ring-orbit::before { content: ""; position: absolute; inset: 0; border-radius: 50%; padding: 1px;
-  background: conic-gradient(from 210deg, rgba(237,202,119,0.42), rgba(58,104,224,0.14) 30%, rgba(237,202,119,0.07) 55%, rgba(237,202,119,0.36) 100%);
+.ring-scene { position: relative; flex: none; width: 100%; height: clamp(206px, 33vh, 312px);
+  touch-action: pan-y; user-select: none; --front-y: 68%; }
+.ring { position: absolute; inset: 0; }
+
+/* the wheel's rim — a shallow ellipse, lit at the near edge (front/bottom), lost toward the back */
+.ring-rail { position: absolute; left: 50%; top: var(--front-y); width: var(--rail-w, 900px); height: var(--rail-h, 96px);
+  transform: translate(-50%, calc(-50% - var(--rail-rise, 48px))); border-radius: 50%; pointer-events: none; }
+.ring-rail::before { content: ""; position: absolute; inset: 0; border-radius: 50%; padding: 1px;
+  background: linear-gradient(0deg, rgba(255,255,255,0.34), rgba(255,255,255,0.08) 42%, transparent 72%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0.65; }
-.ring-orbit::after { content: ""; position: absolute; left: 50%; top: 50%; width: 42%; height: 42%;
-  transform: translate(-50%,-50%); border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(237,202,119,0.05), transparent 70%); }
+  -webkit-mask-composite: xor; mask-composite: exclude; }
+.ring-rail::after { content: ""; position: absolute; left: 50%; bottom: -12%; width: 58%; height: 70%;
+  transform: translateX(-50%); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255,255,255,0.06), rgba(255,255,255,0.02) 56%, transparent 78%); }
 
 /* a province tab — a horizontal rectangle: mark on the left, NAME over STATUS on the right */
-.ring-tab { position: absolute; left: 50%; top: 50%; width: 268px; height: 98px;
+/* neutral glass tab — same house glass as the Arestoteles cards: white hairline edge,
+   white spec, no gold. The focused tab brightens with a white ring, not a gold glow. */
+.ring-tab { position: absolute; left: 50%; top: var(--front-y); width: 268px; height: 98px;
   display: flex; align-items: center; gap: 15px; padding: 0 18px;
-  border: 1px solid var(--line-soft); border-radius: var(--r-card);
-  background: linear-gradient(rgba(16,15,19,0.5), rgba(16,15,19,0.5)) padding-box, var(--glass-edge) border-box;
+  border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r-card);
+  background: linear-gradient(rgba(16,16,21,0.62), rgba(16,16,21,0.62)) padding-box,
+    linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.04) 32%, rgba(255,255,255,0.02) 68%, rgba(255,255,255,0.10)) border-box;
   -webkit-backdrop-filter: blur(13px) saturate(135%); backdrop-filter: blur(13px) saturate(135%);
-  box-shadow: var(--shadow), inset 0 1px 0 var(--edge);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.10);
   cursor: pointer; will-change: transform, opacity;
   transition: border-color .25s, box-shadow .3s, background .25s; }
-.ring-tab::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: var(--spec); }
+.ring-tab::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(130% 90% at 0% 0%, rgba(255,255,255,0.07), transparent 46%); }
 .ring-tab.is-front {
-  border-color: var(--line-2);
-  box-shadow: 0 0 0 1px rgba(237,202,119,0.22), 0 24px 60px -28px rgba(0,0,0,0.95), inset 0 1px 0 var(--edge);
-  background: linear-gradient(rgba(24,21,15,0.56), rgba(18,16,12,0.56)) padding-box, var(--glass-edge) border-box; }
+  border-color: rgba(255,255,255,0.20);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), 0 26px 60px -26px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.12);
+  background: linear-gradient(rgba(26,27,33,0.64), rgba(20,21,26,0.64)) padding-box,
+    linear-gradient(135deg, rgba(255,255,255,0.26), rgba(255,255,255,0.05) 32%, rgba(255,255,255,0.03) 68%, rgba(255,255,255,0.12)) border-box; }
 /* smooth revolve only when snapping/stepping; instant while dragging */
-.ring.settling .ring-tab { transition: transform .55s cubic-bezier(.22,.7,.2,1), opacity .45s, border-color .25s, box-shadow .3s, background .25s; }
+.ring.settling .ring-tab { transition: transform .5s cubic-bezier(.22,.7,.2,1), opacity .42s, filter .42s, border-color .25s, box-shadow .3s, background .25s; }
 
 .tab-logo { width: 58px; height: 58px; flex: none; display: flex; align-items: center; justify-content: center; }
 .tab-logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 18px rgba(0,0,0,0.55)); }
 .tab-mono { width: 54px; height: 54px; border-radius: 13px; display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 26px; color: var(--gold-hi); border: 1px solid var(--line-2);
-  background: radial-gradient(120% 120% at 30% 20%, rgba(237,202,119,0.16), rgba(0,0,0,0.2)); }
+  font-weight: 700; font-size: 26px; color: var(--ink); border: 1px solid rgba(255,255,255,0.12);
+  background: radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,0.08), rgba(0,0,0,0.2)); }
 .tab-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .tab-name { font-weight: 700; font-size: 16.5px; letter-spacing: 0.10em; text-transform: uppercase;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  background: var(--gold-text); -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent; }
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
 .tab-status { font-size: 9.5px; font-weight: 600; letter-spacing: 0.22em; text-indent: 0.22em; text-transform: uppercase; }
 .st-live  { color: #6fcf9b; } .st-wip { color: var(--gold-2); } .st-hold { color: #84b6ff; } .st-scout { color: var(--ink-3); }
-
-/* the CONQUER tab — an empty plinth among the held provinces */
-.ring-tab.is-conquer { border-style: dashed; }
-.ring-tab.is-conquer .tab-logo { color: var(--gold-2); }
-.ring-tab.is-conquer.is-front .tab-logo { color: var(--gold-hi); }
+/* in the ring tabs, the WIP status word drops its gold for a neutral tone (no glimmer) */
+.tab-status.st-wip { color: var(--ink-2); }
 
 /* spin hint under the circle */
-.ring-hint { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+.ring-hint { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%);
   display: inline-flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 11px;
   letter-spacing: 0.02em; color: var(--ink-3); opacity: 0.8; pointer-events: none; white-space: nowrap; }
 .ring-hint kbd { font-family: var(--mono); font-size: 10.5px; color: var(--ink-2);
@@ -221,7 +221,7 @@ a { color: inherit; text-decoration: none; }
 .grid-back { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 600;
   letter-spacing: 0.18em; text-indent: 0.18em; text-transform: uppercase; color: var(--ink-3);
   padding: 7px 14px; border-radius: 10px; border: 1px solid transparent; transition: all .2s; }
-.grid-back:hover { color: var(--gold-hi); border-color: var(--line-soft); background: var(--hover); }
+.grid-back:hover { color: var(--ink); border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); }
 .grid-back svg { width: 14px; height: 14px; }
 
 .card-grid { flex: 1; min-height: 0; display: grid; gap: clamp(14px, 1.8vw, 26px);
@@ -229,15 +229,17 @@ a { color: inherit; text-decoration: none; }
 
 .proj-card { position: relative; display: flex; flex-direction: column; text-align: left;
   padding: clamp(18px, 2vw, 26px); border-radius: var(--r-card); overflow: hidden;
-  border: 1px solid var(--line-soft);
-  background: linear-gradient(rgba(18,16,21,0.62), rgba(13,12,16,0.66)) padding-box, var(--glass-edge) border-box;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(rgba(18,18,23,0.62), rgba(13,13,17,0.66)) padding-box,
+    linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.04) 32%, rgba(255,255,255,0.02) 68%, rgba(255,255,255,0.10)) border-box;
   -webkit-backdrop-filter: blur(20px) saturate(150%); backdrop-filter: blur(20px) saturate(150%);
-  box-shadow: var(--shadow), inset 0 1px 0 var(--edge);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.10);
   transition: transform .25s cubic-bezier(.2,.7,.25,1), border-color .25s, box-shadow .3s;
   opacity: 0; animation: cardIn .55s cubic-bezier(.2,.7,.25,1) both; }
-.proj-card::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: var(--spec); }
-.proj-card:hover { transform: translateY(-4px); border-color: var(--line-2);
-  box-shadow: 0 0 0 1px rgba(237,202,119,0.18), 0 40px 80px -34px rgba(0,0,0,0.95), inset 0 1px 0 var(--edge); }
+.proj-card::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(130% 90% at 0% 0%, rgba(255,255,255,0.06), transparent 46%); }
+.proj-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.2);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), 0 40px 80px -34px rgba(0,0,0,0.95), inset 0 1px 0 rgba(255,255,255,0.12); }
 button.proj-card { cursor: pointer; }
 @keyframes cardIn { 0% { opacity: 0; transform: translateY(22px) scale(.96); } 100% { opacity: 1; transform: none; } }
 
@@ -247,40 +249,42 @@ button.proj-card { cursor: pointer; }
 .pc-logo .tab-mono { width: 56px; height: 56px; font-size: 27px; }
 .pc-id { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pc-name { font-weight: 700; font-size: clamp(18px, 1.5vw, 23px); letter-spacing: 0.06em; text-transform: uppercase;
-  background: var(--gold-text); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+  color: var(--ink); }
 .pc-status { font-size: 9.5px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; }
 .pc-blurb { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); font-weight: 450; text-wrap: pretty; flex: 1; }
 .pc-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px;
   padding-top: 14px; border-top: 1px solid var(--line-soft); }
 .pc-domain { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
 .pc-visit { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 650;
-  letter-spacing: 0.14em; text-indent: 0.14em; text-transform: uppercase; color: var(--gold-2); transition: color .2s, gap .2s; }
-.proj-card:hover .pc-visit { color: var(--gold-hi); gap: 9px; }
+  letter-spacing: 0.14em; text-indent: 0.14em; text-transform: uppercase; color: var(--ink-2); transition: color .2s, gap .2s; }
+.proj-card:hover .pc-visit { color: var(--ink); gap: 9px; }
 .pc-visit svg { width: 13px; height: 13px; }
 
 /* the "claim new ground" card that ends the expansions board */
 .proj-card.is-new { align-items: center; justify-content: center; text-align: center; border-style: dashed;
-  background: linear-gradient(rgba(14,13,17,0.4), rgba(11,10,14,0.44)) padding-box, var(--glass-edge) border-box; color: var(--ink-3); }
-.proj-card.is-new:hover { color: var(--gold-hi); }
+  background: linear-gradient(rgba(14,14,18,0.4), rgba(11,11,15,0.44)) padding-box,
+    linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.10)) border-box; color: var(--ink-3); }
+.proj-card.is-new:hover { color: var(--ink); }
 .pc-new-mark { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  border: 1.5px dashed var(--line-2); margin-bottom: 14px; }
+  border: 1.5px dashed rgba(255,255,255,0.2); margin-bottom: 14px; }
 .pc-new-mark svg { width: 24px; height: 24px; }
 
 /* ============================================================================
-   THE TIMELINE — the chronicle, as a clean horizontal ribbon below the circle.
+   THE TIMELINE — the chronicle, parallel just under the circle. Markers are thin
+   steel ticks on a hairline (echoing the wheel rim), not gold points.
    ============================================================================ */
-.emp-timeline { flex: none; padding-top: clamp(6px, 1.4vh, 14px); }
-.tl-rail { position: relative; display: flex; gap: clamp(16px, 2.4vw, 40px); align-items: stretch;
-  overflow-x: auto; padding: 14px 2px 4px; scrollbar-width: none; }
+.emp-timeline { flex: none; }
+.tl-rail { position: relative; display: flex; gap: clamp(18px, 2.6vw, 44px); align-items: flex-start;
+  overflow-x: auto; padding: 16px 2px 2px; scrollbar-width: none; }
 .tl-rail::-webkit-scrollbar { display: none; }
-.tl-rail::before { content: ""; position: absolute; left: 0; right: 0; top: 20px; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--line-2) 12%, var(--line-soft) 88%, transparent); }
-.tl-item { position: relative; flex: 1 1 0; min-width: 168px; max-width: 320px; padding-top: 18px; }
-.tl-node { position: absolute; left: 0; top: 16px; width: 9px; height: 9px; border-radius: 50%;
-  background: linear-gradient(180deg, var(--gold-hi), var(--gold-2)); box-shadow: 0 0 0 4px rgba(7,7,8,1), 0 0 12px -1px var(--gold-glow); }
+.tl-rail::before { content: ""; position: absolute; left: 2px; right: 2px; top: 8px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(150,170,235,0.30) 8%, var(--line-soft) 90%, transparent); }
+.tl-item { position: relative; flex: 1 1 0; min-width: 168px; max-width: 340px; padding-top: 21px; }
+.tl-tick { position: absolute; left: 0; top: 3px; width: 1.5px; height: 12px; border-radius: 1px;
+  background: linear-gradient(180deg, rgba(150,172,238,0.95), rgba(150,172,238,0)); }
 .tl-meta { display: flex; align-items: baseline; gap: 9px; margin-bottom: 6px; }
-.tl-date { font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
-.tl-proj { font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold-2); }
+.tl-date { font-family: var(--mono); font-size: 11px; color: var(--ink-2); letter-spacing: 0.02em; }
+.tl-proj { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
 .tl-text { font-size: 12.5px; line-height: 1.55; color: var(--ink-2); font-weight: 450; text-wrap: pretty;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
