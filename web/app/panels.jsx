@@ -151,13 +151,16 @@
         ctx.globalAlpha = 1.0;  ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(0, LINE_Y); ctx.lineTo(w, LINE_Y); ctx.stroke();
 
         if (!reduce) {
-          // a specular glint travelling along the line (round, so it fades smoothly all round)
+          // a small glint sliding ALONG the line — flattened so it stays within the line's body
           const sx = (((t * 0.0009) % 1.5) - 0.25) * w;
-          const sr = 96;
-          const sg = ctx.createRadialGradient(sx, LINE_Y, 0, sx, LINE_Y, sr);
-          sg.addColorStop(0, "rgba(255,255,244,0.85)"); sg.addColorStop(0.5, "rgba(255,238,190,0.32)"); sg.addColorStop(1, "rgba(255,238,190,0)");
+          const sr = 16;
+          ctx.save();
+          ctx.translate(sx, LINE_Y); ctx.scale(1, 0.32);   // squash vertically → lives in the line
+          const sg = ctx.createRadialGradient(0, 0, 0, 0, 0, sr);
+          sg.addColorStop(0, "rgba(255,255,246,0.95)"); sg.addColorStop(0.55, "rgba(255,240,200,0.3)"); sg.addColorStop(1, "rgba(255,240,200,0)");
           ctx.globalAlpha = 1; ctx.fillStyle = sg;
-          ctx.beginPath(); ctx.arc(sx, LINE_Y, sr, 0, 6.2832); ctx.fill();
+          ctx.beginPath(); ctx.arc(0, 0, sr, 0, 6.2832); ctx.fill();
+          ctx.restore();
 
           // emit + advance dust
           const n = Math.max(1, Math.round(w / 320));
