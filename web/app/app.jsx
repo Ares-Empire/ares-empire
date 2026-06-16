@@ -38,11 +38,11 @@
 
     // leave the hub for a province — via the empire SSO mint (/sso?to=<slug>), which signs a
     // short-lived hand-off token so the province starts a session with no second login. Falls
-    // back to the raw URL for anything without a slug.
+    // back to the raw URL for anything without a slug. Opens in a new tab so the hub stays put.
     const goTo = useCallback((p) => {
       if (!p) return;
-      if (p.slug) window.location.assign("/sso?to=" + encodeURIComponent(p.slug));
-      else if (p.url) window.location.assign(p.url);
+      const dest = p.slug ? "/sso?to=" + encodeURIComponent(p.slug) : p.url;
+      if (dest) window.open(dest, "_blank", "noopener");
     }, []);
     const openDetail = useCallback((p, rect) => setDetail({ project: p, rect }), []);
     const openForge = useCallback((init) => setForge({ open: true, init: init || null }), []);
