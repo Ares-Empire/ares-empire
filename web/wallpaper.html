@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>THE EMPIRE — animated wallpaper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* THE EMPIRE — the hub's gold wordmark, centered on pure black, for a live Mac desktop background.
+     This matches the EXACT treatment of `.emp-title` in web/app/styles.css: a brighter champagne-gold
+     gradient (220% wide) with a CONTINUOUSLY travelling sheen (titleSheen, 6.5s infinite) — the
+     shimmering gold you see on the site — not the one-shot slam shine. Scaled up for wallpaper distance. */
+  :root {
+    --sheen-period: 6.5s;     /* travelling-sheen loop (site uses 6.5s) */
+    --breath-period: 9s;      /* slow glow swell behind the word */
+  }
+  * { box-sizing: border-box; }
+  /* paint pure black on the root too, so nothing underneath ever shows through —
+     even the menu-bar / notch safe-area strip at the very top of the screen */
+  html { background: #000; }
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+  body {
+    background: #000;                 /* pure black — true wallpaper ground */
+    overflow: hidden;
+    font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    /* a whisper of warm gold ambience so the word doesn't sit on dead black */
+    background-image: radial-gradient(60% 45% at 50% 50%, rgba(237,202,119,0.05), transparent 70%);
+  }
+  /* a fixed, over-sized black backdrop that bleeds past every edge of the
+     viewport — guarantees full coverage no matter how Plash insets the web view */
+  .bg-fill {
+    position: fixed;
+    top: -10vh; left: -10vw;
+    width: 120vw; height: 120vh;
+    background: #000;
+    z-index: -1;
+  }
+
+  .emp-title {
+    margin: 0; text-align: center; white-space: nowrap;
+    font-weight: 700; text-transform: uppercase;
+    font-size: clamp(40px, 10.5vw, 340px);        /* fills the width edge-to-edge, like the ARESIUM wordmark */
+    letter-spacing: 0.4em; text-indent: 0.4em;   /* the indent balances the trailing tracking */
+    /* bright, luminous champagne-gold with a travelling sheen — straight from .emp-title */
+    background: linear-gradient(95deg, #fff4cf 0%, #ffe7a0 19%, #f6cf73 38%, #fff2c8 51%, #f0c662 66%, #ffeaad 85%, #f7d07a 100%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    filter: drop-shadow(0 1px 16px rgba(255,226,150,0.24));
+    animation: titleSheen var(--sheen-period) ease-in-out infinite,
+               breath var(--breath-period) ease-in-out infinite;
+    will-change: background-position, filter;
+  }
+
+  /* the gradient slides edge to edge and back — the constant shimmer */
+  @keyframes titleSheen { 0%, 100% { background-position: 0% 0; } 50% { background-position: 100% 0; } }
+  /* a slow gold bloom layered on top of the sheen's own glow */
+  @keyframes breath {
+    0%, 100% { filter: drop-shadow(0 1px 16px rgba(255,226,150,0.20)); }
+    50%      { filter: drop-shadow(0 1px 30px rgba(255,226,150,0.40)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) { .emp-title { animation: none; } }
+</style>
+</head>
+<body>
+  <div class="bg-fill"></div>
+  <h1 class="emp-title">THE EMPIRE</h1>
+</body>
+</html>
