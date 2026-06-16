@@ -310,16 +310,15 @@
               </div>
             </header>
 
+            {/* the overview is written across the whole page — not in an elevated box */}
+            <p className="pd-lead">{d.about || p.blurb || "—"}</p>
+
             <div className="pd-grid">
-              <PdSection icon="scroll-text" title="Overview" wide>
-                <p className="pd-p">{d.about || p.blurb || "—"}</p>
-                {d.features && d.features.length ? (
-                  <React.Fragment>
-                    <div className="pd-subh">Features</div>
-                    <PdList items={d.features} />
-                  </React.Fragment>
-                ) : null}
-              </PdSection>
+              {d.features && d.features.length ? (
+                <PdSection icon="sparkles" title="Features">
+                  <PdList items={d.features} />
+                </PdSection>
+              ) : null}
 
               <PdSection icon="terminal" title="Setup">
                 {d.setup ? <p className="pd-p">{d.setup}</p> : pdEmpty("No setup notes yet.")}
