@@ -147,7 +147,7 @@
         domain: "",
         blurb: "Git sync across Windows & Mac — every repo, everywhere, automatically.",
         detail: {
-          about: "The two-faced god of thresholds. Aresync (the `aresynch` repo) keeps every " +
+          about: "The two-faced god of thresholds. Aresync keeps every " +
             "project in step across the Windows Lenovo at home, the MacBook on the go and the " +
             "server — it mirrors all GitHub repos locally, auto-commits and pushes local work, " +
             "and pulls everything else. The macOS half runs live; the Windows half is built and " +
