@@ -350,38 +350,66 @@ def _brief_prompt(name, ctx):
     )
 
 
-def _llm_json(prompt):
-    """Call the configured free LLM and return its raw JSON text (or None if unavailable)."""
-    if not LLM_KEY:
-        return None
-    if LLM_PROVIDER == "gemini":
-        model = LLM_MODEL or "gemini-2.0-flash"
+_DEFAULT_MODEL = {
+    "gemini": "gemini-2.0-flash",
+    "groq": "llama-3.3-70b-versatile",
+    "nvidia": "mistralai/mistral-small-4-119b-2603",
+    "mistral": "mistralai/mistral-small-4-119b-2603",
+}
+
+
+def _llm_models():
+    """Models to try in order: EMPIRE_LLM_MODEL (primary), then EMPIRE_LLM_FALLBACK_MODEL."""
+    out = []
+    primary = LLM_MODEL or _DEFAULT_MODEL.get(LLM_PROVIDER, "")
+    if primary:
+        out.append(primary)
+    fb = os.environ.get("EMPIRE_LLM_FALLBACK_MODEL", "")
+    if fb and fb not in out:
+        out.append(fb)
+    return out or [""]
+
+
+def _llm_call_once(model, prompt):
+    if LLM_PROVIDER == "gemini":                # serves Gemini AND Gemma (e.g. gemma-3-27b-it)
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={LLM_KEY}"
         body = {"contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {"response_mime_type": "application/json", "temperature": 0.2}}
         headers = {"Content-Type": "application/json"}
         pick = lambda d: d["candidates"][0]["content"]["parts"][0]["text"]
     elif LLM_PROVIDER == "groq":
-        model = LLM_MODEL or "llama-3.3-70b-versatile"
         url = "https://api.groq.com/openai/v1/chat/completions"
         body = {"model": model, "messages": [{"role": "user", "content": prompt}],
                 "response_format": {"type": "json_object"}, "temperature": 0.2}
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {LLM_KEY}"}
         pick = lambda d: d["choices"][0]["message"]["content"]
-    elif LLM_PROVIDER in ("nvidia", "mistral"):
-        # NVIDIA NIM (build.nvidia.com) — OpenAI-compatible; hosts Mistral models. nvapi-* key.
-        model = LLM_MODEL or "mistralai/mistral-small-24b-instruct-2501"
+    elif LLM_PROVIDER in ("nvidia", "mistral"):  # NVIDIA NIM — OpenAI-compatible; Mistral/Gemma/etc.
         url = "https://integrate.api.nvidia.com/v1/chat/completions"
         body = {"model": model, "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.2, "max_tokens": 1024}
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {LLM_KEY}"}
         pick = lambda d: d["choices"][0]["message"]["content"]
     else:
-        sys.stderr.write(f"empire brief: unknown EMPIRE_LLM_PROVIDER '{LLM_PROVIDER}'\n")
-        return None
+        raise ValueError(f"unknown EMPIRE_LLM_PROVIDER '{LLM_PROVIDER}'")
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
-    with urllib.request.urlopen(req, timeout=45) as r:
+    with urllib.request.urlopen(req, timeout=60) as r:
         return pick(json.loads(r.read()))
+
+
+def _llm_json(prompt):
+    """Call the LLM, trying the primary model then any fallback. Returns raw text, or None."""
+    if not LLM_KEY:
+        return None
+    err = None
+    for model in _llm_models():
+        try:
+            return _llm_call_once(model, prompt)
+        except Exception as e:
+            err = e
+            sys.stderr.write(f"empire: LLM model '{model}' failed ({e}); trying fallback\n")
+    if err:
+        raise err
+    return None
 
 
 def _extract_json(text):
