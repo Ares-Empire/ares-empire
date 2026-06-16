@@ -250,11 +250,39 @@
     return <ul className="pd-list">{items.map((t, i) => <li key={i}>{t}</li>)}</ul>;
   }
 
-  function PdSection({ icon, title, wide, children }) {
+  function PdSection({ title, className, children }) {
     return (
-      <div className={"pd-section" + (wide ? " wide" : "")}>
-        <div className="pd-sec-h"><window.Icon name={icon} size={14} /><span>{title}</span></div>
-        <div className="pd-sec-body">{children}</div>
+      <div className={"pd-sec" + (className ? " " + className : "")}>
+        <div className="pd-sec-label">{title}</div>
+        <div className="pd-sec-box">{children}</div>
+      </div>
+    );
+  }
+
+  // the change log as the same shiny golden timeline as the main page (newest on the right)
+  function PdTimeline({ entries, bust }) {
+    const trackRef = useRef(null);
+    const onWheel = (e) => {
+      const el = trackRef.current;
+      if (el && el.scrollWidth > el.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY;
+    };
+    useEffect(() => { const el = trackRef.current; if (el) el.scrollLeft = el.scrollWidth; }, [entries ? entries.length : 0]);
+    if (!entries || !entries.length) return <div className="pd-empty">No entries yet.</div>;
+    const items = entries.slice(0, 40).reverse();
+    return (
+      <div className="pd-tl">
+        <GoldDust />
+        <div className="log-track" ref={trackRef} onWheel={onWheel}>
+          {items.map((c, i) => (
+            <div className="log-node" key={i}>
+              <span className="log-bust">
+                <img src={bust} alt="" onError={(e) => { e.target.style.visibility = "hidden"; }} />
+              </span>
+              <div className="log-meta"><span className="log-date">{c.at}</span></div>
+              <div className="log-text">{c.text}</div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -293,13 +321,13 @@
              style={{ top: box.top, left: box.left, width: box.width, height: box.height, borderRadius: box.radius }}>
           <button className="pd-close" onClick={close} aria-label="Close"><window.Icon name="x" size={18} /></button>
           <div className="pd-inner">
-            <header className="pd-head">
-              <div className="pd-logo">
-                {p.logo && !imgErr
-                  ? <img src={p.logo} alt={p.name} onError={() => setImgErr(true)} />
-                  : <div className="tab-mono">{(p.name || "?")[0]}</div>}
-              </div>
-              <div className="pd-id">
+            <div className="pd-content">
+              <header className="pd-head">
+                <div className="pd-logo">
+                  {p.logo && !imgErr
+                    ? <img src={p.logo} alt={p.name} onError={() => setImgErr(true)} />
+                    : <div className="tab-mono">{(p.name || "?")[0]}</div>}
+                </div>
                 <button className="pd-name" onClick={() => onVisit(p)} title={"Open " + (p.domain || p.name || "the site")}>
                   <span className="pd-name-t">{p.name}</span><window.Icon name="arrow-up-right" size={22} />
                 </button>
@@ -307,38 +335,28 @@
                   {st && <span className={"pc-status " + statusClass(st.tone)}>{st.label}</span>}
                   {p.domain && <span className="pd-domain">{p.domain}</span>}
                 </div>
+              </header>
+
+              {/* overview — centred, written across the page, with a subtle divider beneath */}
+              <p className="pd-lead">{d.about || p.blurb || "—"}</p>
+              <div className="pd-divider" />
+
+              <div className="pd-grid">
+                <PdSection title="Features"><PdList items={d.features} empty="No features yet." /></PdSection>
+                <PdSection title="Setup">{d.setup ? <p className="pd-p">{d.setup}</p> : pdEmpty("No setup notes yet.")}</PdSection>
+                <PdSection title="In progress · pending"><PdList items={d.wip} empty="No open items." /></PdSection>
               </div>
-            </header>
 
-            {/* the overview is written across the whole page — not in an elevated box */}
-            <p className="pd-lead">{d.about || p.blurb || "—"}</p>
-
-            <div className="pd-grid">
-              {d.features && d.features.length ? (
-                <PdSection icon="sparkles" title="Features">
-                  <PdList items={d.features} />
+              <div className="pd-addons-wrap">
+                <PdSection title="Add-ons · ideas" className="pd-addons">
+                  <PdList items={d.ideas} empty="No ideas captured yet." />
                 </PdSection>
-              ) : null}
+              </div>
 
-              <PdSection icon="terminal" title="Setup">
-                {d.setup ? <p className="pd-p">{d.setup}</p> : pdEmpty("No setup notes yet.")}
-              </PdSection>
-              <PdSection icon="loader" title="In progress · pending">
-                <PdList items={d.wip} empty="No open items." />
-              </PdSection>
-              <PdSection icon="lightbulb" title="Add-ons · ideas">
-                <PdList items={d.ideas} empty="No ideas captured yet." />
-              </PdSection>
-
-              <PdSection icon="history" title="Change log" wide>
-                {log && log.length ? (
-                  <ul className="pd-log">
-                    {log.map((c, i) => (
-                      <li key={i}><span className="pd-log-date">{c.at}</span><span>{c.text}</span></li>
-                    ))}
-                  </ul>
-                ) : pdEmpty("No entries yet.")}
-              </PdSection>
+              <div className="pd-tl-wrap">
+                <div className="pd-sec-label">Change log</div>
+                <PdTimeline entries={log} bust={p.logo || "brand/ares_transparent.png"} />
+              </div>
             </div>
           </div>
         </div>

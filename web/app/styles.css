@@ -379,7 +379,11 @@ button.proj-card { cursor: pointer; }
   -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); opacity: 0; animation: fadeIn .3s ease forwards; }
 .pd-panel { position: fixed; overflow: hidden; z-index: 71;
   border: 1px solid rgba(255,255,255,0.10);
-  background: linear-gradient(rgba(13,13,17,0.97), rgba(8,8,11,0.99));
+  /* Arestoteles-style ground: near-black with crimson glows top-centre + lower-right */
+  background:
+    radial-gradient(72% 52% at 50% -14%, rgba(216,26,52,0.22), transparent 60%),
+    radial-gradient(60% 52% at 92% 116%, rgba(150,14,38,0.18), transparent 58%),
+    linear-gradient(180deg, #08080a, #050506);
   box-shadow: 0 50px 130px -40px rgba(0,0,0,0.95);
   transition: top .42s cubic-bezier(.4,.85,.2,1), left .42s cubic-bezier(.4,.85,.2,1),
     width .42s cubic-bezier(.4,.85,.2,1), height .42s cubic-bezier(.4,.85,.2,1), border-radius .42s ease; }
@@ -390,49 +394,65 @@ button.proj-card { cursor: pointer; }
 .pd-close:hover { color: var(--ink); border-color: rgba(255,255,255,0.2); background: var(--card-2); }
 .pd-close svg { width: 18px; height: 18px; }
 
-.pd-inner { height: 100%; overflow-y: auto; padding: clamp(28px, 5vw, 64px) clamp(22px, 5vw, 72px);
+.pd-inner { height: 100%; overflow-y: auto; display: flex; flex-direction: column;
+  align-items: center; justify-content: safe center;
+  padding: clamp(26px, 4.5vh, 60px) clamp(18px, 3vw, 44px);
   opacity: 0; transition: opacity .3s ease .16s; }
 .pd-panel.open .pd-inner { opacity: 1; }
+.pd-content { width: min(1680px, 93vw); --pd-gap: clamp(18px, 1.8vw, 32px); }
 
-.pd-head { display: flex; align-items: center; gap: clamp(16px, 2vw, 26px); max-width: 1120px;
-  padding-bottom: clamp(20px, 2.4vw, 30px); margin-bottom: clamp(22px, 2.6vw, 34px); border-bottom: 1px solid var(--line-soft); }
-.pd-logo { width: clamp(58px, 6vw, 82px); height: clamp(58px, 6vw, 82px); flex: none; display: flex; align-items: center; justify-content: center; }
-.pd-logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 24px rgba(0,0,0,0.55)); }
-.pd-logo .tab-mono { width: 100%; height: 100%; font-size: clamp(26px, 3vw, 38px); }
-.pd-id { display: flex; flex-direction: column; gap: 11px; min-width: 0; }
-.pd-name { display: inline-flex; align-items: center; gap: 13px; color: var(--gold-2); cursor: pointer;
-  font-weight: 700; font-size: clamp(28px, 4vw, 52px); letter-spacing: 0.015em; text-transform: uppercase;
+/* header — a centred column: bust · shiny name · status/domain */
+.pd-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 13px;
+  margin-bottom: clamp(14px, 1.8vw, 22px); }
+.pd-logo { width: clamp(64px, 6.5vw, 92px); height: clamp(64px, 6.5vw, 92px); flex: none; display: flex; align-items: center; justify-content: center; }
+.pd-logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 12px 26px rgba(0,0,0,0.55)); }
+.pd-logo .tab-mono { width: 100%; height: 100%; font-size: clamp(28px, 3vw, 40px); }
+.pd-name { display: inline-flex; align-items: center; gap: 14px; color: var(--gold-2); cursor: pointer;
+  font-weight: 700; font-size: clamp(30px, 4.4vw, 58px); letter-spacing: 0.02em; text-transform: uppercase;
   transition: gap .2s, filter .2s; }
-.pd-name-t { background: var(--gold-name); -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
-.pd-name svg { width: clamp(18px, 2vw, 24px); height: clamp(18px, 2vw, 24px); opacity: .8; }
-.pd-name:hover { gap: 18px; filter: brightness(1.08) drop-shadow(0 2px 16px rgba(240,202,110,0.32)); }
-.pd-sub { display: flex; align-items: center; gap: 16px; }
+/* shiny, like THE EMPIRE — a travelling champagne sheen (expanded view only) */
+.pd-name-t { background: linear-gradient(95deg, #fff4cf 0%, #ffe7a0 19%, #f6cf73 38%, #fff2c8 51%, #f0c662 66%, #ffeaad 85%, #f7d07a 100%);
+  background-size: 220% 100%; -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  filter: drop-shadow(0 1px 14px rgba(255,226,150,0.22)); animation: titleSheen 6.5s ease-in-out infinite; }
+.pd-name svg { width: clamp(18px, 2vw, 24px); height: clamp(18px, 2vw, 24px); opacity: .75; }
+.pd-name:hover { gap: 19px; filter: brightness(1.06); }
+.pd-sub { display: flex; align-items: center; justify-content: center; gap: 16px; }
 .pd-sub .pc-status { font-size: 10px; }
 .pd-domain { font-family: var(--mono); font-size: 13px; color: var(--ink-3); letter-spacing: 0.01em; }
 
-/* overview — written across the whole page, no elevated box */
-.pd-lead { max-width: 1120px; margin: 0 0 clamp(24px, 3vw, 40px); font-size: clamp(16px, 1.5vw, 21px);
-  line-height: 1.6; color: var(--ink); font-weight: 450; text-wrap: pretty; letter-spacing: -0.005em; }
+/* overview — centred across the page, with a subtle divider beneath */
+.pd-lead { max-width: 860px; margin: clamp(6px,1vw,12px) auto 0; text-align: center; text-wrap: balance;
+  font-size: clamp(16px, 1.45vw, 21px); line-height: 1.65; color: var(--ink); font-weight: 450; }
+.pd-divider { width: min(440px, 62%); height: 1px; margin: clamp(20px,2.4vw,32px) auto clamp(26px,3vw,42px);
+  background: linear-gradient(90deg, transparent, rgba(255,234,176,0.5), transparent); }
 
-.pd-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 1.7vw, 26px);
-  align-content: start; max-width: 1120px; }
-.pd-section { border: 1px solid var(--line-soft); border-radius: var(--r-card); padding: clamp(16px, 1.5vw, 22px);
-  background: rgba(255,255,255,0.015); }
-.pd-section.wide { grid-column: 1 / -1; }
-.pd-sec-h { display: inline-flex; align-items: center; gap: 9px; font-size: 10px; font-weight: 700;
-  letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 15px; }
-.pd-sec-h svg { width: 14px; height: 14px; color: var(--ink-3); }
-.pd-p { font-size: 14.5px; line-height: 1.7; color: var(--ink-2); margin: 0; text-wrap: pretty; max-width: 70ch; }
-.pd-subh { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); margin: 18px 0 9px; }
+/* the section "tabs" — label pulled out & centred above an Arestoteles-style glass box */
+.pd-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--pd-gap); align-items: start;
+  margin-bottom: clamp(20px, 2.2vw, 34px); }
+.pd-sec { display: flex; flex-direction: column; }
+.pd-sec-label { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--ink-2); margin-bottom: 13px; }
+.pd-sec-box { border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r-card); padding: clamp(18px, 1.7vw, 26px);
+  background: linear-gradient(rgba(20,18,22,0.5), rgba(13,12,16,0.55)) padding-box,
+    linear-gradient(135deg, rgba(255,255,255,0.20), rgba(255,255,255,0.04) 32%, rgba(255,255,255,0.02) 68%, rgba(255,255,255,0.10)) border-box;
+  -webkit-backdrop-filter: blur(26px) saturate(150%); backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.08); min-height: clamp(108px, 13vh, 148px); }
+
+.pd-addons-wrap { display: flex; justify-content: center; margin-bottom: clamp(24px, 3vw, 44px); }
+.pd-addons { width: calc((100% - 2 * var(--pd-gap)) / 3); min-width: 250px; }
+
+.pd-p { font-size: 14px; line-height: 1.7; color: var(--ink-2); margin: 0; text-wrap: pretty; }
 .pd-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
-.pd-list li { position: relative; padding-left: 18px; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+.pd-list li { position: relative; padding-left: 18px; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); text-align: left; }
 .pd-list li::before { content: ""; position: absolute; left: 2px; top: 8px; width: 5px; height: 5px; border-radius: 50%;
   background: var(--gold-2); opacity: 0.85; }
-.pd-empty { font-size: 13px; color: var(--ink-3); font-style: italic; }
-.pd-log { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 13px; }
-.pd-log li { display: flex; gap: 16px; font-size: 13.5px; line-height: 1.55; color: var(--ink-2); align-items: baseline; }
-.pd-log-date { flex: none; font-family: var(--mono); font-size: 12px; color: var(--ink-3); min-width: 94px; }
+.pd-empty { font-size: 13px; color: var(--ink-3); font-style: italic; text-align: center; }
+
+/* change log — the same shiny golden timeline as the main page */
+.pd-tl-wrap { margin-top: clamp(6px, 1vw, 14px); }
+.pd-tl { position: relative; height: 166px; --log-line-y: 34px; margin-top: 10px; }
+.pd-tl .log-track { justify-content: flex-start; }
 
 /* ============================================================================
    INTRO — the bust slams onto the wall; cracks burst from the root all at once
