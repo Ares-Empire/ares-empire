@@ -143,14 +143,25 @@
         name: "Aresync",
         url: "",
         logo: "brand/janus.png",
-        status: "MUSTERING",
+        status: "BESIEGING",
         domain: "",
-        blurb: "File sync across Windows & Mac — one filesystem, two machines.",
+        blurb: "Git sync across Windows & Mac — every repo, everywhere, automatically.",
         detail: {
-          about: "The two-faced god of thresholds. Aresync keeps one set of files in step across " +
-            "the Windows Lenovo at home and the MacBook on the go — edit anywhere, it's everywhere.",
-          features: ["Windows ⇄ macOS sync", "Conflict-aware updates"],
-          setup: "", wip: [], ideas: [], changelog: [],
+          about: "The two-faced god of thresholds. Aresync (the `aresynch` repo) keeps every " +
+            "project in step across the Windows Lenovo at home, the MacBook on the go and the " +
+            "server — it mirrors all GitHub repos locally, auto-commits and pushes local work, " +
+            "and pulls everything else. The macOS half runs live; the Windows half is built and " +
+            "awaiting setup.",
+          features: [
+            "Mirrors every GitHub repo locally",
+            "Auto commit → rebase → push",
+            "macOS LaunchAgent (login + daily)",
+            "Windows Task Scheduler",
+          ],
+          setup: "",
+          wip: ["Windows machine setup", "IntelliJ / Artemis uni-project sync"],
+          ideas: [],
+          changelog: [],
         },
       },
       {
@@ -179,6 +190,7 @@
 
     // ── Chronicle: what was done, newest first (Claude Code appends here) ──
     chronicle: [
+      { at: "2026-06-16", project: "aresync", text: "Aresync took the field: a git-based sync that mirrors every GitHub repo across the MacBook, the Windows Lenovo and the server — auto commit → rebase → push, clone-if-new. The macOS agent runs live (login + daily); the Windows task is built and awaiting setup." },
       { at: "2026-06-15", project: "empire", text: "Reworked the hub into a clean, modern black-and-gold room: the marble bust at the left edge, the provinces on a stretched circle, the chronicle as a timeline beneath, and an EXPAND view for the empire's expansions." },
       { at: "2026-06-15", project: "empire", text: "Went live at www.ares-empire.de — TLS, gated by the empire access key, behind the shared nginx." },
       { at: "2026-06-15", project: "empire", text: "Aresium and Arestoteles took their place as the first two provinces of the empire." },
