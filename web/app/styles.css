@@ -289,7 +289,7 @@ button.proj-card { cursor: pointer; }
 .log-track::-webkit-scrollbar-track { background: transparent; }
 .log-track::-webkit-scrollbar-thumb { background: rgba(237,202,119,0.28); border-radius: 4px; }
 .log-track::-webkit-scrollbar-thumb:hover { background: rgba(237,202,119,0.5); }
-/* fixed-width nodes so the strip scrolls instead of squeezing — newest is the left-most */
+/* fixed-width nodes so the strip scrolls instead of squeezing — oldest left, newest right */
 .log-node { flex: 0 0 clamp(178px, 17vw, 224px); display: flex; flex-direction: column; align-items: center; text-align: center; }
 
 /* the marker: the project's bust in a glowing golden coin, centred on the line */
