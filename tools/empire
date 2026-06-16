@@ -66,6 +66,11 @@ LLM_MODEL = os.environ.get("EMPIRE_LLM_MODEL", "")
 # where each province's repo lives (for git log + docs). Defaults scan /root and /opt by slug.
 REPO_ALIASES = {"arestemis": "/root/flatsniper", "arestoteles": "/opt/arestoteles", "empire": REPO}
 
+# ── Telegram (the empire bot): outbound update pings + the inbound text→action bot (empire-bot).
+TG_TOKEN = os.environ.get("EMPIRE_TG_TOKEN", "")
+TG_CHAT = os.environ.get("EMPIRE_TG_CHAT", "")
+TG_NOTIFY = os.environ.get("EMPIRE_TG_NOTIFY", "1") not in ("0", "false", "")
+
 
 def _seed_from_js() -> dict | None:
     """Best-effort: build the initial state by evaluating the empire-data.js seed via node."""
@@ -104,6 +109,25 @@ def save(state: dict) -> None:
             os.remove(tmp)
 
 
+def _esc(s):
+    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def tg_send(text, chat=None):
+    """Best-effort Telegram message to the empire chat. Returns True on success."""
+    target = chat or TG_CHAT
+    if not TG_TOKEN or not target:
+        return False
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    body = {"chat_id": target, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True}
+    try:
+        req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return json.loads(r.read()).get("ok", False)
+    except Exception:
+        return False
+
+
 def find_project(state: dict, slug: str) -> dict | None:
     return next((p for p in state.get("projects", []) if p.get("slug") == slug), None)
 
@@ -125,6 +149,8 @@ def add_chronicle(state: dict, slug: str, text: str, when: str | None = None) ->
     proj = find_project(state, slug)        # mirror into the province's own change log
     if proj is not None:
         ensure_detail(proj)["changelog"].insert(0, {"at": entry["at"], "text": text})
+    if TG_NOTIFY:                           # ping the empire bot on every update
+        tg_send(f"🏛 <b>{_esc((proj or {}).get('name', slug))}</b>\n{_esc(text)}")
 
 
 # ---- commands ----------------------------------------------------------------
@@ -165,6 +191,95 @@ def cmd_about(state, a):
         sys.exit(f"empire: no project '{a.slug}'")
     ensure_detail(proj)["about"] = a.text
     return f"{a.slug} overview updated"
+
+
+def _slugify(s):
+    return re.sub(r"[^a-z0-9]+", "-", (s or "").lower()).strip("-")
+
+
+def cmd_new(state, a):
+    name = (a.name or "").strip()
+    if not name:
+        sys.exit("empire: a name is required")
+    slug = a.slug or _slugify(name)
+    if not slug:
+        sys.exit("empire: could not derive a slug from the name")
+    if find_project(state, slug):
+        sys.exit(f"empire: project '{slug}' already exists")
+    blurb = (a.blurb or "").strip()
+    state.setdefault("projects", []).append({
+        "slug": slug, "name": name, "url": "", "logo": "", "status": "MUSTERING", "domain": "",
+        "blurb": blurb or f"{name} — newly declared.",
+        "detail": {"about": blurb, "features": [], "setup": "", "wip": [], "ideas": [], "changelog": []},
+    })
+    add_chronicle(state, slug, f"Province declared: {name}.")
+    return f"created project {slug} ({name})"
+
+
+def cmd_notify(state, a):
+    return "sent" if tg_send(_esc(a.text)) else "telegram not configured / send failed"
+
+
+ASK_INSTRUCTIONS = (
+    "You route ONE chat message to ONE action on a project dashboard.\n"
+    "Projects (slug — name): {projects}\n"
+    "Statuses: SCOUTED, MUSTERING, BESIEGING, CONQUERED, FORTIFYING.\n"
+    'Return ONLY JSON {{"action","slug","name","text","state"}}; action is one of '
+    "log, idea, wip, feature, status, new, none.\n"
+    "Guide: ideas/plans -> idea; shipped/did/done/update -> log; working-on/todo -> wip; "
+    "feature -> feature; 'set status'/'now live' -> status (+state); "
+    "'new project NAME ...' -> new (name + text=description); match a project by loose name/slug; "
+    "if unclear -> none.\n\nMessage: {msg}"
+)
+
+
+def cmd_ask(state, a):
+    """Route a free-text message (from the bot) to an action and reply. Prints the reply text."""
+    plist = "; ".join(f"{p['slug']} — {p.get('name', '')}" for p in state.get("projects", [])) or "(none)"
+    try:
+        act = _extract_json(_llm_json(ASK_INSTRUCTIONS.format(projects=plist, msg=a.text)))
+    except Exception:
+        print("🤔 I couldn't read that. Try “aresus: idea historical graphs”, or /help.")
+        return None
+    action = (act.get("action") or "none").lower()
+    slug = (act.get("slug") or "").strip()
+    text = (act.get("text") or "").strip()
+    if action == "new":
+        name = (act.get("name") or "").strip()
+        ns = _slugify(name)
+        if not ns:
+            print("🤔 What should the new project be called?"); return None
+        if find_project(state, ns):
+            print(f"⚠️ <b>{_esc(name)}</b> already exists."); return None
+        desc = text if text and text.lower() != name.lower() else ""
+        state.setdefault("projects", []).append({
+            "slug": ns, "name": name, "url": "", "logo": "", "status": "MUSTERING", "domain": "",
+            "blurb": desc or f"{name} — newly declared.",
+            "detail": {"about": desc, "features": [], "setup": "", "wip": [], "ideas": [], "changelog": []}})
+        add_chronicle(state, ns, f"Province declared: {name}.")
+        print(f"🆕 Declared <b>{_esc(name)}</b> — MUSTERING. It's in the circle now.")
+        return None
+    proj = find_project(state, slug)
+    if action == "none" or proj is None:
+        print(f"🤔 Which project did you mean? I know: {_esc(plist)}")
+        return None
+    name = proj.get("name", slug)
+    if action == "idea":
+        ensure_detail(proj)["ideas"].append(text); print(f"💡 Idea filed under <b>{_esc(name)}</b>: {_esc(text)}")
+    elif action == "wip":
+        ensure_detail(proj)["wip"].append(text); print(f"🛠 In-progress on <b>{_esc(name)}</b>: {_esc(text)}")
+    elif action == "feature":
+        ensure_detail(proj)["features"].append(text); print(f"✨ Feature on <b>{_esc(name)}</b>: {_esc(text)}")
+    elif action == "status":
+        st = (act.get("state") or "").upper()
+        if st in state.get("STATUS", {}):
+            proj["status"] = st; add_chronicle(state, slug, f"Status → {st}.")
+            print(f"⚑ <b>{_esc(name)}</b> → {st}")
+        else:
+            print(f"🤔 Unknown status “{_esc(st)}”."); return None
+    else:  # log
+        add_chronicle(state, slug, text); print(f"📝 Logged on <b>{_esc(name)}</b>: {_esc(text)}")
+    return None
 
 
 def cmd_done(state, a):
@@ -219,12 +334,17 @@ def _gather_context(slug):
 
 def _brief_prompt(name, ctx):
     return (
-        f'You maintain a concise dashboard card for the software project "{name}".\n'
-        f"From its docs and recent commit subjects below, write the card fields. Rules: factual and "
-        f"terse, no marketing fluff; state only what the docs/commits support; features = concrete "
-        f"capabilities (present or clearly planned); wip = in-progress / pending items; ideas = "
-        f"potential add-ons; setup = one short line or empty. Lists <=6 items, strings <=140 chars.\n"
-        f'Output ONLY a JSON object: {{"about": str, "features": [str], "setup": str, "wip": [str], "ideas": [str]}}.\n\n'
+        f'You write a concise dashboard card for the software PRODUCT "{name}", for its end users.\n'
+        f"From its docs and recent commits below, produce the card. STRICT rules:\n"
+        f"- Describe what the product does for its user. IGNORE all infrastructure/plumbing: the "
+        f'"Ares Empire" hub, manifests, slugs, busts, commit hooks, SSO, registration, status words — '
+        f"none of that is a feature.\n"
+        f"- features = concrete user-facing capabilities (present or clearly planned). If the project "
+        f"is only declared/planned, list its intended capabilities; do NOT invent beyond the docs.\n"
+        f"- wip = real in-progress/pending build tasks if stated, else []. ideas = potential add-ons "
+        f"if stated, else []. setup = one short line if the docs say how to run it, else \"\".\n"
+        f"- Terse, factual, no marketing fluff. Lists <=6 items, strings <=120 chars.\n"
+        f'Output ONLY JSON: {{"about": str, "features": [str], "setup": str, "wip": [str], "ideas": [str]}}.\n\n'
         f"=== CLAUDE.md ===\n{ctx['claude_md']}\n\n=== README ===\n{ctx['readme']}\n\n"
         f"=== recent commits ===\n{ctx['commits']}\n"
     )
@@ -248,12 +368,34 @@ def _llm_json(prompt):
                 "response_format": {"type": "json_object"}, "temperature": 0.2}
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {LLM_KEY}"}
         pick = lambda d: d["choices"][0]["message"]["content"]
+    elif LLM_PROVIDER in ("nvidia", "mistral"):
+        # NVIDIA NIM (build.nvidia.com) — OpenAI-compatible; hosts Mistral models. nvapi-* key.
+        model = LLM_MODEL or "mistralai/mistral-small-24b-instruct-2501"
+        url = "https://integrate.api.nvidia.com/v1/chat/completions"
+        body = {"model": model, "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2, "max_tokens": 1024}
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {LLM_KEY}"}
+        pick = lambda d: d["choices"][0]["message"]["content"]
     else:
         sys.stderr.write(f"empire brief: unknown EMPIRE_LLM_PROVIDER '{LLM_PROVIDER}'\n")
         return None
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
     with urllib.request.urlopen(req, timeout=45) as r:
         return pick(json.loads(r.read()))
+
+
+def _extract_json(text):
+    """Pull a JSON object out of an LLM reply (tolerates ```json fences / surrounding prose)."""
+    if not text:
+        raise ValueError("empty LLM reply")
+    t = text.strip()
+    m = re.search(r"```(?:json)?\s*(.+?)```", t, re.DOTALL)
+    if m:
+        t = m.group(1).strip()
+    s, e = t.find("{"), t.rfind("}")
+    if s != -1 and e > s:
+        t = t[s:e + 1]
+    return json.loads(t)
 
 
 def _apply_brief(proj, fields):
@@ -283,7 +425,7 @@ def cmd_brief(state, a):
         if not LLM_KEY:
             return None                         # dormant until a free key is configured
         try:
-            fields = json.loads(_llm_json(_brief_prompt(proj.get("name", a.slug), ctx)) or "")
+            fields = _extract_json(_llm_json(_brief_prompt(proj.get("name", a.slug), ctx)))
         except Exception as e:
             sys.stderr.write(f"empire brief: {a.slug} skipped ({e})\n")
             return None
@@ -324,9 +466,14 @@ def cmd_seed(state, a):
     if fresh is None:
         sys.exit("empire: could not seed from empire-data.js (node + the file required)")
     # structure (projects · ideas · STATUS) comes from the JS seed, but keep the accumulated
-    # runtime chronicle so re-seeding after a structural edit never erases the log.
+    # runtime chronicle AND any runtime-added projects (e.g. created via the bot) so re-seeding
+    # after a structural edit never erases the log or a province.
     if state.get("chronicle"):
         fresh["chronicle"] = state["chronicle"]
+    seed_slugs = {p.get("slug") for p in fresh.get("projects", [])}
+    for p in state.get("projects", []):
+        if p.get("slug") not in seed_slugs:
+            fresh.setdefault("projects", []).append(p)
     save(fresh)
     print(f"re-seeded {STATE_PATH} from empire-data.js (chronicle preserved)")
     sys.exit(0)
@@ -355,6 +502,12 @@ def main():
     br = sub.add_parser("brief", help="LLM-summarise a project's docs+commits into its detail boxes")
     br.add_argument("slug"); br.add_argument("--dry-run", action="store_true")
     br.add_argument("--mock", help="apply a local JSON file instead of calling the LLM (testing)")
+    nw = sub.add_parser("new", help="declare a new province (MUSTERING)")
+    nw.add_argument("name"); nw.add_argument("--slug"); nw.add_argument("--blurb", default="")
+    nt = sub.add_parser("notify", help="send a Telegram message via the empire bot")
+    nt.add_argument("text", nargs="+")
+    ak = sub.add_parser("ask", help="route a free-text message to an action (used by the bot)")
+    ak.add_argument("text", nargs="+")
     sub.add_parser("show", help="print the current state")
     sub.add_parser("seed", help="(re)build state.json from empire-data.js")
 
@@ -366,11 +519,12 @@ def main():
     handlers = {
         "log": cmd_log, "status": cmd_status, "feature": cmd_feature, "idea": cmd_idea,
         "wip": cmd_wip, "done": cmd_done, "about": cmd_about, "hook": cmd_hook,
-        "brief": cmd_brief, "show": cmd_show, "seed": cmd_seed,
+        "brief": cmd_brief, "new": cmd_new, "notify": cmd_notify, "ask": cmd_ask,
+        "show": cmd_show, "seed": cmd_seed,
     }
     state = load()
     result = handlers[a.cmd](state, a)
-    if a.cmd not in ("show", "seed"):
+    if a.cmd not in ("show", "seed", "notify"):
         if a.cmd in ("hook", "brief") and result is None:
             return                          # no markers / nothing generated → don't rewrite the file
         save(state)

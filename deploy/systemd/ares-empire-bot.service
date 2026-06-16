@@ -1,0 +1,15 @@
+[Unit]
+Description=Ares Empire Telegram bot (@aresempire_bot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/ares-empire
+ExecStart=/usr/bin/python3 /root/ares-empire/tools/empire-bot
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

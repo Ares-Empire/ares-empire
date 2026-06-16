@@ -1,0 +1,7 @@
+[Unit]
+Description=Ares Empire — LLM API key expiry reminder (one-shot)
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/ares-empire
+ExecStart=/usr/bin/python3 /root/ares-empire/tools/empire notify "⚠️ <b>API key expiry</b> — your NVIDIA/Mistral key for the empire auto-fill is near its ~6-month expiry. Rotate it at build.nvidia.com and update EMPIRE_LLM_KEY in /root/ares-empire/.env."

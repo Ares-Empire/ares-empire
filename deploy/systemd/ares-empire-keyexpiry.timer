@@ -1,0 +1,9 @@
+[Unit]
+Description=Fire the API key expiry reminder on 2026-12-01
+
+[Timer]
+OnCalendar=2026-12-01 09:00:00 Europe/Berlin
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""empire-bot — the Ares Empire Telegram bot (@aresempire_bot).
+
+Long-polls Telegram and turns your messages into hub updates via the `empire` CLI:
+  - natural language ("aresus idea: historical graphs", "new project Aresfoo: does X",
+    "arescribe shipped the webhook")  →  `empire ask`
+  - slash commands (/projects, /log, /idea, /wip, /feature, /status, /new, /help)
+
+Outbound update pings come from the CLI itself (empire notify / the post-commit hook), not
+here. Only messages from EMPIRE_TG_CHAT (the owner) are honored. Stdlib only.
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+EMPIRE = os.path.join(REPO, "tools", "empire")
+
+
+def _load_env(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, _, v = line.partition("=")
+                    os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+    except OSError:
+        pass
+
+
+_load_env(os.path.join(REPO, ".env"))
+TOKEN = os.environ.get("EMPIRE_TG_TOKEN", "")
+CHAT = str(os.environ.get("EMPIRE_TG_CHAT", ""))
+API = f"https://api.telegram.org/bot{TOKEN}"
+
+HELP = (
+    "<b>Empire bot</b> — text me naturally and I'll file it on the hub. Examples:\n"
+    "• <i>aresus idea: historical uptime graphs</i>\n"
+    "• <i>arescribe shipped the telegram webhook</i>\n"
+    "• <i>new project Aresfoo: a thing that does X</i>\n\n"
+    "Commands:\n/projects — list provinces\n/log &lt;slug&gt; &lt;text&gt;\n/idea &lt;slug&gt; &lt;text&gt;\n"
+    "/wip &lt;slug&gt; &lt;text&gt;\n/feature &lt;slug&gt; &lt;text&gt;\n/status &lt;slug&gt; &lt;STATE&gt;\n"
+    "/new &lt;name&gt; : &lt;description&gt;\n/help"
+)
+
+
+def tg(method, body):
+    req = urllib.request.Request(f"{API}/{method}", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=70) as r:
+        return json.loads(r.read())
+
+
+def send(text):
+    try:
+        tg("sendMessage", {"chat_id": CHAT, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True})
+    except Exception as e:
+        sys.stderr.write(f"send failed: {e}\n")
+
+
+def run_empire(args):
+    # the bot replies itself, so suppress the CLI's own outbound ping
+    env = dict(os.environ, EMPIRE_TG_NOTIFY="0")
+    try:
+        p = subprocess.run([sys.executable, EMPIRE, *args], capture_output=True, text=True, env=env, timeout=60)
+        return (p.stdout.strip() or p.stderr.strip() or "done")
+    except Exception as e:
+        return f"⚠️ {e}"
+
+
+def handle(text):
+    text = (text or "").strip()
+    if not text:
+        return
+    if text.startswith("/"):
+        parts = text[1:].split(maxsplit=1)
+        cmd = parts[0].lower().split("@")[0]      # strip any @botname suffix
+        rest = parts[1].strip() if len(parts) > 1 else ""
+        if cmd in ("start", "help"):
+            send(HELP)
+        elif cmd == "projects":
+            send(run_empire(["show"]))
+        elif cmd == "new":
+            name, _, desc = rest.partition(":")
+            if not name.strip():
+                send("Usage: /new &lt;name&gt; : &lt;description&gt;")
+            else:
+                args = ["new", name.strip()] + (["--blurb", desc.strip()] if desc.strip() else [])
+                send("🆕 " + run_empire(args))
+        elif cmd in ("log", "idea", "wip", "feature", "about", "status"):
+            a = rest.split(maxsplit=1)
+            if len(a) < 2:
+                send(f"Usage: /{cmd} &lt;slug&gt; &lt;text&gt;")
+            else:
+                send(run_empire([cmd, a[0], a[1]]))
+        else:
+            send("Unknown command. /help")
+        return
+    send(run_empire(["ask", text]))           # natural language → LLM routing
+
+
+def main():
+    if not TOKEN or not CHAT:
+        sys.stderr.write("empire-bot: EMPIRE_TG_TOKEN / EMPIRE_TG_CHAT not set — exiting\n")
+        sys.exit(1)
+    sys.stderr.write("empire-bot: polling\n")
+    offset = None
+    while True:
+        try:
+            body = {"timeout": 60, "allowed_updates": ["message"]}
+            if offset is not None:
+                body["offset"] = offset
+            res = tg("getUpdates", body)
+            for u in res.get("result", []):
+                offset = u["update_id"] + 1
+                m = u.get("message") or u.get("edited_message")
+                if not m:
+                    continue
+                if str(m.get("chat", {}).get("id")) != CHAT:
+                    continue                  # owner only
+                handle(m.get("text", ""))
+        except urllib.error.HTTPError as e:
+            sys.stderr.write(f"empire-bot http {e.code}\n")
+            time.sleep(5)
+        except Exception as e:
+            sys.stderr.write(f"empire-bot loop: {e}\n")
+            time.sleep(5)
+
+
+if __name__ == "__main__":
+    main()
