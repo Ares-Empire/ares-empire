@@ -1,0 +1,55 @@
+name: empire-sync
+
+# Auto-update the hub from the ares repos once a day. Reads each ares… repo's
+# docs, has Groq fill the boxes, merges into data/state.json, and commits.
+# aresync pulls ares-empire on the server and redeploys → the hub updates.
+#
+# Required repo secrets:
+#   EMPIRE_GH_TOKEN  — a PAT (classic: `repo`, or fine-grained: read access to
+#                      contents+metadata on the ares repos) so the job can LIST
+#                      and READ the other (private) ares repos and push back here.
+#   GROQ_API_KEY     — Groq API key for the LLM.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"      # daily 04:00 UTC
+  workflow_dispatch:          # manual "Run workflow" button for testing
+
+permissions:
+  contents: write             # allow the commit-back (also covered by the PAT)
+
+concurrency:
+  group: empire-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.EMPIRE_GH_TOKEN }}   # so the push back is authenticated
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install --quiet requests groq
+
+      - name: Sync the empire state
+        env:
+          EMPIRE_GH_TOKEN: ${{ secrets.EMPIRE_GH_TOKEN }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GH_OWNER: ${{ github.repository_owner }}
+        run: python tools/empire_sync.py
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- data/state.json; then
+            echo "no changes"; exit 0
+          fi
+          git config user.name  "empire-sync"
+          git config user.email "empire-sync@users.noreply.github.com"
+          git add data/state.json
+          git commit -m "empire-sync: refresh hub from repos $(date -u +%F)"
+          git push
