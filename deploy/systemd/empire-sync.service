@@ -1,0 +1,14 @@
+[Unit]
+Description=Ares Empire — auto-fill the hub from the ares repos
+Documentation=https://github.com/carlsenares/ares-empire
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/ares-empire
+# .env supplies EMPIRE_LLM_* (key/provider/model) + EMPIRE_GH_TOKEN (literal PAT).
+EnvironmentFile=/root/ares-empire/.env
+ExecStart=/root/ares-empire/.venv-empire-sync/bin/python /root/ares-empire/tools/empire_sync.py
+# Writes data/state.json in place. The hub serves it live (no-store), so there is
+# nothing to restart — the change is visible on the next page load.

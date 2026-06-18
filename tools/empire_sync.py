@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """empire_sync — auto-update the Ares Empire hub from the repos themselves.
 
-Runs on a schedule (GitHub Action, once/24h). For every GitHub repo named
+Runs on a schedule (systemd timer empire-sync.timer, daily). For every GitHub repo named
 `ares…` it reads the repo's docs (README, CLAUDE.md, docs/*) and recent commit
 subjects, asks a free LLM (Groq) to fill the hub's boxes — blurb, about,
 features, wip, ideas, and a proposed status — then merges the result into
-`data/state.json` (the live source the hub serves at /api/empire). aresync pulls
-ares-empire on the server and redeploys, so a commit here lands on the hub within
-~5 minutes. No per-commit markers, no manual editing.
+`data/state.json` — the live source the hub serves at /api/empire (read fresh,
+no-store), so the write is visible on the next page load. state.json is machine-
+local (gitignored), which is why this runs ON THE SERVER as a timer, not in CI.
+No git, no per-commit markers, no manual editing.
 
 What it preserves (never clobbered by the LLM):
   - `logo`            brand art (the LLM can't draw the marble busts)
@@ -63,6 +64,10 @@ LLM_KEY = os.environ.get("EMPIRE_LLM_KEY") or os.environ.get("GROQ_API_KEY", "")
 LLM_PROVIDER = os.environ.get("EMPIRE_LLM_PROVIDER", "groq").lower()
 LLM_MODEL = os.environ.get("EMPIRE_LLM_MODEL", "llama-3.3-70b-versatile")
 LLM_FALLBACK_MODEL = os.environ.get("EMPIRE_LLM_FALLBACK_MODEL", "")
+# Telegram (the aresync bot, @aresync_bot — same token/chat the laptops use, so hub
+# changes and laptop sync events land in one feed). Empty = no ping.
+TG_TOKEN = os.environ.get("ARESYNC_TG_TOKEN", "")
+TG_CHAT = os.environ.get("ARESYNC_TG_CHAT", "")
 
 # Every provider here speaks the OpenAI chat-completions wire format; only the
 # base URL differs. Add a row to support a new one.
@@ -81,6 +86,7 @@ LIVE_TIERS = {"CONQUERED", "FORTIFYING"}
 VALID_STATUS = {"SCOUTED", "MUSTERING", "BESIEGING", "CONQUERED", "FORTIFYING"}
 PLACEHOLDER_LOGO = "brand/ares-bust.png"  # empire crest until bespoke art exists
 DOC_CHAR_CAP = 10_000  # per-repo prompt budget
+CHANGELOG_CAP = 20  # most-recent entries kept per project
 
 
 # --- GitHub ---------------------------------------------------------------
@@ -163,6 +169,47 @@ def repo_docs(repo: str) -> str:
     return blob[:DOC_CHAR_CAP]
 
 
+def tg_notify(lines: list[str]) -> None:
+    """Ping the aresync Telegram bot with a summary of hub changes. No-op if
+    creds unset or nothing changed. Failure never sinks the run."""
+    if not (TG_TOKEN and TG_CHAT and lines):
+        return
+    import socket
+
+    host = socket.gethostname().split(".")[0]
+    text = f"🏛 <b>Empire hub updated</b> · {host}\n" + "\n".join(lines)
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage",
+            json={"chat_id": TG_CHAT, "text": text,
+                  "parse_mode": "HTML", "disable_web_page_preview": True},
+            timeout=15,
+        )
+    except requests.RequestException as exc:
+        print(f"telegram notify failed: {exc}", file=sys.stderr)
+
+
+def repo_changelog(repo: str) -> list[dict]:
+    """Recent real commits as dated changelog entries (newest first), shaped like
+    the hub's per-project change log: {"at": YYYY-MM-DD, "text": subject}. Skips
+    aresync auto-commits and merge commits (noise, not real changes)."""
+    try:
+        commits = _gh(f"/repos/{OWNER}/{repo}/commits", {"per_page": 30})
+    except (requests.HTTPError, requests.RequestException):
+        return []
+    out: list[dict] = []
+    if not isinstance(commits, list):
+        return out
+    for c in commits:
+        commit = c.get("commit") or {}
+        subject = (commit.get("message") or "").splitlines()[0].strip()
+        if not subject or subject.startswith(("Aresync auto-commit", "Merge ")):
+            continue
+        when = (commit.get("author") or commit.get("committer") or {}).get("date", "")[:10]
+        out.append({"at": when, "text": subject})
+    return out
+
+
 def domain_live(domain: str) -> bool:
     if not domain:
         return False
@@ -224,9 +271,11 @@ def _as_list(v) -> list[str]:
     return [str(x).strip() for x in v if str(x).strip()] if isinstance(v, list) else []
 
 
-def merge_project(existing: dict | None, repo: str, gen: dict) -> tuple[dict, str | None]:
+def merge_project(existing: dict | None, repo: str, gen: dict,
+                  changelog_new: list[dict] | None = None) -> tuple[dict, str | None]:
     """Produce the merged project dict + an optional chronicle note (status change
-    or new province). Preserves brand/url/changelog from `existing`."""
+    or new province). Preserves brand/url from `existing`; the changelog is
+    append-only — new commit entries are merged on top of the existing history."""
     slug = repo.lower()
     existing = existing or {}
     detail = dict(existing.get("detail") or {})
@@ -245,7 +294,12 @@ def merge_project(existing: dict | None, repo: str, gen: dict) -> tuple[dict, st
         ideas=_as_list(gen.get("ideas")) or detail.get("ideas", []),
     )
     detail.setdefault("setup", existing.get("detail", {}).get("setup", ""))
-    detail.setdefault("changelog", existing.get("detail", {}).get("changelog", []))  # append-only
+    # changelog: append-only history. Merge fresh commit entries (deduped by
+    # date+text) on top of what's there, newest first, capped.
+    existing_log = (existing.get("detail") or {}).get("changelog") or []
+    seen = {(e.get("at"), e.get("text")) for e in existing_log}
+    fresh = [e for e in (changelog_new or []) if (e.get("at"), e.get("text")) not in seen]
+    detail["changelog"] = (fresh + existing_log)[:CHANGELOG_CAP]
 
     merged = {
         "slug": slug,
@@ -294,7 +348,7 @@ def run(*, dry_run: bool, only: str | None) -> int:
         except Exception as exc:  # one bad repo never sinks the run
             print(f"  {slug}: LLM/read failed ({exc}); keeping existing", file=sys.stderr)
             continue
-        merged, note = merge_project(existing, repo, gen)
+        merged, note = merge_project(existing, repo, gen, repo_changelog(repo))
         if existing:
             by_slug[slug].clear()
             by_slug[slug].update(merged)
@@ -317,6 +371,7 @@ def run(*, dry_run: bool, only: str | None) -> int:
 
     STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n", "utf-8")
     print(f"wrote {STATE_PATH} ({len(ordered)} provinces, +{len(notes)} chronicle)", file=sys.stderr)
+    tg_notify([f"• {n['text']}" for n in notes])
     return 0
 
 
