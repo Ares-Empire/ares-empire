@@ -155,9 +155,11 @@ a { color: inherit; text-decoration: none; }
 .ring-scene { position: relative; flex: none; width: 100%; height: clamp(206px, 33vh, 312px);
   touch-action: pan-y; user-select: none; --front-y: 68%;
   transform: translate(20.95vw, 5.71vw); }
-.ring { position: absolute; inset: 0; }
+.ring { position: absolute; inset: 0; z-index: 1; }
 
-/* (the wheel's rim line was removed — the provinces revolve on an invisible orbit) */
+/* the wheel's rim line was removed — the provinces revolve on an invisible orbit, now
+   traced by a soft golden dust halo (RingDust canvas) sitting behind the tabs. */
+.ring-dust { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 
 /* a province tab — a horizontal rectangle: mark on the left, NAME over STATUS on the right */
 /* neutral glass tab — same house glass as the Arestoteles cards: white hairline edge,
@@ -280,6 +282,9 @@ button.proj-card { cursor: pointer; }
    ============================================================================ */
 .emp-log { position: absolute; left: 39vw; right: 3vw; bottom: clamp(28px, 7vh, 92px);
   height: 178px; --log-line-y: 34px; z-index: 1; pointer-events: none; }
+/* the wrapper stays click-through (so the bust/ring behind it stay reachable), but the
+   scrolling strip itself must be grabbable — otherwise its scrollbar can't be dragged. */
+.emp-log .log-track { pointer-events: auto; }
 .log-dust { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 .log-track { position: relative; z-index: 1; height: 100%; display: flex; align-items: flex-start;
   justify-content: flex-start; gap: clamp(16px, 2vw, 40px); padding: 0 clamp(10px, 2vw, 28px);

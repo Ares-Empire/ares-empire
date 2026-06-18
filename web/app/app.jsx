@@ -27,7 +27,12 @@
       fetch("/api/empire", { credentials: "same-origin" })
         .then((r) => (r.ok && /json/.test(r.headers.get("content-type") || "")) ? r.json() : null)
         .then((d) => {
-          if (alive && d && Array.isArray(d.projects)) { window.EMPIRE = d; setData(d); setProjects(d.projects.slice()); }
+          if (alive && d && Array.isArray(d.projects)) {
+            // merge over the seed (don't replace) so seed-only keys the live data omits —
+            // notably the STATUS vocabulary the ring/detail render from — survive.
+            const merged = { ...(window.EMPIRE || {}), ...d };
+            window.EMPIRE = merged; setData(merged); setProjects(merged.projects.slice());
+          }
         })
         .catch(() => {});
       return () => { alive = false; };

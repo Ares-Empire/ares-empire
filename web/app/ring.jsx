@@ -15,6 +15,82 @@
 
   const statusClass = (tone) => ({ live: "st-live", wip: "st-wip", hold: "st-hold", scout: "st-scout", muster: "st-muster" }[tone] || "st-scout");
 
+  // The orbit the provinces revolve on is invisible (the old rim line was removed). RingDust
+  // traces it with the same warm-gold dust as the chronicle timeline — a soft halo, no line,
+  // no markers. The ellipse mirrors the Ring's own geometry (centre a touch above the front row).
+  function RingDust() {
+    const ref = useRef(null);
+    useEffect(() => {
+      const canvas = ref.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      let w = 0, h = 0, raf = 0;
+      const parts = [];
+
+      function resize() {
+        const r = canvas.getBoundingClientRect();
+        w = Math.max(1, r.width); h = Math.max(1, r.height);
+        canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resize();
+      const ro = new ResizeObserver(resize); ro.observe(canvas);
+
+      // ellipse matching the wheel: rx/ry mirror Ring's SPREAD_X/RISE_Y; centre sits one
+      // RISE_Y above the front-row baseline (top:68% in CSS), per the wheel's parametrics.
+      function geom() {
+        const rx = Math.min(w * 0.42, 560);
+        const ry = Math.max(28, Math.min(h * 0.18, 52));
+        return { rx, ry, cx: w * 0.5, cy: h * 0.68 - ry };
+      }
+      // same warm-gold tint the timeline dust uses
+      function dot(x, y, a, warm, size) {
+        ctx.globalAlpha = a;
+        ctx.fillStyle = "rgb(255," + (212 - (warm * 36 | 0)) + "," + (120 + (warm * 70 | 0)) + ")";
+        ctx.beginPath(); ctx.arc(x, y, Math.max(0.2, size), 0, 6.2832); ctx.fill();
+      }
+
+      function frame() {
+        ctx.clearRect(0, 0, w, h);
+        ctx.globalCompositeOperation = "lighter";
+        const g = geom();
+        if (!reduce) {
+          const peri = Math.PI * (g.rx + g.ry);
+          const n = Math.max(3, Math.round(peri / 260));
+          for (let k = 0; k < n; k++) {
+            const th = Math.random() * 6.2832;
+            const nx = Math.cos(th), ny = Math.sin(th);             // ~outward normal of the rim
+            parts.push({ x: g.cx + nx * g.rx + (Math.random() * 2 - 1) * 1.5,
+                         y: g.cy + ny * g.ry + (Math.random() * 2 - 1) * 1.5,
+                         vx: nx * 0.12 + (Math.random() - 0.5) * 0.18,
+                         vy: ny * 0.10 - (0.05 + Math.random() * 0.18),  // a gentle lift, like the timeline
+                         life: 1, size: 0.6 + Math.random() * 1.7, warm: Math.random() });
+          }
+          for (let i = parts.length - 1; i >= 0; i--) {
+            const p = parts[i];
+            p.x += p.vx; p.y += p.vy; p.vx *= 0.99; p.vy *= 0.99; p.life -= 0.012;
+            if (p.life <= 0) { parts.splice(i, 1); continue; }
+            const a = p.life * p.life;
+            dot(p.x, p.y, a * 0.9, p.warm, p.size * a);
+          }
+        } else {
+          // reduced motion: a static golden sprinkle around the orbit
+          for (let i = 0; i < 64; i++) {
+            const th = (i / 64) * 6.2832;
+            dot(g.cx + Math.cos(th) * g.rx, g.cy + Math.sin(th) * g.ry, 0.45, (i % 5) / 5, 1.0);
+          }
+        }
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+        raf = requestAnimationFrame(frame);
+      }
+      raf = requestAnimationFrame(frame);
+      return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+    }, []);
+    return <canvas ref={ref} className="ring-dust" aria-hidden="true" />;
+  }
+
   function TabFace({ tab }) {
     const S = (window.EMPIRE && window.EMPIRE.STATUS) || {};
     const st = S[tab.status] || null;
@@ -94,6 +170,7 @@
       <div className="ring-scene" ref={sceneRef}
            onPointerDown={onPointerDown} onPointerMove={onPointerMove}
            onPointerUp={endDrag} onPointerLeave={endDrag} onWheel={onWheel}>
+        <RingDust />
         <div className={"ring" + (settling ? " settling" : "")}>
           {tabs.map((tab, i) => {
             const phi = norm180(i * step + rotation);
