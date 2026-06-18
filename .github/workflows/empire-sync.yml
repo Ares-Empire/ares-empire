@@ -4,11 +4,12 @@ name: empire-sync
 # docs, has Groq fill the boxes, merges into data/state.json, and commits.
 # aresync pulls ares-empire on the server and redeploys → the hub updates.
 #
-# Required repo secrets:
+# Required repo secrets (Settings → Secrets and variables → Actions → repository secret):
 #   EMPIRE_GH_TOKEN  — a PAT (classic: `repo`, or fine-grained: read access to
 #                      contents+metadata on the ares repos) so the job can LIST
 #                      and READ the other (private) ares repos and push back here.
-#   GROQ_API_KEY     — Groq API key for the LLM.
+#   EMPIRE_LLM_KEY   — the LLM API key (same value as ares-empire/.env EMPIRE_LLM_KEY).
+# Provider/model are plain env below (not secret) — mirror ares-empire/.env.
 
 on:
   schedule:
@@ -34,12 +35,16 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install --quiet requests groq
+      - run: pip install --quiet requests openai
 
       - name: Sync the empire state
         env:
           EMPIRE_GH_TOKEN: ${{ secrets.EMPIRE_GH_TOKEN }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          EMPIRE_LLM_KEY: ${{ secrets.EMPIRE_LLM_KEY }}
+          # Non-secret config — keep in step with ares-empire/.env:
+          EMPIRE_LLM_PROVIDER: nvidia
+          EMPIRE_LLM_MODEL: mistralai/mistral-small-4-119b-2603
+          EMPIRE_LLM_FALLBACK_MODEL: mistralai/mistral-medium-3.5-128b
           GH_OWNER: ${{ github.repository_owner }}
         run: python tools/empire_sync.py
 

@@ -25,12 +25,17 @@ the empire crest as a placeholder logo until you add bespoke art).
 Caveat: discovery is GitHub-only — local-only repos (no remote) are invisible
 here until pushed. Excludes the hub repo itself (`ares-empire`).
 
-Env:
-  EMPIRE_GH_TOKEN   GitHub PAT (repo read) — list + read the ares repos. Falls
-                    back to GITHUB_TOKEN.
-  GROQ_API_KEY      Groq key for the LLM.
-  GH_OWNER          repo owner (default: carlsenares).
-  LLM_MODEL         Groq model (default: llama-3.3-70b-versatile).
+Env (LLM vars mirror ares-empire/.env so the same key/config is reused):
+  EMPIRE_GH_TOKEN          GitHub PAT (repo read) — list + read the ares repos.
+                           Falls back to GITHUB_TOKEN.
+  EMPIRE_LLM_KEY           API key for the LLM (falls back to GROQ_API_KEY).
+  EMPIRE_LLM_PROVIDER      groq | nvidia | gemini | openai (default: groq).
+  EMPIRE_LLM_MODEL         primary model id.
+  EMPIRE_LLM_FALLBACK_MODEL  tried if the primary errors (optional).
+  GH_OWNER                 repo owner (default: carlsenares).
+
+All providers are called through the OpenAI-compatible chat-completions API
+(just a different base URL), so switching provider is a one-env-var change.
 
 CLI:
   --dry-run   discover + print what would change; no LLM call, no write.
@@ -54,8 +59,19 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 STATE_PATH = Path(os.environ.get("EMPIRE_STATE", REPO_ROOT / "data" / "state.json"))
 OWNER = os.environ.get("GH_OWNER", "carlsenares")
 GH_TOKEN = os.environ.get("EMPIRE_GH_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-LLM_MODEL = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+LLM_KEY = os.environ.get("EMPIRE_LLM_KEY") or os.environ.get("GROQ_API_KEY", "")
+LLM_PROVIDER = os.environ.get("EMPIRE_LLM_PROVIDER", "groq").lower()
+LLM_MODEL = os.environ.get("EMPIRE_LLM_MODEL", "llama-3.3-70b-versatile")
+LLM_FALLBACK_MODEL = os.environ.get("EMPIRE_LLM_FALLBACK_MODEL", "")
+
+# Every provider here speaks the OpenAI chat-completions wire format; only the
+# base URL differs. Add a row to support a new one.
+PROVIDER_BASE = {
+    "groq": "https://api.groq.com/openai/v1",
+    "nvidia": "https://integrate.api.nvidia.com/v1",
+    "gemini": "https://generativelanguage.googleapis.com/v1beta/openai/",
+    "openai": "https://api.openai.com/v1",
+}
 
 API = "https://api.github.com"
 # Repos that match ^ares but are NOT provinces.
@@ -176,17 +192,30 @@ _SYSTEM = (
 
 
 def llm_entry(repo: str, docs: str) -> dict:
-    from groq import Groq
+    from openai import OpenAI
 
-    client = Groq(api_key=GROQ_API_KEY)
+    base = PROVIDER_BASE.get(LLM_PROVIDER)
+    if not base:
+        raise RuntimeError(f"unknown EMPIRE_LLM_PROVIDER={LLM_PROVIDER!r}")
+    client = OpenAI(api_key=LLM_KEY, base_url=base)
     user = f"Repo-Name: {repo}\n\nDokumente:\n{docs or '(keine Dokumente gefunden)'}"
-    resp = client.chat.completions.create(
-        model=LLM_MODEL,
-        temperature=0.2,
-        response_format={"type": "json_object"},
-        messages=[{"role": "system", "content": _SYSTEM}, {"role": "user", "content": user}],
-    )
-    return json.loads(resp.choices[0].message.content or "{}")
+    models = [m for m in (LLM_MODEL, LLM_FALLBACK_MODEL) if m]
+    last_exc: Exception | None = None
+    for model in models:
+        try:
+            resp = client.chat.completions.create(
+                model=model,
+                temperature=0.2,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": _SYSTEM},
+                    {"role": "user", "content": user},
+                ],
+            )
+            return json.loads(resp.choices[0].message.content or "{}")
+        except Exception as exc:  # try the fallback model before giving up
+            last_exc = exc
+    raise last_exc or RuntimeError("no model configured")
 
 
 # --- merge ----------------------------------------------------------------
@@ -299,8 +328,8 @@ def main(argv: list[str] | None = None) -> int:
     if not GH_TOKEN:
         print("error: set EMPIRE_GH_TOKEN (or GITHUB_TOKEN)", file=sys.stderr)
         return 2
-    if not args.dry_run and not GROQ_API_KEY:
-        print("error: set GROQ_API_KEY (or use --dry-run)", file=sys.stderr)
+    if not args.dry_run and not LLM_KEY:
+        print("error: set EMPIRE_LLM_KEY (or use --dry-run)", file=sys.stderr)
         return 2
     return run(dry_run=args.dry_run, only=args.only)
 
