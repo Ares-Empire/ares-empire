@@ -26,7 +26,7 @@
       const ctx = canvas.getContext("2d");
       const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      let w = 0, h = 0, raf = 0;
+      let w = 0, h = 0, raf = 0, t = 0;
       const parts = [];
 
       function resize() {
@@ -56,7 +56,21 @@
         ctx.clearRect(0, 0, w, h);
         ctx.globalCompositeOperation = "lighter";
         const g = geom();
+        // TEST LOOK: the timeline's glowing golden line, bent into the orbit ellipse (line + dust,
+        // same treatment as the chronicle). Revert to the dust-only halo by deleting this block.
+        ctx.strokeStyle = "rgb(255,240,206)";
+        const ringPath = () => { ctx.beginPath(); ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, 0, 6.2832); };
+        ctx.globalAlpha = 0.22; ctx.lineWidth = 10;  ringPath(); ctx.stroke();
+        ctx.globalAlpha = 0.55; ctx.lineWidth = 3.4; ringPath(); ctx.stroke();
+        ctx.globalAlpha = 1.0;  ctx.lineWidth = 1.3; ringPath(); ctx.stroke();
         if (!reduce) {
+          // a glint sliding around the ring, like the one that runs along the timeline
+          const ga = (t * 0.0006) % 6.2832;
+          const gx = g.cx + Math.cos(ga) * g.rx, gy = g.cy + Math.sin(ga) * g.ry;
+          const sg = ctx.createRadialGradient(gx, gy, 0, gx, gy, 16);
+          sg.addColorStop(0, "rgba(255,255,246,0.95)"); sg.addColorStop(0.55, "rgba(255,240,200,0.3)"); sg.addColorStop(1, "rgba(255,240,200,0)");
+          ctx.globalAlpha = 1; ctx.fillStyle = sg;
+          ctx.beginPath(); ctx.arc(gx, gy, 16, 0, 6.2832); ctx.fill();
           const peri = Math.PI * (g.rx + g.ry);
           const n = Math.max(3, Math.round(peri / 260));
           for (let k = 0; k < n; k++) {
@@ -83,6 +97,7 @@
           }
         }
         ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+        t += 16;
         raf = requestAnimationFrame(frame);
       }
       raf = requestAnimationFrame(frame);

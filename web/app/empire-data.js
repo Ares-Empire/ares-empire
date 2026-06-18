@@ -81,13 +81,13 @@
         name: "Arestemis",
         url: "",
         logo: "brand/artemis.png",
-        status: "MUSTERING",
+        status: "CONQUERED",
         domain: "",
         blurb: "Apartment sniper — claims new flat listings the moment they post.",
         detail: {
-          about: "The huntress. Arestemis (the Flatsniper bot) watches the housing portals and " +
-            "pounces on a new listing the instant it appears — first to the viewing, first to apply. " +
-            "Already running as flatsniper; linking it into the empire is the next step.",
+          about: "The huntress. Arestemis watches the Munich housing portals and pounces on a " +
+            "new listing the instant it appears — first to the viewing, first to apply. Runs " +
+            "24/7 as a Telegram bot in the empire (formerly the FlatSniper project).",
           features: ["Real-time listing watch", "Instant alerts", "Fast-track applying"],
           setup: "", wip: [], ideas: [], changelog: [],
         },
