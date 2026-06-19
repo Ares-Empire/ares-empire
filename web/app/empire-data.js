@@ -179,6 +179,29 @@
           setup: "", wip: [], ideas: [], changelog: [],
         },
       },
+      {
+        slug: "aresis",
+        name: "Aresis",
+        url: "",
+        logo: "brand/nemesis.png",
+        status: "BESIEGING",
+        domain: "",
+        blurb: "Privacy guardian — scans your exposed personal data and proposes fixes.",
+        detail: {
+          about: "Nemesis, who balances exposure. Aresis is a personal exposure scanner and " +
+            "privacy-remediation engine: feed it identifiers you own (email, username, name), it " +
+            "runs them through OSINT sources, has an LLM judge each finding by severity, and " +
+            "proposes concrete fixes — to shrink your digital footprint, never to investigate others. " +
+            "The full scan→judge→remediate→report pipeline runs end to end.",
+          features: [
+            "OSINT exposure scan across breach & footprint sources",
+            "LLM severity judgement (info → critical)",
+            "Concrete remediation steps per finding",
+            "Self-audit only (ownership-gated)",
+          ],
+          setup: "", wip: ["Deploy behind shared nginx"], ideas: ["Optional auth → privacy SaaS"], changelog: [],
+        },
+      },
     ],
 
     // ── Expansions: future plans (the EXPAND view). Open one → it pre-fills the Forge. ──
@@ -190,6 +213,7 @@
 
     // ── Chronicle: what was done, newest first (Claude Code appends here) ──
     chronicle: [
+      { at: "2026-06-19", project: "aresis", text: "Aresis joined the empire: a personal exposure scanner + privacy-remediation engine (OSINT → LLM severity judge → remediation → report), the full pipeline running end to end. Registered as a province." },
       { at: "2026-06-16", project: "aresync", text: "Aresync took the field: a git-based sync that mirrors every GitHub repo across the MacBook, the Windows Lenovo and the server — auto commit → rebase → push, clone-if-new. The macOS agent runs live (login + daily); the Windows task is built and awaiting setup." },
       { at: "2026-06-15", project: "empire", text: "Reworked the hub into a clean, modern black-and-gold room: the marble bust at the left edge, the provinces on a stretched circle, the chronicle as a timeline beneath, and an EXPAND view for the empire's expansions." },
       { at: "2026-06-15", project: "empire", text: "Went live at www.ares-empire.de — TLS, gated by the empire access key, behind the shared nginx." },

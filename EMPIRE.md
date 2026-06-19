@@ -59,6 +59,7 @@ Mirror of `EMPIRE.projects`. Status vocabulary: `SCOUTED` (idea) → `BESIEGING`
 | **Aresium** | CONQUERED | aresium.de | Personal finance command — VR Bank + PayPal, imported and understood. |
 | **Arestoteles** | CONQUERED | arestoteles.de | AI portfolio strategist — theses, falsifiers, conviction. |
 | **Aresync** | BESIEGING | — | Git sync across Windows & Mac — every repo, everywhere, automatically. |
+| **Aresis** | BESIEGING | — | Privacy guardian — scans your exposed personal data and proposes fixes. Scan→judge→remediate pipeline runs end to end. |
 
 ---
 
@@ -97,6 +98,7 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y").
 
+- **2026-06-19 · aresis** — Aresis joined the empire: a personal exposure scanner + privacy-remediation engine (OSINT → LLM severity judge → remediation → report), with the full pipeline running end to end. Cloned local and registered as a province.
 - **2026-06-15 · empire** — Reworked the hub into a clean, modern black-and-gold room: the marble bust at the left edge, the provinces on a stretched circle, the chronicle as a timeline beneath, and an EXPAND view for the empire's expansions.
 - **2026-06-15 · empire** — Went live at https://www.ares-empire.de — TLS, gated by the empire access key, behind the shared nginx.
 - **2026-06-15 · empire** — Aresium and Arestoteles took their place as the first two provinces of the empire.
