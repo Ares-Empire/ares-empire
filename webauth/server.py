@@ -63,9 +63,9 @@ STATE_PATH = os.environ.get(
 # scrypt params (must match gen_password.py)
 SCRYPT_N, SCRYPT_R, SCRYPT_P, SCRYPT_DKLEN, SCRYPT_MAXMEM = 16384, 8, 1, 32, 64 * 1024 * 1024
 
-# Reachable without a session: the login flow and the one image the login page shows.
+# Reachable without a session: the login flow and the images the login page shows.
 # Exact paths only. Prefix matching ("/brand/") let "/brand/../index.html" past the login (2026-10-22).
-OPEN_PATHS = frozenset({"/login", "/logout", "/favicon.ico", "/brand/ares-bust.png"})
+OPEN_PATHS = frozenset({"/login", "/logout", "/favicon.ico", "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"})
 
 
 def auth_enabled() -> bool:
