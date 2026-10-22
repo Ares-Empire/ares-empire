@@ -63,8 +63,9 @@ STATE_PATH = os.environ.get(
 # scrypt params (must match gen_password.py)
 SCRYPT_N, SCRYPT_R, SCRYPT_P, SCRYPT_DKLEN, SCRYPT_MAXMEM = 16384, 8, 1, 32, 64 * 1024 * 1024
 
-# reachable without a session: the login flow + the brand image the login shows
-OPEN_PREFIXES = ("/login", "/logout", "/brand/", "/favicon")
+# Reachable without a session: the login flow and the one image the login page shows.
+# Exact paths only. Prefix matching ("/brand/") let "/brand/../index.html" past the login (2026-10-22).
+OPEN_PATHS = frozenset({"/login", "/logout", "/favicon.ico", "/brand/ares-bust.png"})
 
 
 def auth_enabled() -> bool:
@@ -189,7 +190,7 @@ class Handler(SimpleHTTPRequestHandler):
         return has_valid_session(self.headers.get("Cookie"))
 
     def _is_open(self, path: str) -> bool:
-        return any(path == p or path.startswith(p) for p in OPEN_PREFIXES)
+        return path in OPEN_PATHS
 
     def do_GET(self):
         path = urlparse(self.path).path
