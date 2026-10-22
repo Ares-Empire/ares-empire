@@ -12,5 +12,7 @@ __pycache__/
 
 # runtime hub state (written by the empire CLI / git hooks)
 data/state.json
+data/sync-meta.json
+data/*.bak-*
 data/*.tmp
 .venv-empire-sync/

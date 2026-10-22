@@ -1,10 +1,11 @@
 [Unit]
-Description=Ares Empire — auto-fill the hub from the ares repos
+Description=Ares Empire — sync the hub with the ares repos on GitHub
 Documentation=https://github.com/carlsenares/ares-empire
 After=network-online.target
 Wants=network-online.target
 
 [Service]
+TimeoutStartSec=20min
 Type=oneshot
 WorkingDirectory=/root/ares-empire
 # .env supplies EMPIRE_LLM_* (key/provider/model) + EMPIRE_GH_TOKEN (literal PAT).

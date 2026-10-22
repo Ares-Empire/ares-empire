@@ -1,12 +1,10 @@
 [Unit]
-Description=Daily Ares Empire hub auto-fill
+Description=Hourly Ares Empire hub sync (new ares repos appear within the hour)
 
 [Timer]
-OnCalendar=*-*-* 04:00:00
-# run on next boot if the machine was off at 04:00 (every-24h cadence)
+OnCalendar=hourly
 Persistent=true
-# avoid a fixed-second hammer
-RandomizedDelaySec=15min
+RandomizedDelaySec=5min
 
 [Install]
 WantedBy=timers.target
