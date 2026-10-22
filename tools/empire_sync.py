@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """empire_sync — keep the Ares Empire hub in step with the `ares…` repos on GitHub.
 
-Runs hourly (systemd timer empire-sync.timer). For every GitHub repo whose name starts with
+Runs daily at 04:00 (systemd timer empire-sync.timer). For every GitHub repo whose name starts with
 `ares` (case-insensitive, excluding the hub itself):
 
 1. **New repo → always added.** Its tile is built from GitHub alone: name, the repo
    description (or the README's first paragraph), website field, recent commits, and a status
-   from activity. No LLM needed, so a new repo appears within the hour even when every model
+   from activity. No LLM needed, so a new repo appears with the next run even when every model
    is down (that was the old failure: LLM down → new repos silently skipped).
 2. **Changed repo (new push) → refreshed:** changelog and status always; text only when the
    LLM polish succeeds (good existing text is never replaced by the plain fallback).

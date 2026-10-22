@@ -1,10 +1,10 @@
 [Unit]
-Description=Hourly Ares Empire hub sync (new ares repos appear within the hour)
+Description=Daily Ares Empire hub sync (new ares repos appear by the next morning)
 
 [Timer]
-OnCalendar=hourly
+OnCalendar=*-*-* 04:00:00
 Persistent=true
-RandomizedDelaySec=5min
+RandomizedDelaySec=15min
 
 [Install]
 WantedBy=timers.target
