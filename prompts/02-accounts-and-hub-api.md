@@ -1,6 +1,6 @@
 # 02: Per-account hub data, the ring, approvals (accounts + hub server)
 
-Status: draft
+Status: merged 2026-10-24; migration applied to the live accounts server; hub server switched after Patrik set admin.
 Branch: `codex/02-hub-api` · Worktree: `../ares-empire-02-hub-api` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
