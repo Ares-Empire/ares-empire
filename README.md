@@ -85,20 +85,18 @@ python3 -m http.server 8099 --directory web    # → http://localhost:8099
 - **Timeline** — the chronicle as a clean horizontal ribbon below the circle.
 - **CONQUER forge** — name a province → it generates the seed `CLAUDE.md`, the manifest entry and
   the Claude Code handoff (copy buttons), then adds it to the circle.
-- **Login / logout** — `web/login.html` (scrypt + HMAC-cookie gate, `webauth/`); a logout control sits top-right.
+- **Login / logout** — Empire accounts (email + password, sign-up with approval, password reset) via
+  `webauth/server.py` + the `web/login.html` template; a logout control sits top-right. See [docs/ACCOUNTS.md](docs/ACCOUNTS.md).
 
 **Source of truth** — [`EMPIRE.md`](EMPIRE.md) (narrative) + `web/app/empire-data.js`
 (`window.EMPIRE`, the manifest the circle renders from). Add a province by appending to both; the circle
 grows on its own.
 
-**Deploy** (live on this server, behind the shared `insureai_nginx` — see `deploy/`)
+**Deploy** (live on this server, behind Caddy — `/etc/caddy/Caddyfile`)
 
 - `ares-empire.service` (`deploy/systemd/`) runs `webauth/server.py` on the docker bridge
-  `172.18.0.1:5185`, reading secrets from `.env`. The gate is **active** (password set).
-- nginx vhost `deploy/nginx/ares-empire.conf` (lives in `insureai/.../nginx/conf.d/`) proxies the
-  domain → the service; TLS via `deploy/enable-tls-ares-empire.sh` (Let's Encrypt; the
-  `insureai_certbot` container auto-renews).
-- **Firewall:** each host-service port needs a UFW allow from the bridge or nginx 504s —
-  `ufw allow from 172.18.0.0/16 to any port 5185 proto tcp`.
-- **Updating the site:** edit `web/…`; the service serves from disk live (no rebuild). On a fresh
-  box, regenerate `.env` with `python3 webauth/gen_password.py 'the-password' > .env`.
+  `172.18.0.1:5185`, reading settings from `.env`. Logins are checked against `empire-accounts`
+  (PocketBase, `deploy/install-accounts.sh`).
+- Caddy proxies the domain → the service and handles TLS itself. (`deploy/nginx/` and the TLS
+  scripts are from the old nginx setup, kept for reference.)
+- **Updating the site:** edit `web/…`; the service serves from disk live (no rebuild).

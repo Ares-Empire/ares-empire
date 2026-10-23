@@ -1,7 +1,7 @@
 # Empire accounts — one login for every service
 
 **Planned 2026-10-23.** Status: **server running** at https://auth.ares-empire.de (PocketBase).
-Aresium's API accepts it (2026-10-23, for the iPhone app); its website still has its own password. Replaces the "Empire SSO" expansion.
+The hub and Aresium (website + API) log in with it; their old shared passwords are gone (2026-10-23). Replaces the "Empire SSO" expansion.
 
 ## Goal
 
@@ -44,6 +44,17 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
   `ares-empire.de` (DNS at Hetzner), sender `noreply@ares-empire.de`. The
   SMTP key is entered only in the admin UI (Settings → Mail settings), never in git or chat.
 
+## Website flow
+
+- `/login` → *Log in* button + "New account? Sign up". `/login/email` → email + password.
+- `/signup` (hub only) creates the account and sends the confirmation email. A hook
+  (`accounts/pb_hooks/accounts.pb.js`) emails the superusers an approval request with a direct link,
+  and emails the person once `approved` is switched on.
+- `/forgot` (hub only) sends PocketBase's reset email; its links open PocketBase's own pages
+  at auth.ares-empire.de/_/#/auth/….
+- Hub → province: `/sso?to=aresium` POSTs the visitor's token to `aresium.de/sso` (never in a URL).
+- PocketBase also emails "login from a new location" alerts (built in, on by default).
+
 ## How a service checks a login
 
 A token stays valid until it expires (7 days) even if the account is un-approved meanwhile, so a
@@ -56,6 +67,5 @@ Reference implementation: `aresium/src/web/empire-auth.ts` (also limits access t
 
 ## Open questions (decide when building)
 
-- Approval notification (e.g. a Telegram message with an approve button) — a small PocketBase hook.
 - For multi-user Aresium: which data is per person (transactions, accounts, rules) and
   which is shared (the category list).

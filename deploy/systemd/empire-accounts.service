@@ -12,7 +12,8 @@ User=empire-accounts
 Group=empire-accounts
 ExecStart=/opt/empire-accounts/pocketbase serve --http=127.0.0.1:8090 \
   --dir=/var/lib/empire-accounts/pb_data \
-  --migrationsDir=/opt/empire-accounts/pb_migrations
+  --migrationsDir=/opt/empire-accounts/pb_migrations \
+  --hooksDir=/opt/empire-accounts/pb_hooks
 Restart=always
 RestartSec=3
 LimitNOFILE=4096

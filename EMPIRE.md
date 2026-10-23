@@ -72,9 +72,9 @@ repo as a top-level folder, and live services and data volumes depend on their p
 
 | Province | Login | iPhone app | Repo |
 |---|---|---|---|
-| **Aresium** | website: own password + the hub's sign-in hand-off · **API: Empire login** (for the app) | **planned (first app)** in `empire-ios` | `aresium` |
+| **Aresium** | **Empire login** (website, hub hand-off and API for the app) | **planned (first app)** in `empire-ios` | `aresium` |
 | **Arestoteles** | own login | — | `Arestoteles` |
-| **Ares Empire** (hub) | is the login (single password today → accounts) | later | `ares-empire` |
+| **Ares Empire** (hub) | **Empire login** — sign-up, approval and password reset live here | later | `ares-empire` |
 
 All empire repos live in the GitHub organization **[Ares-Empire](https://github.com/Ares-Empire)**
 (aresync follows once every laptop runs the org-aware version). Each repo keeps its own
@@ -121,6 +121,7 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y").
 
+- **2026-10-23 · empire** — The hub and Aresium switched from shared passwords to Empire accounts: log in with email + password, sign up and wait for approval, reset a forgotten password.
 - **2026-10-23 · empire** — Empire accounts went live at https://auth.ares-empire.de (PocketBase): sign-up, approval by Patrik, per-service access; email via Resend from ares-empire.de.
 - **2026-10-23 · empire** — Charted the next campaign: Empire accounts (one login for every service) and native iPhone apps via TestFlight, starting with Aresium. Opened the `empire-ios` repo and the Connections table.
 - **2026-06-19 · aresis** — Aresis joined the empire: a personal exposure scanner + privacy-remediation engine (OSINT → LLM severity judge → remediation → report), with the full pipeline running end to end. Cloned local and registered as a province.
@@ -132,9 +133,9 @@ Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 
 ## Notes for later
 
-- **Login:** live — the empire sign-in (`web/login.html`) is gated by `webauth/server.py`
-  (scrypt + HMAC-signed cookie), run by `ares-empire.service` behind Caddy at https://www.ares-empire.de. Secrets live in `.env` (never committed; on a
-  fresh box regenerate with `webauth/gen_password.py`).
+- **Login:** Empire accounts since 2026-10-23 — `webauth/server.py` (run by `ares-empire.service`
+  behind Caddy) logs people in against PocketBase; sign-up needs Patrik's approval. The old single
+  access key is gone.
 - **Front door:** since 2026-10-21 **Caddy** on the host (`/etc/caddy/Caddyfile`) serves every
   domain with automatic HTTPS; it replaced the `insureai_nginx` container (`deploy/nginx/` is history).
 - **Accounts:** `empire-accounts.service` (PocketBase) at https://auth.ares-empire.de — see

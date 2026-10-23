@@ -1,98 +1,125 @@
 #!/usr/bin/env python3
-"""Ares Empire web server — static files for the hub, gated by a single-password login
-with a stateless, HMAC-signed session cookie.
+"""Ares Empire web server — static files for the hub, behind a login with Empire accounts.
 
-Ported from arestoteles/webauth (which itself ports the Aresium scheme): scrypt password
-hashing + HMAC-SHA256 signed cookie, ZERO third-party deps — stdlib hashlib.scrypt + hmac +
-http.server only. Serves the empire login (web/login.html) on the gate, the hub behind it.
+Accounts live in PocketBase (https://auth.ares-empire.de, see docs/ACCOUNTS.md). This server
+talks to it on localhost: log in, sign up, password reset. The session cookie holds the
+Empire token; every request re-checks it (approved, has the "empire" service) with a short
+cache, so un-approving someone locks them out within a minute. Stdlib only.
 
 Config (env, from .env — never committed):
-  AUTH_PASSWORD_HASH   scrypt hash `scrypt:<salthex>:<dkhex>` (set via gen_password.py)
-  AUTH_SESSION_SECRET  random secret used to sign session cookies
-  WEB_ROOT             dir to serve (default: web)        PORT  (default: 8090)
-
-Fail-safe: the gate is ACTIVE only when BOTH secrets are present. If either is unset the
-server logs a loud warning and serves OPEN — so a bad deploy can't lock you out before the
-secrets are in place. Behind nginx (which terminates TLS for www.ares-empire.de).
+  EMPIRE_AUTH_URL   PocketBase base URL (default http://127.0.0.1:8090)
+  WEB_ROOT          dir to serve (default: web)        HOST / PORT
 """
 
 from __future__ import annotations
 
 import hashlib
-import hmac
+import html
 import json
 import os
 import sys
-from base64 import urlsafe_b64decode, urlsafe_b64encode
+import threading
+import urllib.error
+import urllib.request
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from time import time
 from urllib.parse import parse_qs, urlparse
 
 WEB_ROOT = os.environ.get("WEB_ROOT", "web")
-# bind the docker-bridge gateway in prod (172.18.0.1) so only the containerized nginx can
-# reach it — off every public interface; default 0.0.0.0 for local dev.
+# prod binds the docker-bridge gateway (172.18.0.1), off every public interface; Caddy proxies in.
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8090"))
+
+AUTH_URL = os.environ.get("EMPIRE_AUTH_URL", "http://127.0.0.1:8090").rstrip("/")
+SERVICE = "empire"
 COOKIE_NAME = "empire_session"
-SESSION_SECS = 30 * 24 * 60 * 60  # 30 days
+SESSION_SECS = 30 * 24 * 60 * 60  # matches the users token duration in PocketBase
+CHECK_CACHE_SECS = 60
+MAX_FORM_BYTES = 10_000
 
-HASH = os.environ.get("AUTH_PASSWORD_HASH", "")
-SECRET = os.environ.get("AUTH_SESSION_SECRET", "").encode()
-
-# ── Empire SSO (issuer) ──────────────────────────────────────────────────────
-# When an authed visitor enters a province from the hub, the empire mints a short-lived,
-# HMAC-signed token bound to that province (audience). The province verifies it with the
-# SAME shared SSO_SECRET and starts its own session — so there's no second login. The
-# token is signed over its base64url payload string, so the verifier never has to
-# reproduce our JSON formatting (cross-language safe). Empty SSO_SECRET → plain redirect.
-SSO_SECRET = os.environ.get("SSO_SECRET", "").encode()
-SSO_TTL = 90  # seconds — just long enough for the redirect hop
+# Provinces the hub can hand a logged-in visitor to. "handoff" provinces accept the Empire
+# token by POST at /sso (no second login); others just get a link.
 PROVINCES = {
-    "aresium": "https://aresium.de",
-    "arestoteles": "https://arestoteles.de",
+    "aresium": {"url": "https://aresium.de", "handoff": True},
+    "arestoteles": {"url": "https://arestoteles.de", "handoff": False},
 }
 
 # ── Live hub data ────────────────────────────────────────────────────────────
 # GET /api/empire serves this JSON (projects · ideas · chronicle), updated out-of-band by
-# the `empire` CLI / git hooks — so working on a project reaches the site without code edits.
-# The frontend falls back to the embedded empire-data.js seed when this isn't present.
+# empire_sync. The frontend falls back to the embedded empire-data.js seed when it's missing.
 STATE_PATH = os.environ.get(
     "EMPIRE_STATE", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "state.json"))
 
-# scrypt params (must match gen_password.py)
-SCRYPT_N, SCRYPT_R, SCRYPT_P, SCRYPT_DKLEN, SCRYPT_MAXMEM = 16384, 8, 1, 32, 64 * 1024 * 1024
-
-# Reachable without a session: the login flow and the images the login page shows.
+# Reachable without a session: the login pages and the images they show.
 # Exact paths only. Prefix matching ("/brand/") let "/brand/../index.html" past the login (2026-10-22).
-OPEN_PATHS = frozenset({"/login", "/logout", "/favicon.ico", "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"})
+OPEN_PATHS = frozenset({"/login", "/login/email", "/signup", "/forgot", "/logout", "/favicon.ico",
+                        "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"})
 
 
-def auth_enabled() -> bool:
-    return len(HASH) > 0 and len(SECRET) > 0
+# ── Talking to the accounts server ───────────────────────────────────────────
 
-
-def verify_password(password: str) -> bool:
-    parts = HASH.split(":")  # separator is ":" so the hash survives env_file interpolation
-    if len(parts) != 3 or parts[0] != "scrypt":
-        return False
+def pb_call(path: str, body: dict | None = None, token: str | None = None,
+            client_ip: str | None = None) -> tuple[int, dict]:
+    """POST to PocketBase. Returns (status, json); status 0 means it could not be reached."""
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = token
+    if client_ip:
+        headers["X-Forwarded-For"] = client_ip  # so PocketBase rate-limits per visitor, not per hub
+    req = urllib.request.Request(AUTH_URL + path, method="POST", headers=headers,
+                                 data=json.dumps(body or {}).encode())
     try:
-        salt = bytes.fromhex(parts[1])
-        expected = bytes.fromhex(parts[2])
-        dk = hashlib.scrypt(password.encode(), salt=salt, n=SCRYPT_N, r=SCRYPT_R,
-                            p=SCRYPT_P, dklen=len(expected), maxmem=SCRYPT_MAXMEM)
-    except Exception:
+        with urllib.request.urlopen(req, timeout=5) as r:
+            raw = r.read()
+            return r.status, (json.loads(raw) if raw else {})
+    except urllib.error.HTTPError as e:
+        try:
+            return e.code, json.loads(e.read() or b"{}")
+        except ValueError:
+            return e.code, {}
+    except (OSError, ValueError):
+        return 0, {}
+
+
+def has_access(record: dict | None) -> bool:
+    return bool(record) and record.get("approved") is True and SERVICE in (record.get("services") or [])
+
+
+_cache: dict[str, tuple[bool, float]] = {}
+_cache_lock = threading.Lock()
+
+
+def token_ok(token: str) -> bool:
+    """True if `token` belongs to an approved account with Empire access (cached briefly)."""
+    if not token:
         return False
-    return hmac.compare_digest(dk, expected)
+    key = hashlib.sha256(token.encode()).hexdigest()
+    now = time()
+    with _cache_lock:
+        hit = _cache.get(key)
+    if hit and hit[1] > now:
+        return hit[0]
+    status, data = pb_call("/api/collections/users/auth-refresh", token=token)
+    if status == 0 or status == 429 or status >= 500:
+        return False  # accounts server trouble: deny now, but don't remember it
+    ok = status == 200 and has_access(data.get("record"))
+    with _cache_lock:
+        if len(_cache) >= 1000:
+            _cache.clear()
+        _cache[key] = (ok, now + CHECK_CACHE_SECS)
+    return ok
 
 
-def _sign(data: str) -> str:
-    return urlsafe_b64encode(hmac.new(SECRET, data.encode(), hashlib.sha256).digest()).decode().rstrip("=")
+def session_token(cookie_header: str | None) -> str:
+    for part in (cookie_header or "").split(";"):
+        name, _, value = part.strip().partition("=")
+        if name == COOKIE_NAME:
+            return value
+    return ""
 
 
-def make_session_cookie() -> str:
-    payload = urlsafe_b64encode(json.dumps({"exp": int(time()) + SESSION_SECS}).encode()).decode().rstrip("=")
-    token = f"{payload}.{_sign(payload)}"
+def session_cookie(token: str) -> str:
     return f"{COOKIE_NAME}={token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={SESSION_SECS}"
 
 
@@ -100,67 +127,134 @@ def clear_cookie() -> str:
     return f"{COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"
 
 
-def _sso_sign(payload: str) -> str:
-    return urlsafe_b64encode(hmac.new(SSO_SECRET, payload.encode(), hashlib.sha256).digest()).decode().rstrip("=")
+def login(email: str, password: str, client_ip: str) -> tuple[str | None, str]:
+    """Returns (token, "") on success, else (None, message for the visitor)."""
+    status, data = pb_call("/api/collections/users/auth-with-password",
+                           {"identity": email, "password": password}, client_ip=client_ip)
+    if status == 200:
+        if has_access(data.get("record")):
+            return data.get("token"), ""
+        return None, "This account has no access to Ares Empire."
+    if status == 400:
+        return None, "Wrong email or password."
+    if status == 403:  # right password, but not verified and/or not approved yet
+        return None, "This account isn't active yet. Confirm your email, then wait for approval."
+    if status == 429:
+        return None, "Too many attempts. Wait a minute and try again."
+    return None, "Login is unavailable right now. Try again in a minute."
 
 
-def mint_sso(aud: str) -> str:
-    payload = urlsafe_b64encode(json.dumps({"aud": aud, "exp": int(time()) + SSO_TTL}).encode()).decode().rstrip("=")
-    return f"{payload}.{_sso_sign(payload)}"
+def signup(email: str, password: str, confirm: str, client_ip: str) -> str:
+    """Creates the account and sends the confirmation email. Returns "" or an error message."""
+    if password != confirm:
+        return "The passwords don't match."
+    if len(password) < 8:
+        return "The password needs at least 8 characters."
+    status, data = pb_call("/api/collections/users/records",
+                           {"email": email, "password": password, "passwordConfirm": confirm},
+                           client_ip=client_ip)
+    if status == 200:
+        pb_call("/api/collections/users/request-verification", {"email": email}, client_ip=client_ip)
+        return ""
+    fields = data.get("data") or {}
+    if (fields.get("email") or {}).get("code") == "validation_not_unique":
+        return "An account with this email already exists. Log in or reset your password."
+    for field, label in (("email", "Email"), ("password", "Password"), ("passwordConfirm", "Password")):
+        if (fields.get(field) or {}).get("message"):
+            return f"{label}: {fields[field]['message']}"
+    if status == 429:
+        return "Too many attempts. Wait a minute and try again."
+    return "Sign-up is unavailable right now. Try again in a minute."
 
 
-def sso_destination(to: str) -> str | None:
-    """The province URL to send the visitor to — with a fresh SSO token when one can be minted.
-    Returns None for an unknown province (so we never open-redirect to an arbitrary host)."""
-    base = PROVINCES.get(to)
-    if not base:
-        return None
-    return f"{base}/sso?token={mint_sso(to)}" if SSO_SECRET else f"{base}/"
+def request_reset(email: str, client_ip: str) -> None:
+    # Same answer whether or not the account exists, so the page can't be used to probe emails.
+    pb_call("/api/collections/users/request-password-reset", {"email": email}, client_ip=client_ip)
 
 
-def _b64pad(s: str) -> bytes:
-    return urlsafe_b64decode(s + "=" * (-len(s) % 4))
+# ── Pages ────────────────────────────────────────────────────────────────────
+
+_SLOT = "<!-- content: filled in by webauth/server.py -->"
+esc = html.escape
 
 
-def has_valid_session(cookie_header: str | None) -> bool:
-    if not auth_enabled():
-        return True  # gate disabled → open
-    if not cookie_header:
-        return False
-    entry = next((c.strip() for c in cookie_header.split(";") if c.strip().startswith(COOKIE_NAME + "=")), None)
-    if not entry:
-        return False
-    token = entry[len(COOKIE_NAME) + 1:]
-    dot = token.rfind(".")
-    if dot < 1:
-        return False
-    payload, sig = token[:dot], token[dot + 1:]
-    if not hmac.compare_digest(sig, _sign(payload)):
-        return False
-    try:
-        exp = json.loads(_b64pad(payload).decode()).get("exp")
-        return isinstance(exp, int) and time() < exp
-    except Exception:
-        return False
-
-
-# error slot in web/login.html — replaced with the error paragraph (or removed) per request
-_ERR_SLOT = "<!-- error slot: the auth server injects a .err paragraph here on a failed attempt -->"
-
-
-def login_page(error: str = "") -> bytes:
-    err = f'<p class="err">{error}</p>' if error else ""
+def page(content: str) -> bytes:
     try:
         with open(os.path.join(WEB_ROOT, "login.html"), "r", encoding="utf-8") as f:
-            return f.read().replace(_ERR_SLOT, err).encode("utf-8")
+            return f.read().replace(_SLOT, content).encode("utf-8")
     except OSError:
-        # fallback minimal page if login.html is missing
         return (f"<!doctype html><meta charset=utf-8><title>Ares Empire</title>"
                 f"<body style='background:#000;color:#e9c86b;font-family:sans-serif;text-align:center;padding-top:18vh'>"
-                f"<h1 style='letter-spacing:.2em'>ARES EMPIRE</h1>{err}"
-                f"<form method=POST action=/login><input type=password name=password placeholder='Access key' autofocus>"
-                f"<button>Enter</button></form>").encode("utf-8")
+                f"<h1 style='letter-spacing:.2em'>ARES EMPIRE</h1>{content}").encode("utf-8")
 
+
+def err(message: str) -> str:
+    return f'<p class="err">{esc(message)}</p>' if message else ""
+
+
+def welcome_page(error: str = "") -> bytes:
+    return page(f"""<p class="sub">One account for every service of the empire</p>
+    {err(error)}
+    <a class="button" href="/login/email">Log in</a>
+    <p class="alt">New account? <a href="/signup">Sign up</a></p>""")
+
+
+def login_page(error: str = "", email: str = "") -> bytes:
+    return page(f"""<p class="sub">Log in with your Empire account</p>
+    {err(error)}
+    <form method="POST" action="/login">
+      <input type="email" name="email" placeholder="Email" aria-label="Email" autocomplete="username" value="{esc(email)}" required {'' if email else 'autofocus'} />
+      <input type="password" name="password" placeholder="Password" aria-label="Password" autocomplete="current-password" required {'autofocus' if email else ''} />
+      <button type="submit">Log in</button>
+    </form>
+    <p class="alt"><a href="/forgot">Forgot password?</a> · <a href="/signup">Sign up</a></p>""")
+
+
+def signup_page(error: str = "", email: str = "") -> bytes:
+    return page(f"""<p class="sub">Create your Empire account</p>
+    {err(error)}
+    <form method="POST" action="/signup">
+      <input type="email" name="email" placeholder="Email" aria-label="Email" autocomplete="username" value="{esc(email)}" required autofocus />
+      <input type="password" name="password" placeholder="Password (8+ characters)" aria-label="Password" autocomplete="new-password" minlength="8" required />
+      <input type="password" name="confirm" placeholder="Repeat password" aria-label="Repeat password" autocomplete="new-password" minlength="8" required />
+      <button type="submit">Sign up</button>
+    </form>
+    <p class="alt">Already have an account? <a href="/login/email">Log in</a></p>""")
+
+
+def signup_done_page(email: str) -> bytes:
+    return page(f"""<p class="sub">Almost there</p>
+    <p class="note">We sent a confirmation link to <b>{esc(email)}</b>. Click it, then your account
+    waits for approval. You get an email as soon as it's approved.</p>
+    <p class="alt"><a href="/login">Back</a></p>""")
+
+
+def forgot_page() -> bytes:
+    return page("""<p class="sub">Reset your password</p>
+    <form method="POST" action="/forgot">
+      <input type="email" name="email" placeholder="Email" aria-label="Email" autocomplete="username" required autofocus />
+      <button type="submit">Send reset link</button>
+    </form>
+    <p class="alt"><a href="/login/email">Back to log in</a></p>""")
+
+
+def forgot_done_page() -> bytes:
+    return page("""<p class="sub">Check your email</p>
+    <p class="note">If an account exists for that email, a link to set a new password is on its way.</p>
+    <p class="alt"><a href="/login/email">Back to log in</a></p>""")
+
+
+def handoff_page(url: str, token: str) -> bytes:
+    """Carries the Empire token to a province by POST (never in a URL), submitted automatically."""
+    return page(f"""<p class="sub">Entering…</p>
+    <form id="handoff" method="POST" action="{esc(url)}/sso">
+      <input type="hidden" name="token" value="{esc(token)}" />
+      <noscript><button type="submit">Continue</button></noscript>
+    </form>
+    <script>document.getElementById("handoff").submit();</script>""")
+
+
+# ── HTTP ─────────────────────────────────────────────────────────────────────
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -169,8 +263,13 @@ class Handler(SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):  # quieter logs
         sys.stderr.write(f"{self.address_string()} - {fmt % args}\n")
 
+    def _client_ip(self) -> str:
+        # Caddy sets X-Forwarded-For to the visitor's address; the last entry is the one it added.
+        fwd = self.headers.get("X-Forwarded-For", "")
+        return fwd.split(",")[-1].strip() if fwd else self.client_address[0]
+
     def _redirect(self, location: str, cookie: str | None = None) -> None:
-        self.send_response(HTTPStatus.FOUND)
+        self.send_response(HTTPStatus.SEE_OTHER)
         self.send_header("Location", location)
         if cookie:
             self.send_header("Set-Cookie", cookie)
@@ -186,31 +285,71 @@ class Handler(SimpleHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
-    def _authed(self) -> bool:
-        return has_valid_session(self.headers.get("Cookie"))
+    def _token(self) -> str:
+        return session_token(self.headers.get("Cookie"))
 
-    def _is_open(self, path: str) -> bool:
-        return path in OPEN_PATHS
+    def _authed(self) -> bool:
+        return token_ok(self._token())
+
+    def _form(self) -> dict[str, str]:
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length <= 0 or length > MAX_FORM_BYTES:
+            return {}
+        body = self.rfile.read(length).decode("utf-8", "replace")
+        return {k: v[0] for k, v in parse_qs(body).items()}
 
     def do_GET(self):
-        path = urlparse(self.path).path
-        if path == "/login":
+        url = urlparse(self.path)
+        path = url.path
+        if path in ("/login", "/login/email", "/signup", "/forgot"):
             if self._authed():
                 return self._redirect("/")
-            return self._send_html(login_page())
+            return self._send_html({"/login": welcome_page, "/login/email": login_page,
+                                    "/signup": signup_page, "/forgot": forgot_page}[path]())
         if path == "/logout":
             return self._redirect("/login", cookie=clear_cookie())
         if path == "/sso":
-            # mint a province hand-off token — only for an authed empire visitor
+            # hand a logged-in visitor to a province
             if not self._authed():
                 return self._redirect("/login")
-            to = (parse_qs(urlparse(self.path).query).get("to") or [""])[0]
-            return self._redirect(sso_destination(to) or "/")
-        if not self._authed() and not self._is_open(path):
+            province = PROVINCES.get((parse_qs(url.query).get("to") or [""])[0])
+            if not province:
+                return self._redirect("/")  # unknown → never an open redirect
+            if province["handoff"]:
+                return self._send_html(handoff_page(province["url"], self._token()))
+            return self._redirect(province["url"] + "/")
+        if path not in OPEN_PATHS and not self._authed():
             return self._redirect("/login")
         if path == "/api/empire":
             return self._send_state()
         return super().do_GET()
+
+    def do_HEAD(self):
+        path = urlparse(self.path).path
+        if path not in OPEN_PATHS and not self._authed():
+            return self._redirect("/login")
+        return super().do_HEAD()
+
+    def do_POST(self):
+        path = urlparse(self.path).path
+        form = self._form()
+        email = form.get("email", "").strip()
+        ip = self._client_ip()
+        if path == "/login":
+            token, error = login(email, form.get("password", ""), ip)
+            if token:
+                return self._redirect("/", cookie=session_cookie(token))
+            return self._send_html(login_page(error, email), status=HTTPStatus.UNAUTHORIZED)
+        if path == "/signup":
+            error = signup(email, form.get("password", ""), form.get("confirm", ""), ip)
+            if error:
+                return self._send_html(signup_page(error, email), status=HTTPStatus.BAD_REQUEST)
+            return self._send_html(signup_done_page(email))
+        if path == "/forgot":
+            if email:
+                request_reset(email, ip)
+            return self._send_html(forgot_done_page())
+        self.send_error(HTTPStatus.NOT_FOUND)
 
     def _send_state(self) -> None:
         try:
@@ -226,32 +365,10 @@ class Handler(SimpleHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
-    def do_HEAD(self):
-        path = urlparse(self.path).path
-        if not self._authed() and not self._is_open(path) and path not in ("/login", "/logout"):
-            return self._redirect("/login")
-        return super().do_HEAD()
-
-    def do_POST(self):
-        path = urlparse(self.path).path
-        if path != "/login":
-            self.send_error(HTTPStatus.NOT_FOUND)
-            return
-        length = int(self.headers.get("Content-Length", "0") or "0")
-        body = self.rfile.read(length).decode("utf-8", "replace") if length else ""
-        password = (parse_qs(body).get("password") or [""])[0]
-        if auth_enabled() and verify_password(password):
-            return self._redirect("/", cookie=make_session_cookie())
-        return self._send_html(login_page("Incorrect access key."), status=HTTPStatus.UNAUTHORIZED)
-
 
 def main() -> None:
-    if not auth_enabled():
-        sys.stderr.write("!! WARNING: AUTH_PASSWORD_HASH / AUTH_SESSION_SECRET not set — serving OPEN (no login gate)\n")
-    else:
-        sys.stderr.write("Ares Empire web: login gate ACTIVE\n")
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
-    sys.stderr.write(f"Ares Empire web serving {WEB_ROOT} on {HOST}:{PORT}\n")
+    sys.stderr.write(f"Ares Empire web serving {WEB_ROOT} on {HOST}:{PORT}, accounts at {AUTH_URL}\n")
     httpd.serve_forever()
 
 

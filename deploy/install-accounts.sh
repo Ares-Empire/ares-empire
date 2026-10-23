@@ -27,11 +27,13 @@ if [ "$("$OPT/pocketbase" --version 2>/dev/null)" != "pocketbase version $VERSIO
   install -m 755 -o root -g root "$tmp/pocketbase" "$OPT/pocketbase"
 fi
 
-# Migrations are code (root-owned, read-only for the service).
-rm -rf "${OPT:?}/pb_migrations"
-cp -r "$REPO/accounts/pb_migrations" "$OPT/pb_migrations"
-chown -R root:root "$OPT/pb_migrations"
-chmod -R a+rX,go-w "$OPT/pb_migrations"
+# Migrations and hooks are code (root-owned, read-only for the service).
+for d in pb_migrations pb_hooks; do
+  rm -rf "${OPT:?}/$d"
+  cp -r "$REPO/accounts/$d" "$OPT/$d"
+  chown -R root:root "$OPT/$d"
+  chmod -R a+rX,go-w "$OPT/$d"
+done
 
 install -m 644 "$REPO/deploy/systemd/empire-accounts.service" /etc/systemd/system/empire-accounts.service
 systemctl daemon-reload
