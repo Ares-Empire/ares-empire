@@ -1,6 +1,7 @@
 # Empire accounts — one login for every service
 
-**Planned 2026-10-23.** Status: not built yet. Replaces the "Empire SSO" expansion.
+**Planned 2026-10-23.** Status: **server running** at https://auth.ares-empire.de (PocketBase).
+No service uses it yet; Aresium is first. Replaces the "Empire SSO" expansion.
 
 ## Goal
 
@@ -26,9 +27,32 @@ passwords itself.
 The live table is in [`EMPIRE.md` → Connections](../EMPIRE.md#connections). Rule of thumb:
 a service counts as *connected* once it accepts Empire logins and no longer has its own password.
 
+## What is built (2026-10-23)
+
+- **PocketBase** 0.40.6 (self-hosted, one binary, SQLite) as systemd unit `empire-accounts`,
+  on `127.0.0.1:8090`, behind Caddy at `auth.ares-empire.de`. Admin UI: https://auth.ares-empire.de/_/
+- Install/update: `deploy/install-accounts.sh` (pinned version + SHA-256). The account rules are the
+  migration in `accounts/pb_migrations/`, applied automatically on start.
+  PocketBase stops publishing on GitHub after 0.40.6; future versions come from the author's own site.
+- Data: `/var/lib/empire-accounts/pb_data` (not in git). Must be part of the off-server backup.
+- **Users** (`users` collection): email + password, plus
+  - `approved` — set only by a superuser; login needs `verified = true && approved = true`.
+  - `services` — which provinces the account may use (`empire`, `aresium`; add more in a new migration).
+  - Users can rename themselves, change password, delete their account. They can't touch
+    `approved`/`services`/`verified`, and can only see their own record (tested).
+- **Email**: Resend, domain `ares-empire.de` (DNS at Hetzner), sender `noreply@ares-empire.de`. The
+  SMTP key is entered only in the admin UI (Settings → Mail settings), never in git or chat.
+
+## How a service checks a login
+
+A token stays valid until it expires (7 days) even if the account is un-approved meanwhile, so a
+service must not trust the token alone. It calls
+`POST https://auth.ares-empire.de/api/collections/users/auth-refresh` with the token: a 200 means
+approved and verified (the auth rule runs again), and the returned record's `services` must contain
+the service's name. Cache the answer for a few minutes per token.
+
 ## Open questions (decide when building)
 
-- Where the account database lives: a small Postgres or SQLite next to `webauth/server.py`.
-- Which email service sends password resets.
+- Approval notification (e.g. a Telegram message with an approve button) — a small PocketBase hook.
 - For multi-user Aresium: which data is per person (transactions, accounts, rules) and
   which is shared (the category list).

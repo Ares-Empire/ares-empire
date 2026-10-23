@@ -121,6 +121,7 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y").
 
+- **2026-10-23 · empire** — Empire accounts went live at https://auth.ares-empire.de (PocketBase): sign-up, approval by Patrik, per-service access; email via Resend from ares-empire.de.
 - **2026-10-23 · empire** — Charted the next campaign: Empire accounts (one login for every service) and native iPhone apps via TestFlight, starting with Aresium. Opened the `empire-ios` repo and the Connections table.
 - **2026-06-19 · aresis** — Aresis joined the empire: a personal exposure scanner + privacy-remediation engine (OSINT → LLM severity judge → remediation → report), with the full pipeline running end to end. Cloned local and registered as a province.
 - **2026-06-15 · empire** — Reworked the hub into a clean, modern black-and-gold room: the marble bust at the left edge, the provinces on a stretched circle, the chronicle as a timeline beneath, and an EXPAND view for the empire's expansions.
@@ -132,8 +133,11 @@ Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ## Notes for later
 
 - **Login:** live — the empire sign-in (`web/login.html`) is gated by `webauth/server.py`
-  (scrypt + HMAC-signed cookie), run by `ares-empire.service` and reverse-proxied by the shared
-  `insureai_nginx` at https://www.ares-empire.de. Secrets live in `.env` (never committed; on a
+  (scrypt + HMAC-signed cookie), run by `ares-empire.service` behind Caddy at https://www.ares-empire.de. Secrets live in `.env` (never committed; on a
   fresh box regenerate with `webauth/gen_password.py`).
+- **Front door:** since 2026-10-21 **Caddy** on the host (`/etc/caddy/Caddyfile`) serves every
+  domain with automatic HTTPS; it replaced the `insureai_nginx` container (`deploy/nginx/` is history).
+- **Accounts:** `empire-accounts.service` (PocketBase) at https://auth.ares-empire.de — see
+  [docs/ACCOUNTS.md](docs/ACCOUNTS.md).
 - **SSO:** the hub becomes the shared identity provider so entering a province from the
   hub doesn't ask you to log in again. Routes are left room for this; not built yet.

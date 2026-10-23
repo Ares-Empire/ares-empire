@@ -1,0 +1,35 @@
+# /etc/systemd/system/empire-accounts.service
+# Empire accounts (PocketBase) — the one login for every Ares service, at https://auth.ares-empire.de.
+# Listens on localhost only; Caddy on the same host proxies to it. Installed by deploy/install-accounts.sh.
+[Unit]
+Description=Ares Empire accounts (PocketBase)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=empire-accounts
+Group=empire-accounts
+ExecStart=/opt/empire-accounts/pocketbase serve --http=127.0.0.1:8090 \
+  --dir=/var/lib/empire-accounts/pb_data \
+  --migrationsDir=/opt/empire-accounts/pb_migrations
+Restart=always
+RestartSec=3
+LimitNOFILE=4096
+
+# Hardening: it can only write its own data folder.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/var/lib/empire-accounts
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target
