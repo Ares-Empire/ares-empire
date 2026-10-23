@@ -214,8 +214,8 @@
     // marker = the bust of the updated project; empire entries wear the Ares bust
     const bySlug = {};
     (projects || []).forEach((p) => { if (p.logo) bySlug[p.slug] = p.logo; });
-    const BUST = { aresium: "brand/hermes.png", arestoteles: "brand/arestoteles_transparent.png" };
-    const bustFor = (slug) => BUST[slug] || bySlug[slug] || "brand/ares_transparent.png";
+    const BUST = { aresium: "brand/hermes.webp", arestoteles: "brand/arestoteles_transparent.webp" };
+    const bustFor = (slug) => BUST[slug] || bySlug[slug] || "brand/ares_transparent.webp";
     const items = log.slice(0, 50).reverse();   // oldest → newest, left → right (newest sits on the right)
     return (
       <div className="emp-log" aria-label="Chronicle">
@@ -355,7 +355,7 @@
 
               <div className="pd-tl-wrap">
                 <div className="pd-sec-label">Change log</div>
-                <PdTimeline entries={log} bust={p.logo || "brand/ares_transparent.png"} />
+                <PdTimeline entries={log} bust={p.logo || "brand/ares_transparent.webp"} />
               </div>
             </div>
           </div>

@@ -8,16 +8,23 @@
    crossfades — it MORPHS straight into the hub (the wordmark does not travel to the top; the
    throne room simply dissolves in underneath).
 
-   play({ onDone, onReveal, reducedOk })
+   play({ onDone, onReveal, onSettled, reducedOk })
+     onSettled fires once the big motion is over → a good moment to build the hub underneath
      onReveal  fires as the crossfade begins → reveal the live hub UNDER the opaque overlay
      onDone    called once the overlay is torn down
      reducedOk if true, honor prefers-reduced-motion by skipping straight to onReveal/onDone
 
-   Tunables live in CFG. Honors prefers-reduced-motion. */
+   Tunables live in CFG. Honors prefers-reduced-motion.
+
+   Smoothness (2026-10-23): the intro starts only once the bust is downloaded AND decoded and the
+   fonts are ready (never without the bust; it is skipped if the bust can't load). Only cheap
+   properties animate per frame: no animated blur, and the crack glow is a wide faint stroke
+   under each crack instead of per-path drop-shadow filters. */
 (function () {
   "use strict";
 
-  const BUST_SRC = "brand/ares-bust.png";
+  const BUST_SRC = "/brand/ares-bust.webp";
+  const MAX_WAIT_MS = 6000; // give up on the intro (show the hub) if the bust takes longer
   const WORD = "ARES EMPIRE";
   let prefersReduced = false;
   try { prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (_) {}
@@ -42,16 +49,15 @@
     const ph = el("div", "intro-bust-ph"); ph.style.opacity = "0";
     ph.appendChild(el("div", "bust-ph-vein"));
     const cap = el("div", "bust-ph-cap"); cap.textContent = "ARES"; ph.appendChild(cap);
-    const img = el("img", "intro-bust-img"); img.alt = "Ares Empire"; img.style.opacity = "0";
-    img.onload = () => { img.style.opacity = "1"; ph.style.opacity = "0"; };
+    const img = el("img", "intro-bust-img"); img.alt = "Ares Empire";
+    img.decoding = "sync"; // already downloaded + decoded by play(), so it shows on the first frame
     img.onerror = () => { img.remove(); ph.style.opacity = "1"; };
     img.src = BUST_SRC;
-    if (img.complete && img.naturalWidth) img.style.opacity = "1";
     wrap.appendChild(ph); wrap.appendChild(img);
     return wrap;
   }
 
-  function run(cfg, onDone, onReveal) {
+  function run(cfg, onDone, onReveal, onSettled) {
     const root = document.body;
     const overlay = el("div", "intro-overlay");
     const shake = el("div", "intro-shake");
@@ -95,6 +101,12 @@
       return { d, pts };
     }
     function addPath(d, w, core) {
+      // a wide faint stroke underneath = the glow (cheap to draw, unlike a filter per path)
+      const glow = document.createElementNS(SVGNS, "path");
+      glow.setAttribute("d", d);
+      glow.setAttribute("class", "intro-crack-glow");
+      glow.setAttribute("stroke-width", (w + 5).toFixed(2));
+      crackSvg.appendChild(glow); crackPaths.push(glow);
       const p = document.createElementNS(SVGNS, "path");
       p.setAttribute("d", d);
       p.setAttribute("class", core ? "intro-crack core" : "intro-crack");
@@ -158,7 +170,23 @@
     dusts.forEach((d) => stage.appendChild(d));
     stage.appendChild(flash);
     stage.appendChild(band);
-    shake.appendChild(stage); overlay.appendChild(shake); root.appendChild(overlay);
+    shake.appendChild(stage); overlay.appendChild(shake);
+
+    // Warm-up: put everything on screen (practically invisible) for two frames before anything
+    // moves, so the browser draws the big bust, crater, dust and flash once up front instead of
+    // in the middle of the fall or the impact.
+    const tY0 = cfg.startCenter * H - halfH;
+    bust.style.transform = `translate(-50%, ${tY0.toFixed(1)}px) scale(${cfg.startScale})`;
+    flash.style.opacity = "1";
+    stage.style.opacity = "0.001";
+    root.appendChild(overlay);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      stage.style.opacity = "";
+      flash.style.opacity = "";
+      animate();
+    }));
+
+    function animate() {
 
     // geometry: transform-origin center; translateY positions the box CENTER at a screen fraction
     const tY = (cf) => (cf * H - halfH);
@@ -167,8 +195,8 @@
 
     // 1) bust falls in depth
     bust.animate([
-      { transform: tf(cfg.startCenter, cfg.startScale), filter: "blur(1.5px)" },
-      { transform: tf(cfg.restCenter, 1), filter: "blur(0px)", offset: 1 },
+      { transform: tf(cfg.startCenter, cfg.startScale) },
+      { transform: tf(cfg.restCenter, 1), offset: 1 },
     ], { duration: fall, easing: cfg.fallEase, fill: "both" });
 
     // settle micro-bounce
@@ -199,12 +227,14 @@
     ], { duration: 640, delay: fall, easing: "cubic-bezier(.18,.9,.3,1)", fill: "both" });
 
     // 4) cracks draw outward — ALL at once from the root (no clockwise stagger), then grow
-    crackPaths.forEach((p) => {
-      const len = p.getTotalLength();
-      p.style.strokeDasharray = len; p.style.strokeDashoffset = len;
-      p.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }],
-        { duration: 720 + Math.random() * 360, delay: fall + Math.random() * 50, easing: "cubic-bezier(.2,.7,.2,1)", fill: "both" });
-    });
+    for (let i = 0; i < crackPaths.length; i += 2) {
+      const len = crackPaths[i].getTotalLength();
+      const timing = { duration: 720 + Math.random() * 360, delay: fall + Math.random() * 50, easing: "cubic-bezier(.2,.7,.2,1)", fill: "both" };
+      [crackPaths[i], crackPaths[i + 1]].forEach((p) => {
+        p.style.strokeDasharray = len; p.style.strokeDashoffset = len;
+        p.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], timing);
+      });
+    }
 
     // 5) dust
     dusts.forEach((d) => {
@@ -234,17 +264,17 @@
     // the specular sweep crosses the gold once, as the letters settle
     setTimeout(() => { word.classList.add("shine"); }, wordIn + 300);
 
+    // the big motion is over (impact, cracks, letters) → let the hub build AND draw underneath the
+    // still-opaque overlay now, so the crossfade only has to blend two finished pictures
+    setTimeout(() => { if (onSettled) { try { onSettled(); } catch (_) {} } }, fall + 1000);
+
     // 8) finish → morph (crossfade) into the hub
+    // jump any animation that hasn't finished yet (e.g. a background tab) to its end state;
+    // normally all have finished by now, so this costs nothing (no restyle, no redraw)
     const forceFinal = () => {
       [bust, shake, crater, flash, ...dusts, ...crackPaths, ...spans].forEach((n) => {
-        if (n) n.getAnimations().forEach((a) => a.cancel());
+        if (n) n.getAnimations().forEach((a) => { if (a.playState !== "finished") a.finish(); });
       });
-      bust.style.transform = tf(cfg.restCenter, 1); bust.style.filter = "none";
-      shake.style.transform = "none"; band.style.opacity = "1";
-      spans.forEach((s) => { s.style.opacity = "1"; s.style.transform = "none"; });
-      crater.style.opacity = "1"; crater.style.transform = "translate(-50%,-50%) scale(1)";
-      crackPaths.forEach((p) => { p.style.strokeDashoffset = "0"; });
-      dusts.forEach((d) => { d.style.opacity = "0"; }); flash.style.opacity = "0";
     };
     const cleanup = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); if (onDone) onDone(); };
     setTimeout(() => {
@@ -253,16 +283,26 @@
       overlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 560, easing: "ease", fill: "both" })
         .finished.then(cleanup).catch(cleanup);
     }, cfg.total - 560);
+    } // animate()
   }
 
   window.EmpireIntro = {
     play(opts) {
       opts = opts || {};
       if (opts.reducedOk && prefersReduced) { if (opts.onReveal) opts.onReveal(); if (opts.onDone) opts.onDone(); return; }
-      let started = false;
-      const go = () => { if (started) return; started = true; run(CFG, opts.onDone, opts.onReveal); };
-      const im = new Image(); im.onload = go; im.onerror = go; im.src = BUST_SRC;
-      if (im.complete) go(); else setTimeout(go, 360);
+      let finished = false;
+      const skip = () => { // no bust → no intro: show the hub right away
+        if (finished) return; finished = true;
+        if (opts.onSettled) opts.onSettled(); if (opts.onReveal) opts.onReveal(); if (opts.onDone) opts.onDone();
+      };
+      const timer = setTimeout(skip, MAX_WAIT_MS);
+      const im = new Image(); im.src = BUST_SRC;
+      const fonts = document.fonts ? document.fonts.ready.catch(() => {}) : Promise.resolve();
+      Promise.all([im.decode(), fonts]).then(() => {
+        if (finished) return; finished = true; clearTimeout(timer);
+        // start on a fresh frame so the first animation frame isn't shared with setup work
+        requestAnimationFrame(() => run(CFG, opts.onDone, opts.onReveal, opts.onSettled));
+      }, () => { clearTimeout(timer); skip(); });
     },
   };
 })();

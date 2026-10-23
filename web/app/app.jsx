@@ -84,13 +84,13 @@
       <React.Fragment>
         <div className="emp-ambient" aria-hidden="true" />
         <div className={"emp-figure" + (expanded || spread ? " recede" : "")} aria-hidden="true">
-          <img src="brand/head_transparent_real.png" alt="" onError={(e) => { e.target.style.display = "none"; }} />
+          <img src="brand/head_transparent_real.webp" alt="" onError={(e) => { e.target.style.display = "none"; }} />
         </div>
 
         <main className="emp-app">
           <header className="emp-top">
             <div className="emp-top-l">
-              <img className="emp-crest" src="brand/ares_transparent.png" alt="Ares Empire"
+              <img className="emp-crest" src="brand/ares_transparent.webp" alt="Ares Empire"
                    onError={(e) => { e.target.style.display = "none"; }} />
             </div>
             <button className={"emp-title" + (home ? " is-empire" : "")} onClick={onTitle}

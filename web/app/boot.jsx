@@ -14,18 +14,27 @@
   const revealHub = () => document.documentElement.classList.remove("ares-booting");
 
   function Root() {
+    // While the intro plays, the hub isn't built yet: building it (and loading its images)
+    // at the same time made the slam stutter. It is built once the big motion is over.
+    const [hubOn, setHubOn] = React.useState(!willPlayIntro || !window.EmpireIntro);
     React.useEffect(() => {
       if (!willPlayIntro) { revealHub(); return; }
       try { sessionStorage.setItem("empire-intro-seen", "1"); } catch (_) {}
       if (window.EmpireIntro) {
         // onReveal fires as the crossfade begins → the overlay dissolves straight into the hub
-        window.EmpireIntro.play({ reducedOk: true, onReveal: revealHub, onDone: revealHub });
+        window.EmpireIntro.play({
+          reducedOk: true,
+          // build + show the hub under the opaque intro, so it is fully drawn before the fade
+          onSettled: () => { setHubOn(true); requestAnimationFrame(revealHub); },
+          onReveal: () => { setHubOn(true); revealHub(); },
+          onDone: revealHub,
+        });
       } else {
         revealHub();
       }
     }, []);
     const App = window.EmpireApp;
-    return App ? <App /> : null;
+    return hubOn && App ? <App /> : null;
   }
 
   ReactDOM.createRoot(document.getElementById("root")).render(<Root />);

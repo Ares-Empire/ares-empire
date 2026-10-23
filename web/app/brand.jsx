@@ -1,13 +1,13 @@
 /* Ares Empire — brand marks (window.Bust, window.Wordmark, window.Icon).
 
-   Bust renders the Ares crown bust (brand/ares-bust.png) with a marble placeholder that
+   Bust renders the Ares crown bust (brand/ares-bust.webp) with a marble placeholder that
    shows only if the file is missing. Wordmark renders ARES EMPIRE for the gold band / crown
    (the inter-word space becomes a wider slot so the two words read apart). Icon is a thin
    wrapper over Lucide so we don't hand-roll SVGs. */
 (function () {
   const { useState } = React;
 
-  const BUST_SRC = "brand/ares-bust.png";
+  const BUST_SRC = "brand/ares-bust.webp";
 
   function MarblePlaceholder({ label }) {
     return (

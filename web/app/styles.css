@@ -461,14 +461,15 @@ button.proj-card { cursor: pointer; }
    INTRO — the bust slams onto the wall; cracks burst from the root all at once
    and grow outward; "ARES EMPIRE" slams in, in polished gold with a single shine.
    ============================================================================ */
-.intro-overlay { position: fixed; inset: 0; z-index: 9000; background: #000; overflow: hidden; }
+.intro-overlay { position: fixed; inset: 0; z-index: 9000; background: #000; overflow: hidden; will-change: opacity; }
 .intro-shake { position: absolute; inset: 0; will-change: transform; }
 .intro-stage { position: absolute; inset: 0; overflow: hidden; perspective: 1200px;
   background: radial-gradient(60% 46% at 50% 56%, rgba(150,18,30,0.16), transparent 64%), #000; }
-.intro-bust { position: absolute; aspect-ratio: 0.785; transform-origin: center; will-change: transform, filter; }
+.intro-bust { position: absolute; aspect-ratio: 0.785; transform-origin: center; will-change: transform; }
 .intro-bust-ph, .intro-bust-img { position: absolute; inset: 0; }
-.intro-bust-img { width: 100%; height: 100%; object-fit: contain; transition: opacity .3s ease;
-  filter: drop-shadow(0 26px 54px rgba(0,0,0,0.72)) drop-shadow(0 6px 26px rgba(214,42,58,0.16)); }
+.intro-bust-img { width: 100%; height: 100%; object-fit: contain; }
+/* no drop-shadow on the bust: it's redrawn at ~3x size during the fall, and a black shadow on the
+   black wall barely shows */
 .intro-bust-ph { border-radius: 12px; overflow: hidden; transition: opacity .3s ease;
   background: linear-gradient(143deg, #efece7 0%, #dad6cf 26%, #bdb8af 52%, #98938a 76%, #7a756d 100%);
   box-shadow: inset 0 2px 0 rgba(255,255,255,0.55), inset 0 -16px 30px rgba(0,0,0,0.28), 0 30px 60px rgba(0,0,0,0.6); }
@@ -484,9 +485,10 @@ button.proj-card { cursor: pointer; }
 
 /* the cracks — fine gold fissures with a brief white-hot core (refined, not molten glare) */
 .intro-cracks { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.intro-crack { fill: none; stroke: #e7c074; opacity: 0.8; stroke-linecap: round; stroke-linejoin: round;
-  filter: drop-shadow(0 0 2px rgba(237,202,119,0.45)) drop-shadow(0 0 5px rgba(200,70,50,0.18)); }
-.intro-crack.core { stroke: #fff6df; opacity: 0.9; filter: drop-shadow(0 0 3px rgba(255,244,212,0.8)); }
+/* no filters here: a filter per path is re-rendered every frame while the cracks grow */
+.intro-crack { fill: none; stroke: #e7c074; opacity: 0.85; stroke-linecap: round; stroke-linejoin: round; }
+.intro-crack.core { stroke: #fff6df; opacity: 0.9; }
+.intro-crack-glow { fill: none; stroke: rgba(226,160,90,0.16); stroke-linecap: round; stroke-linejoin: round; }
 
 .intro-dust { position: absolute; transform: translate(-50%,-50%); border-radius: 50%; will-change: transform, opacity;
   background: radial-gradient(closest-side, rgba(120,30,34,0.4), rgba(80,16,22,0.14) 56%, transparent 76%); }
