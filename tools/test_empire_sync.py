@@ -35,8 +35,9 @@ make iso
 """
 
 
-def repo(name, pushed="2026-10-22T10:00:00Z", description="", homepage=None):
-    return {"name": name, "pushed_at": pushed, "description": description, "homepage": homepage}
+def repo(name, pushed="2026-10-22T10:00:00Z", description="", homepage=None, owner="Ares-Empire"):
+    return {"name": name, "full_name": f"{owner}/{name}", "owner": {"login": owner},
+            "pushed_at": pushed, "description": description, "homepage": homepage}
 
 
 def project(slug, **kw):
@@ -132,7 +133,7 @@ class ExistingRepos(Base):
         self.assertEqual(p["detail"]["about"], "About aresync.")
         self.assertEqual(p["logo"], "brand/aresync.png")
         self.assertEqual(p["status"], "BESIEGING")
-        self.assertEqual(p["detail"]["changelog"][0], {"at": "2026-10-22", "text": "aresync commit"})
+        self.assertEqual(p["detail"]["changelog"][0], {"at": "2026-10-22", "text": "Ares-Empire/aresync commit"})
         self.assertEqual(state["chronicle"], [])
 
     def test_llm_is_tried_at_most_once_a_day(self):
@@ -172,6 +173,14 @@ class Text(unittest.TestCase):
         s = es.first_sentence("word " * 40)
         self.assertLessEqual(len(s), es.BLURB_CAP)
         self.assertTrue(s.endswith("…"))
+
+    def test_repos_are_read_from_the_account_and_the_org(self):
+        page = [repo("aresium", owner="Ares-Empire"), repo("aresync", owner="carlsenares"),
+                repo("aresx", owner="someone-else"), repo("ares-empire", owner="Ares-Empire"),
+                repo("nametbd", owner="carlsenares")]
+        with mock.patch.object(es, "_gh", lambda path, params=None: page if params["page"] == 1 else []):
+            names = [r["name"] for r in es.list_ares_repos()]
+        self.assertEqual(names, ["aresium", "aresync"])
 
     def test_homepage_domain(self):
         self.assertEqual(es.homepage_domain("https://aresium.de/"), "aresium.de")

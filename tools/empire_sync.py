@@ -29,7 +29,8 @@ Env:
   EMPIRE_LLM_MODELS          comma-separated models, tried in order. Else EMPIRE_LLM_MODEL
                              and EMPIRE_LLM_FALLBACK_MODEL.
   EMPIRE_LLM_TIMEOUT         seconds per model call (default 45).
-  GH_OWNER                   repo owner (default: carlsenares).
+  GH_OWNERS                  comma-separated accounts/orgs whose ares… repos are provinces
+                             (default: carlsenares,Ares-Empire).
 
 CLI:
   --dry-run       report what would change; no LLM call, no write.
@@ -54,7 +55,7 @@ import requests
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STATE_PATH = Path(os.environ.get("EMPIRE_STATE", REPO_ROOT / "data" / "state.json"))
 META_PATH = Path(os.environ.get("EMPIRE_SYNC_META", REPO_ROOT / "data" / "sync-meta.json"))
-OWNER = os.environ.get("GH_OWNER", "carlsenares")
+OWNERS = [o.strip() for o in os.environ.get("GH_OWNERS", "carlsenares,Ares-Empire").split(",") if o.strip()]
 GH_TOKEN = os.environ.get("EMPIRE_GH_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
 LLM_KEY = os.environ.get("EMPIRE_LLM_KEY") or os.environ.get("GROQ_API_KEY", "")
 LLM_PROVIDER = os.environ.get("EMPIRE_LLM_PROVIDER", "groq").lower()
@@ -103,17 +104,20 @@ def _gh(path: str, params: dict | None = None) -> object:
 
 
 def list_ares_repos() -> list[dict]:
-    """Repos the token owner owns (public + private) named ares…, excluding the hub, archived
-    repos and forks. Returns GitHub's repo objects (name, description, homepage, pushed_at…)."""
+    """Repos (public + private) named ares… owned by one of OWNERS (the token's own account or
+    an org it belongs to), excluding the hub, archived repos and forks. Returns GitHub's repo
+    objects (name, full_name, description, homepage, pushed_at…)."""
+    owners = {o.lower() for o in OWNERS}
     repos: list[dict] = []
     page = 1
     while True:
-        batch = _gh("/user/repos", {"per_page": 100, "page": page, "affiliation": "owner"})
+        batch = _gh("/user/repos", {"per_page": 100, "page": page,
+                                    "affiliation": "owner,organization_member"})
         if not batch:
             break
         for repo in batch:
             name = repo["name"]
-            if repo.get("owner", {}).get("login", "").lower() != OWNER.lower():
+            if repo.get("owner", {}).get("login", "").lower() not in owners:
                 continue
             if repo.get("archived") or repo.get("fork"):
                 continue
@@ -125,9 +129,9 @@ def list_ares_repos() -> list[dict]:
     return sorted(repos, key=lambda r: r["name"].lower())
 
 
-def _content(repo: str, path: str) -> str | None:
+def _content(full: str, path: str) -> str | None:
     try:
-        data = _gh(f"/repos/{OWNER}/{repo}/contents/{path}")
+        data = _gh(f"/repos/{full}/contents/{path}")
     except requests.HTTPError:
         return None
     if isinstance(data, dict) and data.get("encoding") == "base64":
@@ -135,20 +139,20 @@ def _content(repo: str, path: str) -> str | None:
     return None
 
 
-def repo_docs(repo: str, readme: str | None) -> str:
+def repo_docs(full: str, readme: str | None) -> str:
     """README + CLAUDE.md + docs/*.md + recent commit subjects, capped (for the LLM)."""
     parts: list[str] = []
     if readme:
         parts.append(f"### README.md\n{readme}")
-    claude = _content(repo, "CLAUDE.md")
+    claude = _content(full, "CLAUDE.md")
     if claude:
         parts.append(f"### CLAUDE.md\n{claude}")
     try:
-        listing = _gh(f"/repos/{OWNER}/{repo}/contents/docs")
+        listing = _gh(f"/repos/{full}/contents/docs")
         if isinstance(listing, list):
             for item in listing:
                 if item.get("type") == "file" and item["name"].lower().endswith(".md"):
-                    text = _content(repo, f"docs/{item['name']}")
+                    text = _content(full, f"docs/{item['name']}")
                     if text:
                         parts.append(f"### docs/{item['name']}\n{text}")
     except requests.HTTPError:
@@ -156,11 +160,11 @@ def repo_docs(repo: str, readme: str | None) -> str:
     return "\n\n".join(parts)[:DOC_CHAR_CAP]
 
 
-def repo_changelog(repo: str) -> list[dict]:
+def repo_changelog(full: str) -> list[dict]:
     """Recent real commits as {"at": YYYY-MM-DD, "text": subject}, newest first. Skips aresync
     auto-commits and merges."""
     try:
-        commits = _gh(f"/repos/{OWNER}/{repo}/commits", {"per_page": 30})
+        commits = _gh(f"/repos/{full}/commits", {"per_page": 30})
     except requests.RequestException:
         return []
     out: list[dict] = []
@@ -449,7 +453,7 @@ def run(*, dry_run: bool, only: str | None, use_llm: bool, force: bool,
     llm_ready = use_llm and bool(LLM_KEY) and bool(LLM_MODELS)
 
     for repo in repos:
-        name = repo["name"]
+        name, full = repo["name"], repo["full_name"]
         slug = name.lower()
         existing = by_slug.get(slug)
         seen = meta["repos"].get(slug, {})
@@ -464,16 +468,16 @@ def run(*, dry_run: bool, only: str | None, use_llm: bool, force: bool,
             print(f"  {slug}: would {'refresh' if existing else 'ADD'}", file=sys.stderr)
             continue
 
-        readme = _content(name, "README.md")
+        readme = _content(full, "README.md")
         fallback = basic_entry(repo, readme, today)
         gen = None
         if llm_ready and seen.get("llm_attempt") != today.isoformat():
             seen["llm_attempt"] = today.isoformat()
             try:
-                gen = llm_entry(name, repo_docs(name, readme) + _commit_block(name))
+                gen = llm_entry(name, repo_docs(full, readme) + _commit_block(full))
             except Exception as exc:
                 errors.append(f"{slug}: LLM failed ({str(exc)[:200]})")
-        merged, note = merge_project(existing, name, gen, repo_changelog(name),
+        merged, note = merge_project(existing, name, gen, repo_changelog(full),
                                      fallback["status"], fallback)
         seen["pushed_at"] = repo.get("pushed_at")
         seen["needs_llm"] = gen is None
@@ -506,8 +510,8 @@ def run(*, dry_run: bool, only: str | None, use_llm: bool, force: bool,
     return 0
 
 
-def _commit_block(repo: str) -> str:
-    subjects = [e["text"] for e in repo_changelog(repo)[:10]]
+def _commit_block(full: str) -> str:
+    subjects = [e["text"] for e in repo_changelog(full)[:10]]
     return ("\n\n### recent commits\n" + "\n".join(f"- {s}" for s in subjects)) if subjects else ""
 
 
