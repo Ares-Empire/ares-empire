@@ -1,6 +1,6 @@
 # 01: The hub on a phone ("throne room")
 
-Status: draft
+Status: merged and live 2026-10-24. Data layer, dialogs, approvals and add flow by Codex; the look reworked by Claude after Patrik's feedback (approved).
 Branch: `codex/01-mobile-hub` · Worktree: `../ares-empire-01-mobile-hub` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
