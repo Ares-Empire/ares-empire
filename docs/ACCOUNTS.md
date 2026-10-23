@@ -36,10 +36,22 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
   PocketBase stops publishing on GitHub after 0.40.6; future versions come from the author's own site.
 - Data: `/var/lib/empire-accounts/pb_data` (not in git). Must be part of the off-server backup.
 - **Users** (`users` collection): email + password, plus
-  - `approved` — set only by a superuser; login needs `verified = true && approved = true`.
+  - `approved` — set by a superuser or an admin approving another account; login needs
+    `verified = true && approved = true`.
   - `services` — which provinces the account may use (`empire`, `aresium`; add more in a new migration).
-  - Users can rename themselves, change password, delete their account. They can't touch
-    `approved`/`services`/`verified`, and can only see their own record (tested).
+  - `admin` — only a superuser may set this, including at sign-up.
+  - `ring` — JSON list of province slugs, editable by the account itself. Adding a province does not grant access.
+  - Normal users can rename themselves, change password and delete their account. They can't touch
+    `approved`/`services`/`verified`/`admin`, and can only see their own record.
+  - Admins can list/view all accounts, update only `approved` and `services` on other accounts, and delete
+    unapproved accounts. An admin cannot delete an approved account, including their own.
+    The `admin-visibility.pb.js` hook exposes account emails to admins for approvals without granting
+    PocketBase's broader `manageRule` privileges.
+
+Local verification (no live account data): `bash accounts/test-rules.sh` uses a disposable PocketBase 0.40.6
+from `$POCKETBASE` (default `~/.pocketbase-test/pocketbase`) and checks API rules, email visibility and migration
+rollback/reapply. It loads the visibility hook but excludes the mail hooks. Hub contract tests use fake
+PocketBase responses: `python3 -m unittest webauth/test_server.py`.
 - **Email**: Resend via `smtp.resend.com:2465` (the host blocks outgoing 25/465/587), domain
   `ares-empire.de` (DNS at Hetzner), sender `noreply@ares-empire.de`. The
   SMTP key is entered only in the admin UI (Settings → Mail settings), never in git or chat.

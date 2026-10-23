@@ -17,14 +17,16 @@ import hashlib
 import html
 import json
 import os
+import re
 import sys
 import threading
 import urllib.error
 import urllib.request
 from http import HTTPStatus
+from http.client import HTTPException
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from time import time
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 WEB_ROOT = os.environ.get("WEB_ROOT", "web")
 # prod binds the docker-bridge gateway (172.18.0.1), off every public interface; Caddy proxies in.
@@ -47,9 +49,13 @@ PROVINCES = {
 
 # ── Live hub data ────────────────────────────────────────────────────────────
 # GET /api/empire serves this JSON (projects · ideas · chronicle), updated out-of-band by
-# empire_sync. The frontend falls back to the embedded empire-data.js seed when it's missing.
+# empire_sync. Missing → 503 and the frontend uses its embedded seed.
 STATE_PATH = os.environ.get(
     "EMPIRE_STATE", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "state.json"))
+CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
+# Plain JSON snapshot of web/app/empire-data.js, usable without a JS runtime.
+PULSE_URLS = {"aresium": "https://aresium.de/api/pulse"}
+LIVE_CACHE_SECS = 60
 
 # Reachable without a session: the login pages and the images they show.
 # Exact paths only. Prefix matching ("/brand/") let "/brand/../index.html" past the login (2026-10-22).
@@ -60,55 +66,228 @@ OPEN_PATHS = frozenset({"/login", "/login/email", "/signup", "/forgot", "/logout
 # ── Talking to the accounts server ───────────────────────────────────────────
 
 def pb_call(path: str, body: dict | None = None, token: str | None = None,
-            client_ip: str | None = None) -> tuple[int, dict]:
-    """POST to PocketBase. Returns (status, json); status 0 means it could not be reached."""
+            client_ip: str | None = None, method: str = "POST") -> tuple[int, dict]:
+    """Call PocketBase; status 0 means unreachable or an unreadable response."""
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = token
     if client_ip:
         headers["X-Forwarded-For"] = client_ip  # so PocketBase rate-limits per visitor, not per hub
-    req = urllib.request.Request(AUTH_URL + path, method="POST", headers=headers,
-                                 data=json.dumps(body or {}).encode())
+    req = urllib.request.Request(AUTH_URL + path, method=method, headers=headers,
+                                 data=json.dumps(body or {}).encode() if method in ("POST", "PATCH") else None)
     try:
         with urllib.request.urlopen(req, timeout=5) as r:
             raw = r.read()
-            return r.status, (json.loads(raw) if raw else {})
+            data = json.loads(raw) if raw else {}
+            return (r.status, data) if isinstance(data, dict) else (0, {})
     except urllib.error.HTTPError as e:
         try:
-            return e.code, json.loads(e.read() or b"{}")
-        except ValueError:
+            data = json.loads(e.read() or b"{}")
+            return e.code, data if isinstance(data, dict) else {}
+        except (OSError, ValueError, HTTPException):
             return e.code, {}
-    except (OSError, ValueError):
+        finally:
+            e.close()
+    except (OSError, ValueError, HTTPException):
         return 0, {}
 
 
 def has_access(record: dict | None) -> bool:
-    return bool(record) and record.get("approved") is True and SERVICE in (record.get("services") or [])
+    return (isinstance(record, dict) and record.get("approved") is True
+            and isinstance(record.get("services"), list) and SERVICE in record["services"])
 
 
-_cache: dict[str, tuple[bool, float]] = {}
+_cache: dict[str, tuple[dict, float]] = {}
 _cache_lock = threading.Lock()
 
 
-def token_ok(token: str) -> bool:
-    """True if `token` belongs to an approved account with Empire access (cached briefly)."""
+def token_access(token: str, client_ip: str | None = None) -> dict:
+    """Keep token rejection, lack of access, and outages distinct, as in Aresium."""
+    unauthenticated = {"outcome": "denied", "status": 401, "error": "unauthenticated"}
+    forbidden = {"outcome": "denied", "status": 403, "error": "This account has no access to Ares Empire."}
+    unavailable = {"outcome": "unavailable", "status": 503,
+                   "error": "Login service unavailable, try again in a minute."}
     if not token:
-        return False
+        return unauthenticated
     key = hashlib.sha256(token.encode()).hexdigest()
     now = time()
     with _cache_lock:
         hit = _cache.get(key)
     if hit and hit[1] > now:
         return hit[0]
-    status, data = pb_call("/api/collections/users/auth-refresh", token=token)
-    if status == 0 or status == 429 or status >= 500:
-        return False  # accounts server trouble: deny now, but don't remember it
-    ok = status == 200 and has_access(data.get("record"))
+    status, data = pb_call("/api/collections/users/auth-refresh", token=token, client_ip=client_ip)
+    if status == 200:
+        record = data.get("record")
+        if not isinstance(record, dict) or not isinstance(record.get("id"), str) or not record["id"]:
+            return unavailable
+        access = {"outcome": "allowed", "record": record} if has_access(record) else forbidden
+    elif status in (400, 401):
+        access = unauthenticated
+    elif status == 403:
+        access = forbidden
+    else:
+        return unavailable  # Never cache outages, rate limits, or unexpected replies.
     with _cache_lock:
         if len(_cache) >= 1000:
             _cache.clear()
-        _cache[key] = (ok, now + CHECK_CACHE_SECS)
-    return ok
+        _cache[key] = (access, now + CHECK_CACHE_SECS)
+    return access
+
+
+def forget_token(token: str) -> None:
+    with _cache_lock:
+        _cache.pop(hashlib.sha256(token.encode()).hexdigest(), None)
+
+
+class APIError(Exception):
+    def __init__(self, status: int, message: str):
+        self.status = status
+        self.message = message
+
+
+def load_state() -> dict:
+    # data/state.json is written by empire_sync. Without it the API answers 503 and the website falls back to its
+    # embedded seed (web/app/empire-data.js), the only copy of the seed.
+    try:
+        with open(STATE_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict) and isinstance(data.get("projects"), list):
+            return data
+    except (OSError, ValueError):
+        pass
+    raise APIError(503, "Hub data unavailable, try again in a minute.")
+
+
+def load_catalog() -> dict:
+    with open(CATALOG_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+
+_live_cache: dict[tuple[str, str], tuple[str | None, float]] = {}
+_live_lock = threading.Lock()
+
+
+def live_line(slug: str, account_id: str, token: str) -> str | None:
+    url = PULSE_URLS.get(slug)
+    if not url:
+        return None
+    key = (account_id, slug)
+    with _live_lock:
+        hit = _live_cache.get(key)
+    if hit and hit[1] > time():
+        return hit[0]
+    line = None
+    try:
+        req = urllib.request.Request(url, headers={"Authorization": "Bearer " + token})
+        with urllib.request.urlopen(req, timeout=2) as r:
+            data = json.load(r)
+            if r.status == 200 and isinstance(data, dict) and isinstance(data.get("line"), str):
+                line = data["line"]
+    except urllib.error.HTTPError as e:
+        e.close()
+    except (OSError, ValueError, HTTPException):
+        pass  # Pulse failures never turn into hub errors.
+    with _live_lock:
+        if len(_live_cache) >= 1000:
+            _live_cache.clear()
+        _live_cache[key] = (line, time() + LIVE_CACHE_SECS)
+    return line
+
+
+def account_ring(record: dict) -> list[str]:
+    ring = record.get("ring")
+    return list(dict.fromkeys(s for s in ring if isinstance(s, str))) if isinstance(ring, list) else []
+
+
+def require_pb(status: int) -> None:
+    if 200 <= status < 300:
+        return
+    if status in (400, 401, 403, 404):
+        raise APIError(status, {400: "Invalid account request.", 401: "unauthenticated",
+                                403: "Forbidden.", 404: "Account not found."}[status])
+    raise APIError(503, "Account service unavailable, try again in a minute.")
+
+
+def pending_accounts(token: str, client_ip: str, count_only: bool = False):
+    items = []
+    page = 1
+    while True:
+        query = urlencode({"filter": "approved = false", "sort": "created,id", "page": page,
+                           "perPage": 1 if count_only else 500,
+                           "fields": "id,email,name,created"})
+        status, data = pb_call("/api/collections/users/records?" + query, token=token,
+                               client_ip=client_ip, method="GET")
+        require_pb(status)
+        if not isinstance(data.get("items"), list) or not isinstance(data.get("totalItems"), int):
+            raise APIError(503, "Account service returned an unreadable response.")
+        if count_only:
+            return data["totalItems"]
+        items.extend({k: item.get(k, "") for k in ("id", "email", "name", "created")}
+                     for item in data["items"])
+        if page >= data.get("totalPages", 1):
+            return items
+        page += 1
+
+
+def empire_data(record: dict, token: str, client_ip: str) -> dict:
+    state, catalog = load_state(), load_catalog()
+    admin = record.get("admin") is True
+    ring = set(account_ring(record)) & catalog.keys()
+
+    def province(project):
+        slug = project["slug"]
+        entry = catalog.get(slug, {})
+        return {**project, "state": "open" if admin else entry["users"],
+                "app": entry.get("app"), "live": live_line(slug, record["id"], token)}
+
+    projects = state.get("projects", [])
+    # Keep the version-1 field names and all province metadata.
+    return {"version": 2, "me": {"id": record["id"], "name": record.get("name", ""), "admin": admin},
+            "projects": [province(p) for p in projects if admin or p["slug"] in ring],
+            "addable": [] if admin else [province(p) for p in projects
+                                         if p["slug"] in catalog and p["slug"] not in ring],
+            "chronicle": [e for e in state.get("chronicle", []) if admin or e.get("project") in ring],
+            "ideas": state.get("ideas", []) if admin else [],
+            "pending": pending_accounts(token, client_ip, count_only=True) if admin else 0}
+
+
+def change_ring(record: dict, token: str, client_ip: str, body: dict) -> dict:
+    if set(body) not in ({"add"}, {"remove"}):
+        raise APIError(400, "Send exactly one province to add or remove.")
+    action, slug = next(iter(body.items()))
+    if not isinstance(slug, str) or slug not in load_catalog():
+        raise APIError(400, "Unknown catalog province.")
+    ring = account_ring(record)
+    if action == "add" and slug not in ring:
+        ring.append(slug)
+    elif action == "remove":
+        ring = [s for s in ring if s != slug]
+    status, updated = pb_call("/api/collections/users/records/" + record["id"], {"ring": ring},
+                              token=token, client_ip=client_ip, method="PATCH")
+    require_pb(status)
+    if updated.get("id") != record["id"] or updated.get("ring") != ring:
+        raise APIError(503, "Account service returned an unreadable response.")
+    forget_token(token)  # The next request must not reuse the old ring from auth-refresh.
+    return empire_data({**record, "ring": ring}, token, client_ip)
+
+
+def decide_approval(account_id: str, token: str, client_ip: str, body: dict) -> dict:
+    if not re.fullmatch(r"[a-zA-Z0-9]{15}", account_id):
+        raise APIError(400, "Invalid account id.")
+    if body != {"approve": True} and body != {"decline": True}:
+        raise APIError(400, "Send approve: true or decline: true.")
+    # bool is intentional: JSON numbers must not count as `true`.
+    if next(iter(body.values())) is not True:
+        raise APIError(400, "Send approve: true or decline: true.")
+    path = "/api/collections/users/records/" + account_id
+    if "approve" in body:
+        status, _ = pb_call(path, {"approved": True, "services": [SERVICE]},
+                            token=token, client_ip=client_ip, method="PATCH")
+    else:
+        # PocketBase enforces approved = false atomically on DELETE.
+        status, _ = pb_call(path, token=token, client_ip=client_ip, method="DELETE")
+    require_pb(status)
+    return {"ok": True}
 
 
 def session_token(cookie_header: str | None) -> str:
@@ -127,21 +306,27 @@ def clear_cookie() -> str:
     return f"{COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"
 
 
-def login(email: str, password: str, client_ip: str) -> tuple[str | None, str]:
-    """Returns (token, "") on success, else (None, message for the visitor)."""
+def login(email: str, password: str, client_ip: str) -> tuple[str | None, str, int]:
+    """Returns (token, message, HTTP status), preserving auth failure categories."""
     status, data = pb_call("/api/collections/users/auth-with-password",
                            {"identity": email, "password": password}, client_ip=client_ip)
     if status == 200:
-        if has_access(data.get("record")):
-            return data.get("token"), ""
-        return None, "This account has no access to Ares Empire."
+        record = data.get("record")
+        if (not isinstance(data.get("token"), str) or not data["token"]
+                or not isinstance(record, dict) or not isinstance(record.get("id"), str) or not record["id"]):
+            return None, "Login is unavailable right now. Try again in a minute.", 503
+        if has_access(record):
+            return data["token"], "", 200
+        return None, "This account has no access to Ares Empire.", 403
     if status == 400:
-        return None, "Wrong email or password."
+        return None, "Wrong email or password.", 401
+    if status == 401:
+        return None, "Wrong email or password.", 401
     if status == 403:  # right password, but not verified and/or not approved yet
-        return None, "This account isn't active yet. Confirm your email, then wait for approval."
+        return None, "This account isn't active yet. Confirm your email, then wait for approval.", 403
     if status == 429:
-        return None, "Too many attempts. Wait a minute and try again."
-    return None, "Login is unavailable right now. Try again in a minute."
+        return None, "Too many attempts. Wait a minute and try again.", 503
+    return None, "Login is unavailable right now. Try again in a minute.", 503
 
 
 def signup(email: str, password: str, confirm: str, client_ip: str) -> str:
@@ -289,12 +474,68 @@ class Handler(SimpleHTTPRequestHandler):
         return session_token(self.headers.get("Cookie"))
 
     def _authed(self) -> bool:
-        return token_ok(self._token())
+        return token_access(self._token(), self._client_ip())["outcome"] == "allowed"
 
     def _bearer_ok(self) -> bool:
         # the iPhone apps send the Empire token as "Authorization: Bearer <token>" (API only)
-        auth = self.headers.get("Authorization", "")
-        return auth[:7].lower() == "bearer " and token_ok(auth[7:].strip())
+        match = re.fullmatch(r"Bearer\s+(\S+)", self.headers.get("Authorization", ""), re.I)
+        return bool(match) and token_access(match[1], self._client_ip())["outcome"] == "allowed"
+
+    def _web_gate(self) -> bool:
+        access = token_access(self._token(), self._client_ip())
+        if access["outcome"] == "allowed":
+            return True
+        if access["status"] == 401:
+            self._redirect("/login")
+        else:
+            self._send_html(page(err(access["error"])), access["status"])
+        return False
+
+    def _json_body(self) -> dict:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            raise APIError(400, "Invalid content length.")
+        if length > MAX_FORM_BYTES:
+            raise APIError(413, "Request too large.")
+        if length <= 0:
+            raise APIError(400, "A JSON object is required.")
+        try:
+            body = json.loads(self.rfile.read(length))
+        except (ValueError, UnicodeError):
+            raise APIError(400, "Invalid JSON.")
+        if not isinstance(body, dict):
+            raise APIError(400, "A JSON object is required.")
+        return body
+
+    def _api(self, path: str) -> None:
+        try:
+            if "Authorization" in self.headers:
+                match = re.fullmatch(r"Bearer\s+(\S+)", self.headers["Authorization"], re.I)
+                token = match[1] if match else ""
+            else:
+                token = self._token()
+            ip = self._client_ip()
+            access = token_access(token, ip)
+            if access["outcome"] != "allowed":
+                raise APIError(access["status"], access["error"])
+            record = access["record"]
+            if path == "/api/empire/approvals" or path.startswith("/api/empire/approvals/"):
+                if record.get("admin") is not True:
+                    raise APIError(403, "Administrator access required.")
+            if self.command in ("GET", "HEAD") and path == "/api/empire":
+                return self._send_state(record, token, ip)
+            if self.command in ("GET", "HEAD") and path == "/api/empire/approvals":
+                data = pending_accounts(token, ip)
+            elif self.command == "POST" and path == "/api/empire/ring":
+                data = change_ring(record, token, ip, self._json_body())
+            elif self.command == "POST" and path.startswith("/api/empire/approvals/"):
+                data = decide_approval(path.rsplit("/", 1)[1], token, ip, self._json_body())
+            else:
+                raise APIError(404, "Unknown API route.")
+            self._send_json(json.dumps(data).encode())
+        except APIError as e:
+            self._send_json(json.dumps({"error": e.message}).encode(), e.status)
 
     def _form(self) -> dict[str, str]:
         length = int(self.headers.get("Content-Length", "0") or "0")
@@ -306,6 +547,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         url = urlparse(self.path)
         path = url.path
+        if path == "/api/empire" or path.startswith("/api/empire/"):
+            return self._api(path)
         if path in ("/login", "/login/email", "/signup", "/forgot"):
             if self._authed():
                 return self._redirect("/")
@@ -315,38 +558,38 @@ class Handler(SimpleHTTPRequestHandler):
             return self._redirect("/login", cookie=clear_cookie())
         if path == "/sso":
             # hand a logged-in visitor to a province
-            if not self._authed():
-                return self._redirect("/login")
+            if not self._web_gate():
+                return
             province = PROVINCES.get((parse_qs(url.query).get("to") or [""])[0])
             if not province:
                 return self._redirect("/")  # unknown → never an open redirect
             if province["handoff"]:
                 return self._send_html(handoff_page(province["url"], self._token()))
             return self._redirect(province["url"] + "/")
-        if path == "/api/empire":
-            if not (self._authed() or self._bearer_ok()):
-                return self._send_json(b'{"error":"unauthenticated"}', HTTPStatus.UNAUTHORIZED)
-            return self._send_state()
-        if path not in OPEN_PATHS and not self._authed():
-            return self._redirect("/login")
+        if path not in OPEN_PATHS and not self._web_gate():
+            return
         return super().do_GET()
 
     def do_HEAD(self):
         path = urlparse(self.path).path
-        if path not in OPEN_PATHS and not self._authed():
-            return self._redirect("/login")
+        if path == "/api/empire" or path.startswith("/api/empire/"):
+            return self._api(path)
+        if path not in OPEN_PATHS and not self._web_gate():
+            return
         return super().do_HEAD()
 
     def do_POST(self):
         path = urlparse(self.path).path
+        if path == "/api/empire" or path.startswith("/api/empire/"):
+            return self._api(path)
         form = self._form()
         email = form.get("email", "").strip()
         ip = self._client_ip()
         if path == "/login":
-            token, error = login(email, form.get("password", ""), ip)
+            token, error, status = login(email, form.get("password", ""), ip)
             if token:
                 return self._redirect("/", cookie=session_cookie(token))
-            return self._send_html(login_page(error, email), status=HTTPStatus.UNAUTHORIZED)
+            return self._send_html(login_page(error, email), status=status)
         if path == "/signup":
             error = signup(email, form.get("password", ""), form.get("confirm", ""), ip)
             if error:
@@ -358,13 +601,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self._send_html(forgot_done_page())
         self.send_error(HTTPStatus.NOT_FOUND)
 
-    def _send_state(self) -> None:
-        try:
-            with open(STATE_PATH, "rb") as f:
-                body = f.read()
-        except OSError:
-            body = b"{}"
-        self._send_json(body)
+    def _send_state(self, record: dict, token: str, client_ip: str) -> None:
+        self._send_json(json.dumps(empire_data(record, token, client_ip)).encode())
 
     def _send_json(self, body: bytes, status: int = HTTPStatus.OK) -> None:
         self.send_response(status)
