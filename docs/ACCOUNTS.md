@@ -1,7 +1,7 @@
 # Empire accounts — one login for every service
 
 **Planned 2026-10-23.** Status: **server running** at https://auth.ares-empire.de (PocketBase).
-No service uses it yet; Aresium is first. Replaces the "Empire SSO" expansion.
+Aresium's API accepts it (2026-10-23, for the iPhone app); its website still has its own password. Replaces the "Empire SSO" expansion.
 
 ## Goal
 
@@ -51,6 +51,8 @@ service must not trust the token alone. It calls
 `POST https://auth.ares-empire.de/api/collections/users/auth-refresh` with the token: a 200 means
 approved and verified (the auth rule runs again), and the returned record's `services` must contain
 the service's name. Cache the answer for a few minutes per token.
+Reference implementation: `aresium/src/web/empire-auth.ts` (also limits access to the user ids in
+`EMPIRE_ALLOWED_USERS` while Aresium holds only one person's data).
 
 ## Open questions (decide when building)
 

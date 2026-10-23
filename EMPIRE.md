@@ -72,7 +72,7 @@ repo as a top-level folder, and live services and data volumes depend on their p
 
 | Province | Login | iPhone app | Repo |
 |---|---|---|---|
-| **Aresium** | own password + accepts the hub's sign-in hand-off → **moving to Empire accounts** | **planned (first app)** in `empire-ios` | `aresium` |
+| **Aresium** | website: own password + the hub's sign-in hand-off · **API: Empire login** (for the app) | **planned (first app)** in `empire-ios` | `aresium` |
 | **Arestoteles** | own login | — | `Arestoteles` |
 | **Ares Empire** (hub) | is the login (single password today → accounts) | later | `ares-empire` |
 
