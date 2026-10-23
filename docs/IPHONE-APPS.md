@@ -64,6 +64,7 @@ worth trying once the app is shared with a real group of users.
    the SwiftUI screens follow it, compared side by side on the simulator (mobile site in the simulator's
    Safari vs the app).
 5. Later: Aresium for several users (each person's data separated on the server).
+6. The Empire itself on the phone: [EMPIRE-APP.md](EMPIRE-APP.md) (throne room, per-user ring, approvals).
 
 ## Links
 

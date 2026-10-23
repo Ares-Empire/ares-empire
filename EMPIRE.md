@@ -96,7 +96,7 @@ repo as a top-level folder, and live services and data volumes depend on their p
 |---|---|---|---|
 | **Aresium** | **Empire login** (website, hub hand-off and API for the app) | **planned (first app)** in `empire-ios` | `aresium` |
 | **Arestoteles** | own login | — | `Arestoteles` |
-| **Ares Empire** (hub) | **Empire login** — sign-up, approval and password reset live here | later | `ares-empire` |
+| **Ares Empire** (hub) | **Empire login** — sign-up, approval and password reset live here | **planned**: [docs/EMPIRE-APP.md](docs/EMPIRE-APP.md) | `ares-empire` |
 
 All empire repos live in the GitHub organization **[Ares-Empire](https://github.com/Ares-Empire)**
 (aresync follows once every laptop runs the org-aware version). Each repo keeps its own
