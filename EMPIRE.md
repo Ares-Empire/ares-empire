@@ -143,6 +143,7 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y").
 
+- **2026-10-23 · aresium** — The Aresium iPhone app grew to the full mobile site: transaction detail and recategorise, import (button and share sheet), the red Aresium mode with the ARESIUM band and intro, and two home-screen widgets (this month's spending line; Groceries + Drogerie). The server now also sends the recategorise choices and each month's running total; the old browser calculation and the paint animation are gone.
 - **2026-10-23 · aresium** — The first iPhone app took shape: native SwiftUI Aresium (Empire login, the start, category and month screens of the mobile site) runs on the simulator. To serve website and app alike, Aresium now calculates every dashboard number on the server (`/api/data` v2), checked identical to the old browser calculation on all real data.
 - **2026-10-23 · empire** — The hub and Aresium switched from shared passwords to Empire accounts: log in with email + password, sign up and wait for approval, reset a forgotten password.
 - **2026-10-23 · empire** — Empire accounts went live at https://auth.ares-empire.de (PocketBase): sign-up, approval by Patrik, per-service access; email via Resend from ares-empire.de.
