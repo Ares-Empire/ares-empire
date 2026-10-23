@@ -63,11 +63,30 @@ Mirror of `EMPIRE.projects`. Status vocabulary: `SCOUTED` (idea) → `BESIEGING`
 
 ---
 
+## Connections
+
+Which provinces use the **Empire login** ([docs/ACCOUNTS.md](docs/ACCOUNTS.md)) and which have an
+**iPhone app** ([docs/IPHONE-APPS.md](docs/IPHONE-APPS.md)). Every project keeps its own repo and
+folder; being "part of the empire" is tracked here, not by moving folders (aresync clones every
+repo as a top-level folder, and live services and data volumes depend on their paths).
+
+| Province | Login | iPhone app | Repo |
+|---|---|---|---|
+| **Aresium** | own password + accepts the hub's sign-in hand-off → **moving to Empire accounts** | **planned (first app)** in `empire-ios` | `aresium` |
+| **Arestoteles** | own login | — | `Arestoteles` |
+| **Ares Empire** (hub) | is the login (single password today → accounts) | later | `ares-empire` |
+
+iPhone apps for every province live in one repo, **`empire-ios`** (name deliberately not
+`ares…`, so the empire sync doesn't list it as a province of its own).
+
+---
+
 ## Expansions (future plans)
 
 Mirror of `EMPIRE.ideas` — the **EXPAND** view. Open one from the board and it pre-fills the CONQUER forge.
 
-- **Empire SSO** — one sign-in across every service; enter the hub, walk into any province already logged in.
+- **Empire accounts** — one account for every service and app: sign up with email + password, Patrik approves, every province trusts the login. Plan: [docs/ACCOUNTS.md](docs/ACCOUNTS.md).
+- **iPhone apps** — real native apps installed via TestFlight, starting with Aresium, then widgets. Plan: [docs/IPHONE-APPS.md](docs/IPHONE-APPS.md).
 - **Aresgora** — a public agora: the empire's outward-facing landing for the usable services.
 - **The Watchtower** — one status board: uptime, last deploy and health per conquered service.
 
@@ -98,6 +117,7 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y").
 
+- **2026-10-23 · empire** — Charted the next campaign: Empire accounts (one login for every service) and native iPhone apps via TestFlight, starting with Aresium. Opened the `empire-ios` repo and the Connections table.
 - **2026-06-19 · aresis** — Aresis joined the empire: a personal exposure scanner + privacy-remediation engine (OSINT → LLM severity judge → remediation → report), with the full pipeline running end to end. Cloned local and registered as a province.
 - **2026-06-15 · empire** — Reworked the hub into a clean, modern black-and-gold room: the marble bust at the left edge, the provinces on a stretched circle, the chronicle as a timeline beneath, and an EXPAND view for the empire's expansions.
 - **2026-06-15 · empire** — Went live at https://www.ares-empire.de — TLS, gated by the empire access key, behind the shared nginx.

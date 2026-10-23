@@ -206,13 +206,15 @@
 
     // ── Expansions: future plans (the EXPAND view). Open one → it pre-fills the Forge. ──
     ideas: [
-      { title: "Empire SSO", note: "One sign-in across every service — enter the hub, walk into any province already logged in." },
+      { title: "Empire accounts", note: "One account for every service and app: sign up with email + password, Patrik approves, every province trusts the login." },
+      { title: "iPhone apps", note: "Real native apps via TestFlight, starting with Aresium — then widgets. Code in the empire-ios repo." },
       { title: "Aresgora", note: "A public agora: the empire's outward-facing landing for the services people can actually use." },
       { title: "The Watchtower", note: "A single status board — uptime, last deploy and health for every conquered service." },
     ],
 
     // ── Chronicle: what was done, newest first (Claude Code appends here) ──
     chronicle: [
+      { at: "2026-10-23", project: "empire", text: "Charted the next campaign: Empire accounts (one login for every service) and native iPhone apps via TestFlight, starting with Aresium. Opened the empire-ios repo." },
       { at: "2026-06-19", project: "aresis", text: "Aresis joined the empire: a personal exposure scanner + privacy-remediation engine (OSINT → LLM severity judge → remediation → report), the full pipeline running end to end. Registered as a province." },
       { at: "2026-06-16", project: "aresync", text: "Aresync took the field: a git-based sync that mirrors every GitHub repo across the MacBook, the Windows Lenovo and the server — auto commit → rebase → push, clone-if-new. The macOS agent runs live (login + daily); the Windows task is built and awaiting setup." },
       { at: "2026-06-15", project: "empire", text: "Reworked the hub into a clean, modern black-and-gold room: the marble bust at the left edge, the provinces on a stretched circle, the chronicle as a timeline beneath, and an EXPAND view for the empire's expansions." },
