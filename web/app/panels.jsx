@@ -109,25 +109,32 @@
   const LINE_Y = 34;          // px from the top of the log band — the busts' centre line
 
   // a self-contained canvas: the shiny line + a live shower of golden dust rising off it
-  function GoldDust() {
+  function GoldDust({ vertical = false }) {
     const ref = useRef(null);
     useEffect(() => {
       const canvas = ref.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
-      const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let reduce = motion.matches;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       let w = 0, h = 0, raf = 0, t = 0;
       const parts = [];
 
       function resize() {
         const r = canvas.getBoundingClientRect();
-        w = Math.max(1, r.width); h = Math.max(1, r.height);
-        canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const width = Math.max(1, r.width), height = Math.max(1, r.height);
+        w = vertical ? height : width; h = vertical ? width : height;
+        canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
+        // Transpose the desktop canvas: the same line, glint and dust now run vertically.
+        if (vertical) ctx.setTransform(0, dpr, dpr, 0, 0, 0);
+        else ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
       resize();
-      const ro = new ResizeObserver(resize); ro.observe(canvas);
+      const ro = new ResizeObserver(() => {
+        resize();
+        if (vertical && reduce) frame();
+      }); ro.observe(canvas);
 
       function lineGrad() {
         const g = ctx.createLinearGradient(0, 0, w, 0);
@@ -187,11 +194,21 @@
         }
         ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
         t += 16;
-        raf = requestAnimationFrame(frame);
+        if (!vertical || !reduce) raf = requestAnimationFrame(frame);
       }
       raf = requestAnimationFrame(frame);
-      return () => { cancelAnimationFrame(raf); ro.disconnect(); };
-    }, []);
+      const changeMotion = (event) => {
+        reduce = event.matches;
+        parts.length = 0;
+        cancelAnimationFrame(raf);
+        frame();
+      };
+      if (vertical) motion.addEventListener("change", changeMotion);
+      return () => {
+        cancelAnimationFrame(raf); ro.disconnect();
+        if (vertical) motion.removeEventListener("change", changeMotion);
+      };
+    }, [vertical]);
     return <canvas ref={ref} className="log-dust" aria-hidden="true" />;
   }
 
@@ -480,6 +497,7 @@ TODO — stack, deploy, domain.
 
   window.CardGrid = CardGrid;
   window.Chronicle = Chronicle;
+  window.EmpireGoldDust = GoldDust;
   window.ProjectDetail = ProjectDetail;
   window.Forge = Forge;
 })();

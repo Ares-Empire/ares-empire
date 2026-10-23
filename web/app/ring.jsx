@@ -6,7 +6,9 @@
    scroll / ← → to revolve; click the focused province to open it, click a neighbour to bring
    it round.
 
-   Props: { projects, onOpen(project), risingSlug } */
+   Props: { projects, onOpen(project), risingSlug,
+            addSlot?: { label, onAdd() }   — phone, non-admins: an empty "+" place at the end of the wheel,
+            onFront?(project | null) }     — told which province is at the front (null = the "+" place) */
 (function () {
   const { useState, useRef, useEffect, useMemo, useCallback } = React;
   const SENS = 0.34;                   // degrees of revolve per pixel dragged
@@ -17,7 +19,7 @@
 
   function TabFace({ tab }) {
     const S = (window.EMPIRE && window.EMPIRE.STATUS) || {};
-    const st = S[tab.status] || null;
+    const st = tab.statusLabel ? { label: tab.statusLabel, tone: "scout" } : (S[tab.status] || null);
     const [imgErr, setImgErr] = useState(false);
     return (
       <React.Fragment>
@@ -34,10 +36,14 @@
     );
   }
 
-  function Ring({ projects, onOpen, risingSlug }) {
-    const tabs = projects || [];
+  function Ring({ projects, onOpen, risingSlug, addSlot, onFront }) {
+    const tabs = addSlot ? [...(projects || []), { slug: "__add", add: true, name: addSlot.label }] : (projects || []);
     const count = Math.max(tabs.length, 1);
-    const step = 360 / count;
+    // A short ring (fewer than 6, e.g. one province plus the "+" place) keeps its tabs as close as six would be and
+    // stops at both ends; spread over the whole wheel, the second tab would sit out of sight on the far side.
+    const short = count < 6;
+    const step = 360 / Math.max(count, 6);
+    const clampRot = (r) => short ? Math.max(-(count - 1) * step, Math.min(0, r)) : r;
 
     const [rotation, setRotation] = useState(0);
     const [settling, setSettling] = useState(true);
@@ -58,17 +64,19 @@
       return best;
     }, [rotation, count, step]);
 
-    const stepBy = useCallback((n) => { const k = Math.round(rotation / step); setSettling(true); setRotation((k + n) * step); }, [rotation, step]);
-    const toFront = useCallback((i) => { setSettling(true); setRotation(rotation + norm180(-i * step - rotation)); }, [rotation, step]);
+    useEffect(() => { if (onFront) { const t = tabs[frontIndex]; onFront(t && !t.add ? t : null); } }, [frontIndex, tabs.length]);
+
+    const stepBy = useCallback((n) => { const k = Math.round(rotation / step); setSettling(true); setRotation(clampRot((k + n) * step)); }, [rotation, step, short, count]);
+    const toFront = useCallback((i) => { setSettling(true); setRotation(clampRot(rotation + norm180(-i * step - rotation))); }, [rotation, step, short, count]);
 
     const onPointerDown = (e) => { drag.current = { on: true, startX: e.clientX, startRot: rotation, moved: 0 }; setSettling(false); };
     const onPointerMove = (e) => {
       if (!drag.current.on) return;
       const dx = e.clientX - drag.current.startX;
       drag.current.moved = Math.max(drag.current.moved, Math.abs(dx));
-      setRotation(drag.current.startRot + dx * SENS);
+      setRotation(clampRot(drag.current.startRot + dx * SENS));
     };
-    const endDrag = () => { if (!drag.current.on) return; drag.current.on = false; setSettling(true); setRotation(Math.round(rotation / step) * step); };
+    const endDrag = () => { if (!drag.current.on) return; drag.current.on = false; setSettling(true); setRotation(clampRot(Math.round(rotation / step) * step)); };
     const onWheel = (e) => {
       const now = Date.now(); if (now - wheelAt.current < 240) return; wheelAt.current = now;
       const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
@@ -84,6 +92,7 @@
     const clickTab = (i) => {
       if (drag.current.moved > 6) return;        // it was a revolve, not a tap
       if (i !== frontIndex) toFront(i);
+      else if (tabs[i].add) addSlot.onAdd();
       else if (onOpen) onOpen(tabs[i]);
     };
 
@@ -107,12 +116,15 @@
             const blur = off * 3.2;
             return (
               <div key={tab.slug}
-                   className={"ring-tab" + (i === frontIndex ? " is-front" : "") + (tab.slug === risingSlug ? " rising" : "")}
+                   className={"ring-tab" + (i === frontIndex ? " is-front" : "") + (tab.add ? " ring-tab-add" : "") + (tab.slug === risingSlug ? " rising" : "")}
                    style={{ transform: `translate(calc(-50% + ${x.toFixed(1)}px), calc(-50% + ${y.toFixed(1)}px)) scale(${scale.toFixed(3)})`,
                             opacity: opacity.toFixed(3), filter: blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : "none",
                             zIndex: Math.round((Math.cos(r) + 1) * 50), pointerEvents: hidden ? "none" : "auto" }}
                    onClick={() => clickTab(i)}>
-                <TabFace tab={tab} />
+                {tab.add
+                  ? <React.Fragment><div className="tab-logo"><div className="tab-mono tab-plus">+</div></div>
+                      <div className="tab-body"><div className="tab-add-label">{tab.name}</div></div></React.Fragment>
+                  : <TabFace tab={tab} />}
               </div>
             );
           })}

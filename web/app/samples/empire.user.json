@@ -1,0 +1,49 @@
+{
+  "version": 2,
+  "me": {
+    "id": "sample-user",
+    "name": "Sample member",
+    "admin": false
+  },
+  "projects": [
+    {
+      "slug": "aresium",
+      "name": "Aresium",
+      "url": "https://aresium.de",
+      "logo": "brand/hermes.webp",
+      "status": "CONQUERED",
+      "domain": "aresium.de",
+      "blurb": "Personal finance command — VR Bank + PayPal, imported and understood.",
+      "detail": {
+        "about": "The empire's personal-finance command. Aresium imports VR Bank and PayPal activity, reconciles it, and turns raw statements into an understood picture of balances, cash flow and where the money actually goes.",
+        "features": [
+          "VR Bank + PayPal import",
+          "Transaction categorisation & reconciliation",
+          "Balance and cash-flow overview"
+        ],
+        "setup": "",
+        "wip": [],
+        "ideas": [],
+        "changelog": []
+      },
+      "state": "coming-soon",
+      "live": null,
+      "app": "aresium://"
+    }
+  ],
+  "addable": [],
+  "chronicle": [
+    {
+      "at": "2026-10-23",
+      "project": "aresium",
+      "text": "The Aresium iPhone app grew to the full mobile site: transaction detail, recategorisation and import, plus two home-screen widgets for spending and groceries."
+    },
+    {
+      "at": "2026-10-23",
+      "project": "aresium",
+      "text": "The first native Aresium app took shape: Empire login, categories and months. Dashboard numbers now come from the server, shared by the website and the app."
+    }
+  ],
+  "ideas": [],
+  "pending": 0
+}
