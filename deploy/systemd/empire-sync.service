@@ -1,6 +1,6 @@
 [Unit]
 Description=Ares Empire — sync the hub with the ares repos on GitHub
-Documentation=https://github.com/carlsenares/ares-empire
+Documentation=https://github.com/Ares-Empire/ares-empire
 After=network-online.target
 Wants=network-online.target
 

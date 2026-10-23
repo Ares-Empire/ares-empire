@@ -76,6 +76,10 @@ repo as a top-level folder, and live services and data volumes depend on their p
 | **Arestoteles** | own login | — | `Arestoteles` |
 | **Ares Empire** (hub) | is the login (single password today → accounts) | later | `ares-empire` |
 
+All empire repos live in the GitHub organization **[Ares-Empire](https://github.com/Ares-Empire)**
+(aresync follows once every laptop runs the org-aware version). Each repo keeps its own
+visibility, so code can go public project by project.
+
 iPhone apps for every province live in one repo, **`empire-ios`** (name deliberately not
 `ares…`, so the empire sync doesn't list it as a province of its own).
 

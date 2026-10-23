@@ -12,7 +12,7 @@
 - Apps are installed through **TestFlight**, not the public App Store.
 - The apps log in with an **Ares Empire account** from day one (see [ACCOUNTS.md](ACCOUNTS.md)),
   even while Patrik is the only user, so sharing later is a server-only change.
-- Code lives in one repo for all iPhone apps: **[`empire-ios`](https://github.com/carlsenares/empire-ios)**.
+- Code lives in one repo for all iPhone apps: **[`empire-ios`](https://github.com/Ares-Empire/empire-ios)**.
   Each app talks to its service's existing API; the services stay where they are.
 - iPhone work happens with **Claude Code on the MacBook** (Xcode only runs on macOS), so
   Claude can build, run the simulator and fix errors directly. Server work stays on the server.
