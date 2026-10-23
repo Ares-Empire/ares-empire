@@ -16,3 +16,6 @@ data/sync-meta.json
 data/*.bak-*
 data/*.tmp
 .venv-empire-sync/
+
+# Codex run outputs
+codex-runs/
