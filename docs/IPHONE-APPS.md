@@ -6,6 +6,10 @@
 
 - Empire services become **real native iPhone apps** (SwiftUI), not website wrappers.
   Native is what makes widgets, Face ID and other iPhone features possible later.
+- **No single codebase for website and app** (asked 2026-10-23): a wrapped website loses the native
+  features above, and React Native would replace SwiftUI while still not sharing screens with the
+  React website. What is shared instead: all logic on the server (one API) and one design
+  ([EMPIRE.md → How we build apps](../EMPIRE.md#how-we-build-apps-web--ios)).
 - Patrik gets the **paid Apple Developer Program** membership (99 USD/year, shown in EUR at
   sign-up). The free Apple ID route was rejected: those apps stop opening after 7 days and
   need a re-install from the Mac every week.
@@ -46,11 +50,20 @@ worth trying once the app is shared with a real group of users.
 
 ## Order of work
 
-1. Empire accounts on the server ([ACCOUNTS.md](ACCOUNTS.md)), just Patrik for now.
-2. Aresium accepts an Empire login for its API (`/api/data`, `/api/transaction/…`, `/api/import`).
-3. `empire-ios`: the Aresium app (login, dashboard, transactions, recategorise, import via share
-   sheet), then a widget.
-4. Later: Aresium for several users (each person's data separated on the server).
+1. Empire accounts on the server ([ACCOUNTS.md](ACCOUNTS.md)), just Patrik for now. ✅
+2. Aresium accepts an Empire login for its API (`/api/data`, `/api/transaction/…`, `/api/import`). ✅
+3. Aresium: move the dashboard calculations from the browser (`web/public/app/data.js`: month totals,
+   balances, chart series, category totals) to the server, so `/api/data` sends ready numbers and the
+   website and the app only display them ([EMPIRE.md → How we build apps](../EMPIRE.md#how-we-build-apps-web--ios)).
+   Still one request per page load, so switching months stays instant (1,246 transactions on 2026-10-23:
+   milliseconds on the server). Before switching, the old and new calculation must give identical numbers
+   on the real data. Agreed 2026-10-23.
+4. `empire-ios`: the Aresium app (login, dashboard, transactions, recategorise, import via share
+   sheet), then a widget. **Import stays in the app** (Patrik: very handy on the phone). **Template:** the
+   mobile website (`aresium/web/public/app/mobile.jsx`) has the layout, gestures and spacing worked out;
+   the SwiftUI screens follow it, compared side by side on the simulator (mobile site in the simulator's
+   Safari vs the app).
+5. Later: Aresium for several users (each person's data separated on the server).
 
 ## Links
 
