@@ -291,6 +291,11 @@ class Handler(SimpleHTTPRequestHandler):
     def _authed(self) -> bool:
         return token_ok(self._token())
 
+    def _bearer_ok(self) -> bool:
+        # the iPhone apps send the Empire token as "Authorization: Bearer <token>" (API only)
+        auth = self.headers.get("Authorization", "")
+        return auth[:7].lower() == "bearer " and token_ok(auth[7:].strip())
+
     def _form(self) -> dict[str, str]:
         length = int(self.headers.get("Content-Length", "0") or "0")
         if length <= 0 or length > MAX_FORM_BYTES:
@@ -318,10 +323,12 @@ class Handler(SimpleHTTPRequestHandler):
             if province["handoff"]:
                 return self._send_html(handoff_page(province["url"], self._token()))
             return self._redirect(province["url"] + "/")
+        if path == "/api/empire":
+            if not (self._authed() or self._bearer_ok()):
+                return self._send_json(b'{"error":"unauthenticated"}', HTTPStatus.UNAUTHORIZED)
+            return self._send_state()
         if path not in OPEN_PATHS and not self._authed():
             return self._redirect("/login")
-        if path == "/api/empire":
-            return self._send_state()
         return super().do_GET()
 
     def do_HEAD(self):
@@ -357,7 +364,10 @@ class Handler(SimpleHTTPRequestHandler):
                 body = f.read()
         except OSError:
             body = b"{}"
-        self.send_response(HTTPStatus.OK)
+        self._send_json(body)
+
+    def _send_json(self, body: bytes, status: int = HTTPStatus.OK) -> None:
+        self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))

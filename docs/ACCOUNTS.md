@@ -62,6 +62,7 @@ service must not trust the token alone. It calls
 `POST https://auth.ares-empire.de/api/collections/users/auth-refresh` with the token: a 200 means
 approved and verified (the auth rule runs again), and the returned record's `services` must contain
 the service's name. Cache the answer for a few minutes per token.
+The hub's `GET /api/empire` (provinces, ideas, chronicle) takes the same Bearer token, for an Empire app.
 Reference implementation: `aresium/src/web/empire-auth.ts` (also limits access to the user ids in
 `EMPIRE_ALLOWED_USERS` while Aresium holds only one person's data).
 
