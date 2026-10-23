@@ -38,8 +38,8 @@ One home screen that keeps the desktop hub's identity, top to bottom:
 | Below the ring | the full chronicle | "What's new" for their ring's provinces |
 | Expansions, Approvals | yes | no |
 
-**The catalog** is a field per province in the empire data: `users: "open" | "coming-soon" | "private"` (default
-private). Today: Aresium `coming-soon` (it holds only Patrik's data until it becomes multi-user, a later project);
+**The catalog** is `webauth/catalog.json`, one entry per province open to users: `users: "open" | "coming-soon"`
+(a province not listed is private). Today: Aresium `coming-soon` (it holds only Patrik's data until it becomes multi-user, a later project);
 every other province `private` (Arestoteles has nothing for others, Aresync is two scripts, Arestemis is an
 unactivated bot). A `coming-soon` province can be added; its card then says "coming soon" and does not open.
 

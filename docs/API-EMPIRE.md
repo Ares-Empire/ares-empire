@@ -42,5 +42,13 @@ Auth as Aresium's `/api/*` (`aresium/docs/API-DATA.md` → Auth): session cookie
 
 ## Catalog
 
-Each province in the empire data carries `users: "open" | "coming-soon" | "private"` (default `private`). Only `open`
-and `coming-soon` provinces can be in a non-admin ring. Today: `aresium: "coming-soon"`, everything else private.
+`webauth/catalog.json` (committed; not in `data/state.json`, which the empire sync rewrites) lists, per province slug,
+`users: "open" | "coming-soon"` and optionally `app` (its iPhone URL scheme). A province not listed is private: only
+admins see it. Only listed provinces can be in a non-admin ring. Today: `{"aresium": {"users": "coming-soon",
+"app": "aresium://"}}`.
+
+## Live lines
+
+The server asks each province for one line with the visitor's own token (cached per account for a minute) and puts it
+in `live`. Today only Aresium answers, from `GET /api/pulse` there (this month's spending, or "Nothing imported for
+<month> yet"); other provinces get a line when they have something worth saying.
