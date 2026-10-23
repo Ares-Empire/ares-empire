@@ -57,7 +57,8 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
 
 ## How a service checks a login
 
-A token stays valid until it expires (7 days) even if the account is un-approved meanwhile, so a
+A token stays valid until it expires (30 days, migration `1792774800_login_30_days.js`; the iPhone app renews it at
+every launch) even if the account is un-approved meanwhile, so a
 service must not trust the token alone. It calls
 `POST https://auth.ares-empire.de/api/collections/users/auth-refresh` with the token: a 200 means
 approved and verified (the auth rule runs again), and the returned record's `services` must contain
@@ -70,3 +71,8 @@ Reference implementation: `aresium/src/web/empire-auth.ts` (also limits access t
 
 - For multi-user Aresium: which data is per person (transactions, accounts, rules) and
   which is shared (the category list).
+
+## Phone lost or token leaked
+
+Change the Empire password (admin UI or "forgot password"): PocketBase then rejects every existing token, so the
+phone, the website session and any copied token stop working. There is no per-device logout yet.
