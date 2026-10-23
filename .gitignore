@@ -19,3 +19,4 @@ data/*.tmp
 
 # Codex run outputs
 codex-runs/
+build/

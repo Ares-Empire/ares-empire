@@ -24,8 +24,7 @@
     // Falls back silently to the embedded empire-data.js seed when the API isn't reachable.
     useEffect(() => {
       let alive = true;
-      fetch("/api/empire", { credentials: "same-origin" })
-        .then((r) => (r.ok && /json/.test(r.headers.get("content-type") || "")) ? r.json() : null)
+      window.EmpireData.load()
         .then((d) => {
           if (alive && d && Array.isArray(d.projects)) {
             // merge over the seed (don't replace) so seed-only keys the live data omits —

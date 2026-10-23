@@ -23,7 +23,7 @@
 (function () {
   "use strict";
 
-  const BUST_SRC = "/brand/ares-bust.webp";
+  const BUST_SRC = "brand/ares-bust.webp";
   const MAX_WAIT_MS = 6000; // give up on the intro (show the hub) if the bust takes longer
   const WORD = "ARES EMPIRE";
   let prefersReduced = false;
