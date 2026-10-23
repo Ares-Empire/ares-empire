@@ -34,26 +34,23 @@ province names, titles, timeline nodes — over an otherwise black, modern field
 
 ## How we build apps (web + iOS)
 
-Every province may get a website and an iPhone app ([docs/IPHONE-APPS.md](docs/IPHONE-APPS.md)). Build them
-so that both stay cheap to change for years, **even when that costs more work now.** (Patrik, 2026-10-23.)
+Every province may get a website and an iPhone app ([docs/IPHONE-APPS.md](docs/IPHONE-APPS.md)).
+**A good structure is worth more work now.** (Patrik, 2026-10-23.)
 
-1. **Logic lives in one place: the service's server.** Data, calculations, rules and checks run there. The
-   website and the app only display what the API sends and send back what the user did. No calculation
-   exists twice, once per client.
-2. **One API for all clients**, designed for both rather than shaped around one page. Change it by adding
-   fields; renaming or removing one waits until the app builds on people's phones no longer use it.
-3. **One design:** the crown language above. Each client implements it once (tokens, not per-screen copies).
-4. **Structure before patches.** If the existing structure would force duplicate code, workarounds or
-   awkward fixes, restructure it (move logic to the server, split a file, rebuild a screen, partly rebuild
-   an existing app) instead of adding to it. The extra time up front is accepted. The "smallest change"
-   rule in the global `CLAUDE.md` is measured against a sound structure, not against the current one.
-5. **Restructure safely:** in steps that keep the live service working; before switching, show that the new
-   version gives the same results as the old one on real data; then delete the old code, so no two versions
-   are left running side by side.
-6. **Limits:** build for what exists or is decided (e.g. the iPhone app of a service that has a website), not
-   for imagined future apps. Code shared between iPhone apps still waits until a second app needs it.
-7. **Say it.** When the right restructure is bigger than the task at hand, tell Patrik what, why and roughly
-   how big, instead of quietly patching or quietly rebuilding.
+When the quick way (adding code wherever it fits, a workaround, copying a calculation into a second place)
+would make later changes slower or cause bugs, choose the better structure instead, even if it takes longer
+now or means partly rebuilding something that already works. Saving work today that causes more work later
+is the wrong saving.
+
+This is judgment, not a rule to merge or share things. Separate pieces are fine when they are simpler. The
+question each time: which structure leaves less work and fewer problems over the coming months?
+
+Example: Aresium's website calculates its numbers in the browser. An iPhone app would have to copy those
+calculations, so they move to the server first ([IPHONE-APPS.md](docs/IPHONE-APPS.md), step 3).
+
+When restructuring: go in steps that keep the live service working; before switching, show that the new
+version gives the same results as the old one; then delete the old code. When the better structure is much
+bigger than the task at hand, tell Patrik what, why and roughly how big before starting.
 
 ---
 
