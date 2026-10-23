@@ -10,7 +10,7 @@ set -euo pipefail
 
 DOMAIN=ares-empire.de
 WWW=www.ares-empire.de
-EMAIL=you@example.com
+EMAIL="${CERTBOT_EMAIL:?set CERTBOT_EMAIL to the certificate contact email}"  # e.g. CERTBOT_EMAIL=you@example.com bash enable-tls-ares-empire.sh
 PORT=5185
 CONF=/root/insureai/InsureAI/backend/nginx/conf.d/ares-empire.conf
 CERTBOT_CONF=/root/insureai/InsureAI/backend/certbot/conf
