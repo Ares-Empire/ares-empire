@@ -40,7 +40,8 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
   - `services` — which provinces the account may use (`empire`, `aresium`; add more in a new migration).
   - Users can rename themselves, change password, delete their account. They can't touch
     `approved`/`services`/`verified`, and can only see their own record (tested).
-- **Email**: Resend, domain `ares-empire.de` (DNS at Hetzner), sender `noreply@ares-empire.de`. The
+- **Email**: Resend via `smtp.resend.com:2465` (the host blocks outgoing 25/465/587), domain
+  `ares-empire.de` (DNS at Hetzner), sender `noreply@ares-empire.de`. The
   SMTP key is entered only in the admin UI (Settings → Mail settings), never in git or chat.
 
 ## How a service checks a login
