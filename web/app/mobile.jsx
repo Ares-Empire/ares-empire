@@ -30,7 +30,7 @@
     return <section className="em-news" aria-label={title}>
       <div className="em-section-heading"><h2>{title}</h2></div>
       {entries.length ? <div className="em-timeline-wrap">
-        <window.EmpireGoldDust vertical />
+        <window.EmpireGoldDust vertical lineY={27} />
         <ol className="em-timeline">
         {newest(entries).map((entry, i) => <li className="log-node" key={entry.at + entry.project + i}>
           <span className="log-bust"><Mark province={{ name: entry.project || "Empire", logo: logos[entry.project] || "brand/ares_transparent.webp" }} /></span>
@@ -44,7 +44,8 @@
 
   // The desktop's own wheel (window.Ring): compact tabs, neighbours smaller, paler and blurred toward the sides.
   // Underneath, one quiet line about the province at the front. Ideas ride the same wheel when expanded.
-  function PhoneRing({ items, expanded, admin, onOpen, onAdd }) {
+  // Tap the front tab to open it, hold any tab for its page (as the Empire iPhone app does).
+  function PhoneRing({ items, expanded, admin, onOpen, onHold, onAdd }) {
     const [front, setFront] = useState(null);
     const tabs = expanded ? items.map((idea) => ({ slug: idea.title, name: idea.title, status: "SCOUTED", idea }))
       : items.map((p) => (!admin && p.state === "coming-soon") ? { ...p, statusLabel: "COMING SOON" } : p);
@@ -53,7 +54,7 @@
     return <section className="em-ring" aria-label={expanded ? "Expansions" : "Provinces"}>
       <div className="em-ring-stage">
         <window.Ring key={expanded ? "ideas" : "provinces"} projects={tabs} onFront={setFront}
-          onOpen={(tab) => onOpen(expanded ? tab.idea : tab)}
+          onOpen={(tab) => onOpen(expanded ? tab.idea : tab)} onHold={(tab) => onHold(expanded ? tab.idea : tab)}
           addSlot={onAdd ? { label: "Add a province", onAdd } : undefined} />
       </div>
       <p className={"em-ring-line" + (front && front.live && !expanded ? " is-live" : "")} aria-live="polite">{line}</p>
@@ -92,16 +93,17 @@
     const detail = province.detail || {};
     const comingSoon = !data.me.admin && province.state === "coming-soon";
     const destination = API.destination(province);
+    // The mark and the name are the link (a small arrow says so); no separate Open button.
+    const title = <React.Fragment><div className="em-detail-mark"><Mark province={province} /></div>
+      <h1>{province.name}{destination && <span className="em-detail-arrow"><Glyph name="ArrowUpRight" size={15} /></span>}</h1></React.Fragment>;
     return <React.Fragment>
-      <div className="em-detail-hero"><div className="em-detail-mark"><Mark province={province} /></div>
-        <h1>{province.name}</h1>
+      <div className="em-detail-hero">
+        {destination ? <a className="em-detail-link" href={destination} target="_blank" rel="noopener" aria-label={"Open " + province.name}>{title}</a> : title}
         <span className="em-status">{status(province, data.me.admin)}</span>
         <p className="em-detail-blurb">{province.blurb}</p>
         {province.live && <p className="em-detail-live">{province.live}</p>}
       </div>
-      {comingSoon ? <p className="em-coming-note">Coming soon. You’ll be able to open {province.name} here when it’s available.</p>
-        : destination ? <a className="em-primary em-open" href={destination} target="_blank" rel="noopener">Open {province.name}<Glyph name="ArrowUpRight" /></a>
-        : <p className="em-coming-note">No website is available yet.</p>}
+      {comingSoon && <p className="em-coming-note">Coming soon. You’ll be able to open {province.name} here when it’s available.</p>}
       <section className="em-detail-section"><h2>About</h2><p>{detail.about || province.blurb}</p></section>
       <section className="em-detail-section"><h2>Features</h2>
         {detail.features && detail.features.length ? <ul>{detail.features.map((feature, i) => <li key={i}><Glyph name="Check" size={15} />{feature}</li>)}</ul> : <p>No features listed yet.</p>}
@@ -153,6 +155,12 @@
     }, [retry]);
 
     const open = (next) => { setError(null); setModal(next); };
+    // Tapping the front province opens it; one that cannot be opened (yet) shows its page instead.
+    const launch = (province) => {
+      const destination = API.destination(province);
+      if (destination) window.open(destination, "_blank", "noopener");
+      else open({ type: "province", item: province });
+    };
     const ring = async (change) => {
       if (locked.current) return;
       locked.current = true; setBusy(true); setError(null);
@@ -214,7 +222,8 @@
         </header>
         {items.length || !admin ? <PhoneRing key={(expanded ? "ideas" : "projects") + data.projects.map((p) => p.slug).join(",")}
           items={items} expanded={expanded} admin={admin}
-          onOpen={(item) => open({ type: expanded ? "idea" : "province", item })}
+          onOpen={(item) => expanded ? open({ type: "idea", item }) : launch(item)}
+          onHold={(item) => open({ type: expanded ? "idea" : "province", item })}
           onAdd={admin ? null : () => open({ type: "add" })} />
           : <p className="em-empty">No expansions yet.</p>}
         {!expanded && <Timeline title={admin ? "Chronicle" : "What's new"} entries={data.chronicle} projects={data.projects} />}

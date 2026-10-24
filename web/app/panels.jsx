@@ -109,7 +109,8 @@
   const LINE_Y = 34;          // px from the top of the log band — the busts' centre line
 
   // a self-contained canvas: the shiny line + a live shower of golden dust rising off it
-  function GoldDust({ vertical = false }) {
+  // lineY: where the line runs (the phone's smaller chronicle puts it at its coins' centre).
+  function GoldDust({ vertical = false, lineY = LINE_Y }) {
     const ref = useRef(null);
     useEffect(() => {
       const canvas = ref.current;
@@ -153,16 +154,16 @@
         const grad = lineGrad();
         ctx.strokeStyle = grad;
         // layered glow → bright core
-        ctx.globalAlpha = 0.22; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(0, LINE_Y); ctx.lineTo(w, LINE_Y); ctx.stroke();
-        ctx.globalAlpha = 0.55; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(0, LINE_Y); ctx.lineTo(w, LINE_Y); ctx.stroke();
-        ctx.globalAlpha = 1.0;  ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(0, LINE_Y); ctx.lineTo(w, LINE_Y); ctx.stroke();
+        ctx.globalAlpha = 0.22; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(0, lineY); ctx.lineTo(w, lineY); ctx.stroke();
+        ctx.globalAlpha = 0.55; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(0, lineY); ctx.lineTo(w, lineY); ctx.stroke();
+        ctx.globalAlpha = 1.0;  ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(0, lineY); ctx.lineTo(w, lineY); ctx.stroke();
 
         if (!reduce) {
           // a small glint sliding ALONG the line — flattened so it stays within the line's body
           const sx = (((t * 0.0009) % 1.5) - 0.25) * w;
           const sr = 16;
           ctx.save();
-          ctx.translate(sx, LINE_Y); ctx.scale(1, 0.32);   // squash vertically → lives in the line
+          ctx.translate(sx, lineY); ctx.scale(1, 0.32);   // squash vertically → lives in the line
           const sg = ctx.createRadialGradient(0, 0, 0, 0, 0, sr);
           sg.addColorStop(0, "rgba(255,255,246,0.95)"); sg.addColorStop(0.55, "rgba(255,240,200,0.3)"); sg.addColorStop(1, "rgba(255,240,200,0)");
           ctx.globalAlpha = 1; ctx.fillStyle = sg;
@@ -173,7 +174,7 @@
           const n = Math.max(1, Math.round(w / 320));
           for (let k = 0; k < n; k++) {
             const x = Math.random() * w;
-            parts.push({ x, y: LINE_Y + (Math.random() * 2 - 1) * 1.4,
+            parts.push({ x, y: lineY + (Math.random() * 2 - 1) * 1.4,
               vx: (Math.random() - 0.5) * 0.3, vy: -(0.2 + Math.random() * 0.8),
               life: 1, size: 0.6 + Math.random() * 1.9, warm: Math.random() });
           }
@@ -189,7 +190,7 @@
         } else {
           for (let i = 0; i < 26; i++) {
             ctx.globalAlpha = 0.5; ctx.fillStyle = "rgb(255,224,150)";
-            ctx.beginPath(); ctx.arc(((i + 0.5) / 26) * w, LINE_Y - 6 - (i % 3) * 5, 1.1, 0, 6.2832); ctx.fill();
+            ctx.beginPath(); ctx.arc(((i + 0.5) / 26) * w, lineY - 6 - (i % 3) * 5, 1.1, 0, 6.2832); ctx.fill();
           }
         }
         ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
@@ -208,7 +209,7 @@
         cancelAnimationFrame(raf); ro.disconnect();
         if (vertical) motion.removeEventListener("change", changeMotion);
       };
-    }, [vertical]);
+    }, [vertical, lineY]);
     return <canvas ref={ref} className="log-dust" aria-hidden="true" />;
   }
 

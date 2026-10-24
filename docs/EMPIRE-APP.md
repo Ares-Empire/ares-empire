@@ -23,7 +23,9 @@ One home screen that keeps the desktop hub's identity, top to bottom:
   backdrop behind the top of the screen.
 - **The ring:** a swipeable row of province cards (the focused card large and lit, its neighbours peeking and
   dimmed, page dots below), like the desktop ring laid flat. A card: mark, GOLD NAME, status, one live line. Tap the
-  focused card → the **province page** (about, features, what's new, an Open button).
+  focused card → it **opens** (the app, else the website; one that cannot open yet shows its page). **Hold** any card
+  → the **province page** (about, features, what's new); there the mark and the name are the link, no Open button
+  (Patrik, 2026-10-24, after trying the app; the website's phone version does the same).
 - **Below the ring:** Patrik: the **CHRONICLE**; everyone else: **WHAT'S NEW**, the chronicle entries about the
   provinces in their own ring. Both as a vertical gold timeline (gold line on the left, bust markers, date · tag, text).
 - **EXPAND (Patrik):** the ring shows the **EXPANSIONS** (plans) instead. Claiming new ground stays on the desktop.

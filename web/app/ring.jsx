@@ -4,9 +4,10 @@
    The province revolved to the front is sharp and centred; its neighbours fall away to the
    sides (smaller · paler · blurred) and the far side of the wheel is out of sight. Drag /
    scroll / ← → to revolve; click the focused province to open it, click a neighbour to bring
-   it round.
+   it round; with `onHold`, press and hold any tab for its page (the phone).
 
    Props: { projects, onOpen(project), risingSlug,
+            onHold?(project)               — phone: a long press (or the context menu) on a tab
             addSlot?: { label, onAdd() }   — phone, non-admins: an empty "+" place at the end of the wheel,
             onFront?(project | null) }     — told which province is at the front (null = the "+" place) */
 (function () {
@@ -36,7 +37,9 @@
     );
   }
 
-  function Ring({ projects, onOpen, risingSlug, addSlot, onFront }) {
+  const HOLD_MS = 350;
+
+  function Ring({ projects, onOpen, risingSlug, addSlot, onFront, onHold }) {
     const tabs = addSlot ? [...(projects || []), { slug: "__add", add: true, name: addSlot.label }] : (projects || []);
     const count = Math.max(tabs.length, 1);
     // A short ring (fewer than 6, e.g. one province plus the "+" place) keeps its tabs as close as six would be and
@@ -49,6 +52,8 @@
     const [settling, setSettling] = useState(true);
     const drag = useRef({ on: false, startX: 0, startRot: 0, moved: 0 });
     const wheelAt = useRef(0);
+    const hold = useRef({ timer: 0, fired: false });
+    const [pressed, setPressed] = useState(null);
     const sceneRef = useRef(null);
     const [dim, setDim] = useState({ w: 880, h: 300 });
 
@@ -74,9 +79,10 @@
       if (!drag.current.on) return;
       const dx = e.clientX - drag.current.startX;
       drag.current.moved = Math.max(drag.current.moved, Math.abs(dx));
+      if (drag.current.moved > 6) cancelHold();
       setRotation(clampRot(drag.current.startRot + dx * SENS));
     };
-    const endDrag = () => { if (!drag.current.on) return; drag.current.on = false; setSettling(true); setRotation(clampRot(Math.round(rotation / step) * step)); };
+    const endDrag = () => { cancelHold(); if (!drag.current.on) return; drag.current.on = false; setSettling(true); setRotation(clampRot(Math.round(rotation / step) * step)); };
     const onWheel = (e) => {
       const now = Date.now(); if (now - wheelAt.current < 240) return; wheelAt.current = now;
       const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
@@ -89,7 +95,31 @@
       return () => window.removeEventListener("keydown", onKey);
     }, [stepBy]);
 
+    // Holding a tab: its page. The click that ends the press is then ignored.
+    const holdTab = (tab) => { if (tab.add) addSlot.onAdd(); else onHold(tab); };
+    const startHold = (tab) => {
+      if (!onHold) return;
+      clearTimeout(hold.current.timer);
+      hold.current.fired = false;
+      setPressed(tab.slug);
+      hold.current.timer = setTimeout(() => {
+        if (drag.current.moved > 6) return;
+        hold.current.fired = true;
+        setPressed(null);
+        if (navigator.vibrate) navigator.vibrate(12);
+        holdTab(tab);
+      }, HOLD_MS);
+    };
+    function cancelHold() { clearTimeout(hold.current.timer); setPressed(null); }
+    useEffect(() => () => clearTimeout(hold.current.timer), []);
+    const onContextMenu = (e, tab) => {
+      if (!onHold) return;
+      e.preventDefault();                        // Android's long-press menu, or a right click
+      if (!hold.current.fired) { cancelHold(); hold.current.fired = true; holdTab(tab); }
+    };
+
     const clickTab = (i) => {
+      if (hold.current.fired) { hold.current.fired = false; return; }
       if (drag.current.moved > 6) return;        // it was a revolve, not a tap
       if (i !== frontIndex) toFront(i);
       else if (tabs[i].add) addSlot.onAdd();
@@ -111,15 +141,16 @@
             const hidden = Math.abs(phi) > VISIBLE;
             const x = Math.sin(r) * SPREAD_X;
             const y = -(1 - Math.cos(r)) * RISE_Y;     // front lowest, neighbours rise back toward the horizon
-            const scale = 1 - 0.42 * off;
+            const scale = (1 - 0.42 * off) * (pressed === tab.slug ? 0.96 : 1);
             const opacity = hidden ? 0 : 1 - 0.84 * off;
             const blur = off * 3.2;
             return (
               <div key={tab.slug}
-                   className={"ring-tab" + (i === frontIndex ? " is-front" : "") + (tab.add ? " ring-tab-add" : "") + (tab.slug === risingSlug ? " rising" : "")}
+                   className={"ring-tab" + (i === frontIndex ? " is-front" : "") + (tab.add ? " ring-tab-add" : "") + (tab.slug === risingSlug ? " rising" : "") + (pressed === tab.slug ? " is-pressed" : "")}
                    style={{ transform: `translate(calc(-50% + ${x.toFixed(1)}px), calc(-50% + ${y.toFixed(1)}px)) scale(${scale.toFixed(3)})`,
                             opacity: opacity.toFixed(3), filter: blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : "none",
                             zIndex: Math.round((Math.cos(r) + 1) * 50), pointerEvents: hidden ? "none" : "auto" }}
+                   onPointerDown={() => startHold(tab)} onContextMenu={(e) => onContextMenu(e, tab)}
                    onClick={() => clickTab(i)}>
                 {tab.add
                   ? <React.Fragment><div className="tab-logo"><div className="tab-mono tab-plus">+</div></div>
