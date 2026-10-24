@@ -416,3 +416,16 @@ class DataAndTransportTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class BrandImageTests(unittest.TestCase):
+    def test_only_images_under_brand_pass_with_a_bearer_token(self):
+        self.assertTrue(server.is_brand_image("/brand/hermes.webp"))
+        self.assertTrue(server.is_brand_image("/brand/ares-bust.PNG"))
+        for path in ("/brand/../index.html", "/brand/../app/app.jsx", "/brand/", "/index.html",
+                     "/brand/notes.txt", "/brand//hermes.webp", "/app/brand/x.png"):
+            self.assertFalse(server.is_brand_image(path), path)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -17,6 +17,7 @@ import hashlib
 import html
 import json
 import os
+import posixpath
 import re
 import sys
 import threading
@@ -59,6 +60,16 @@ LIVE_CACHE_SECS = 60
 
 # Reachable without a session: the login pages and the images they show.
 # Exact paths only. Prefix matching ("/brand/") let "/brand/../index.html" past the login (2026-10-22).
+# The iPhone apps load province marks with their Bearer token (they have no cookie). Images only: the normalised
+# path must stay under /brand/ and end in an image type, so "/brand/../index.html" is not a way to a page.
+BRAND_IMAGE_TYPES = (".webp", ".png", ".jpg", ".jpeg", ".svg")
+
+
+def is_brand_image(path: str) -> bool:
+    clean = posixpath.normpath(path)
+    return clean.startswith("/brand/") and clean == path and clean.lower().endswith(BRAND_IMAGE_TYPES)
+
+
 OPEN_PATHS = frozenset({"/login", "/login/email", "/signup", "/forgot", "/logout", "/favicon.ico",
                         "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"})
 
@@ -566,6 +577,8 @@ class Handler(SimpleHTTPRequestHandler):
             if province["handoff"]:
                 return self._send_html(handoff_page(province["url"], self._token()))
             return self._redirect(province["url"] + "/")
+        if is_brand_image(path) and self.headers.get("Authorization") and self._bearer_ok():
+            return super().do_GET()
         if path not in OPEN_PATHS and not self._web_gate():
             return
         return super().do_GET()
