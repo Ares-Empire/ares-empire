@@ -56,7 +56,18 @@ reviews each request and rejects beta apps. A personal app for one person may we
 declined, so it is **not** the fallback we rely on. TestFlight is the plan; unlisted is only
 worth trying once the app is shared with a real group of users.
 
-## What this means in practice
+## Every app has (the standard, 2026-10-24)
+
+- **Settings** behind a gear icon in the header: the app's own settings, language, notifications (apps that send
+  them), contact & support (a form that reaches Patrik by email), privacy policy, imprint, font licences, version,
+  the account and Log out. Built once in `empire-ios/Shared/`; a new app only adds its own section.
+- **Its name at the end of the main screen**, seen only when scrolling down (`WordmarkBand`, shared).
+- **English and German** ([LANGUAGES.md](LANGUAGES.md)).
+- **Light mode: decided, not built yet** (Patrik, 2026-10-24: "we will add it and its best to do it before making
+  more apps so it can become a part of standard design"). The apps are dark only today. Light mode is designed once
+  in the shared design (`Shared/Design`: colours as light/dark pairs, a Settings row "Appearance": like the iPhone,
+  light, dark), then every app is moved onto it and checked in both. It comes **before the next new app**.
+
 
 - A new build stays installable for 90 days. We ship updates far more often than that while
   building, so it does not run out. Uploads can be automated later (Xcode Cloud is included
