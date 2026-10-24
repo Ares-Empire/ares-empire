@@ -40,6 +40,15 @@ interface Province {         // version-1 project fields, unchanged …
 Auth as Aresium's `/api/*` (`aresium/docs/API-DATA.md` → Auth): session cookie or `Authorization: Bearer <Empire token>`;
 401 token rejected, 403 no access (incl. a non-admin calling an admin route), 503 the account server could not be asked.
 
+## Language
+
+Live lines and app-facing error sentences follow `Accept-Language`; API responses set `Content-Language: en|de`.
+Among tags with primary language `de` or `en`, the highest `q` wins (first on a tie); missing, unsupported or unreadable
+headers mean English. Codes, keys and enums never change. Province names/texts, the chronicle and ideas stay in their
+original English. The hub forwards `Accept-Language: de|en` to both live-line sources and caches per account and
+language. The English website explicitly requests `en`, even in a German browser; login/sign-up/reset pages stay
+English.
+
 ## Catalog
 
 `webauth/catalog.json` (committed; not in `data/state.json`, which the empire sync rewrites) lists, per province slug,
@@ -51,8 +60,8 @@ A province's iPhone app (`app`, its URL scheme) does not depend on who may see i
 
 ## Live lines
 
-The server asks each province for one line with the visitor's own token (cached per account for a minute) and puts it
-in `live`. Aresium answers from `GET /api/pulse` there (this month's spending, or "Nothing imported for <month> yet").
+The server asks each province for one line with the visitor's own token (cached per account and language for a minute)
+and puts it in `live`. Aresium answers from `GET /api/pulse` there (this month's spending, or "Nothing imported for <month> yet").
 Every other province gets Aresus's line for it (2026-10-24): one `GET /api/aresus/overview` per account and minute on
-localhost (`ARESUS_OVERVIEW_URL`), "Issue: " in front when the province has one (e.g. "Off on purpose · website up",
-"Issue: Server down since 04:53"). Accounts without the `aresus` service get no line.
+localhost (`ARESUS_OVERVIEW_URL`), "Issue: " (German: "Problem: ") in front when the province has one (e.g.
+"Off on purpose · website up", "Issue: Server down since 04:53"). Accounts without the `aresus` service get no line.

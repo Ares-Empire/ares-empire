@@ -29,6 +29,13 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from time import time
 from urllib.parse import parse_qs, urlencode, urlparse
 
+# The systemd unit also supports running this file directly from outside the repo root.
+if not __package__:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from empire_language import request_language
+from webauth.texts import text
+
 WEB_ROOT = os.environ.get("WEB_ROOT", "web")
 # prod binds the docker-bridge gateway (172.18.0.1), off every public interface; Caddy proxies in.
 HOST = os.environ.get("HOST", "0.0.0.0")
@@ -180,14 +187,15 @@ def load_catalog() -> dict:
         return json.load(f)
 
 
-_live_cache: dict[tuple[str, str], tuple[str | None, float]] = {}
+_live_cache: dict[tuple[str, str, str], tuple[str | dict[str, str] | None, float]] = {}
 _live_lock = threading.Lock()
 
 
-def _fetch_json(url: str, token: str):
+def _fetch_json(url: str, token: str, language: str):
     """GET with the visitor's token; None on any failure (live lines never turn into hub errors)."""
     try:
-        req = urllib.request.Request(url, headers={"Authorization": "Bearer " + token})
+        req = urllib.request.Request(url, headers={"Authorization": "Bearer " + token,
+                                                  "Accept-Language": language})
         with urllib.request.urlopen(req, timeout=2) as r:
             data = json.load(r)
             return data if r.status == 200 else None
@@ -198,19 +206,19 @@ def _fetch_json(url: str, token: str):
     return None
 
 
-def aresus_lines(account_id: str, token: str) -> dict[str, str]:
-    """slug -> Aresus's line for that province ("Issue: " in front when it has one), cached per account."""
-    key = (account_id, "__aresus__")
+def aresus_lines(account_id: str, token: str, language: str = "en") -> dict[str, str]:
+    """slug -> Aresus's line with an issue prefix, cached per account and language."""
+    key = (account_id, "__aresus__", language)
     with _live_lock:
         hit = _live_cache.get(key)
     if hit and hit[1] > time():
         return hit[0]
     lines: dict[str, str] = {}
-    data = _fetch_json(ARESUS_OVERVIEW_URL, token)
+    data = _fetch_json(ARESUS_OVERVIEW_URL, token, language)
     provinces = data.get("provinces") if isinstance(data, dict) else None
     for p in provinces if isinstance(provinces, list) else []:
         if isinstance(p, dict) and isinstance(p.get("slug"), str) and isinstance(p.get("line"), str) and p["line"]:
-            lines[p["slug"]] = ("Issue: " if p.get("state") == "issue" else "") + p["line"]
+            lines[p["slug"]] = (text("Issue: ", language) if p.get("state") == "issue" else "") + p["line"]
     with _live_lock:
         if len(_live_cache) >= 1000:
             _live_cache.clear()
@@ -218,26 +226,19 @@ def aresus_lines(account_id: str, token: str) -> dict[str, str]:
     return lines
 
 
-def live_line(slug: str, account_id: str, token: str) -> str | None:
+def live_line(slug: str, account_id: str, token: str, language: str = "en") -> str | None:
     url = PULSE_URLS.get(slug)
     if not url:
-        return aresus_lines(account_id, token).get(slug)
-    key = (account_id, slug)
+        return aresus_lines(account_id, token, language).get(slug)
+    key = (account_id, slug, language)
     with _live_lock:
         hit = _live_cache.get(key)
     if hit and hit[1] > time():
         return hit[0]
     line = None
-    try:
-        req = urllib.request.Request(url, headers={"Authorization": "Bearer " + token})
-        with urllib.request.urlopen(req, timeout=2) as r:
-            data = json.load(r)
-            if r.status == 200 and isinstance(data, dict) and isinstance(data.get("line"), str):
-                line = data["line"]
-    except urllib.error.HTTPError as e:
-        e.close()
-    except (OSError, ValueError, HTTPException):
-        pass  # Pulse failures never turn into hub errors.
+    data = _fetch_json(url, token, language)
+    if isinstance(data, dict) and isinstance(data.get("line"), str):
+        line = data["line"]
     with _live_lock:
         if len(_live_cache) >= 1000:
             _live_cache.clear()
@@ -280,7 +281,7 @@ def pending_accounts(token: str, client_ip: str, count_only: bool = False):
         page += 1
 
 
-def empire_data(record: dict, token: str, client_ip: str) -> dict:
+def empire_data(record: dict, token: str, client_ip: str, language: str = "en") -> dict:
     state, catalog = load_state(), load_catalog()
     admin = record.get("admin") is True
     ring = set(account_ring(record)) & catalog.keys()
@@ -289,7 +290,7 @@ def empire_data(record: dict, token: str, client_ip: str) -> dict:
         slug = project["slug"]
         entry = catalog.get(slug, {})
         return {**project, "state": "open" if admin else entry["users"],
-                "app": APP_SCHEMES.get(slug), "live": live_line(slug, record["id"], token)}
+                "app": APP_SCHEMES.get(slug), "live": live_line(slug, record["id"], token, language)}
 
     projects = state.get("projects", [])
     # Keep the version-1 field names and all province metadata.
@@ -302,7 +303,7 @@ def empire_data(record: dict, token: str, client_ip: str) -> dict:
             "pending": pending_accounts(token, client_ip, count_only=True) if admin else 0}
 
 
-def change_ring(record: dict, token: str, client_ip: str, body: dict) -> dict:
+def change_ring(record: dict, token: str, client_ip: str, body: dict, language: str = "en") -> dict:
     if set(body) not in ({"add"}, {"remove"}):
         raise APIError(400, "Send exactly one province to add or remove.")
     action, slug = next(iter(body.items()))
@@ -319,7 +320,7 @@ def change_ring(record: dict, token: str, client_ip: str, body: dict) -> dict:
     if updated.get("id") != record["id"] or updated.get("ring") != ring:
         raise APIError(503, "Account service returned an unreadable response.")
     forget_token(token)  # The next request must not reuse the old ring from auth-refresh.
-    return empire_data({**record, "ring": ring}, token, client_ip)
+    return empire_data({**record, "ring": ring}, token, client_ip, language)
 
 
 def decide_approval(account_id: str, token: str, client_ip: str, body: dict) -> dict:
@@ -515,6 +516,7 @@ class Handler(SimpleHTTPRequestHandler):
     def _send_html(self, body: bytes, status: int = 200) -> None:
         self.send_response(status)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Language", "en")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
@@ -579,14 +581,18 @@ class Handler(SimpleHTTPRequestHandler):
             if self.command in ("GET", "HEAD") and path == "/api/empire/approvals":
                 data = pending_accounts(token, ip)
             elif self.command == "POST" and path == "/api/empire/ring":
-                data = change_ring(record, token, ip, self._json_body())
+                data = change_ring(record, token, ip, self._json_body(), self.language)
             elif self.command == "POST" and path.startswith("/api/empire/approvals/"):
                 data = decide_approval(path.rsplit("/", 1)[1], token, ip, self._json_body())
             else:
                 raise APIError(404, "Unknown API route.")
             self._send_json(json.dumps(data).encode())
         except APIError as e:
-            self._send_json(json.dumps({"error": e.message}).encode(), e.status)
+            self._send_json(json.dumps({"error": text(e.message, self.language)}).encode(), e.status)
+
+    @property
+    def language(self) -> str:
+        return request_language(self.headers.get("Accept-Language"))
 
     def _form(self) -> dict[str, str]:
         length = int(self.headers.get("Content-Length", "0") or "0")
@@ -655,11 +661,12 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND)
 
     def _send_state(self, record: dict, token: str, client_ip: str) -> None:
-        self._send_json(json.dumps(empire_data(record, token, client_ip)).encode())
+        self._send_json(json.dumps(empire_data(record, token, client_ip, self.language)).encode())
 
     def _send_json(self, body: bytes, status: int = HTTPStatus.OK) -> None:
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Language", self.language)
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()

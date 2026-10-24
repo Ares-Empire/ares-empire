@@ -61,6 +61,7 @@ class HubTests(unittest.TestCase):
         }
         self.catalog = {'aresium': {'users': 'coming-soon'}, 'other': {'users': 'open'}}
         self.enterContext(patch.object(server, 'pb_call', side_effect=self.pb))
+        self.real_load_state = server.load_state
         self.enterContext(patch.object(server, 'load_state', side_effect=lambda: copy.deepcopy(self.state)))
         self.enterContext(patch.object(server, 'load_catalog', side_effect=lambda: copy.deepcopy(self.catalog)))
         self.pulse = self.enterContext(patch.object(server.urllib.request, 'urlopen', side_effect=OSError('no pulse')))
@@ -138,6 +139,119 @@ class HubTests(unittest.TestCase):
         self.assertEqual(headers['Cache-Control'], 'no-store')
         self.assertEqual(self.calls[0][2:4], ('user-one', '192.0.2.10'))
         self.assertEqual(len(self.calls), 1)  # Users never ask PocketBase for approval metadata.
+
+    def test_accept_language_parsing_through_hub_api(self):
+        for header, expected in ((None, 'en'), ('de', 'de'), ('de-DE', 'de'),
+                                 ('de-DE,de;q=0.9,en;q=0.8', 'de'), ('en', 'en'),
+                                 ('en-GB,de;q=0.5', 'en'), ('fr', 'en'), ('broken', 'en'),
+                                 ('fr,de;q=0.8,en;q=0.9', 'en'), ('de;q=0.8,en;q=0.8', 'de'),
+                                 ('en;q=0.8,de;q=0.8', 'en'), ('de;q=0', 'en'),
+                                 ('de;q=oops', 'en'), ('de;q=1.1', 'en'), ('de;q=-1', 'en'),
+                                 ('de;q=NaN', 'en'), ('DE-de;Q=0.9,en;q=0.8', 'de')):
+            with self.subTest(header=header):
+                status, data, headers = self.request(token=None,
+                    headers={'Accept-Language': header} if header is not None else {})
+                self.assertEqual((status, data), (401, {'error': 'unauthenticated'}))
+                self.assertEqual(headers['Content-Language'], expected)
+
+    def test_live_languages_are_forwarded_and_cached_per_account_and_language(self):
+        def answer(request, timeout):
+            language = request.get_header('Accept-language')
+            self.assertIn(language, ('en', 'de'))
+            self.assertEqual(timeout, 2)
+            if request.full_url == server.ARESUS_OVERVIEW_URL:
+                line = 'Server ausgefallen seit 04:53' if language == 'de' else 'Server down since 04:53'
+                return Pulse({'provinces': [{'slug': 'private', 'state': 'issue', 'line': line},
+                                            {'slug': 'other', 'state': 'active', 'line': 'Website 5 ms'}]})
+            return Pulse({'line': '12 € im Oktober ausgegeben' if language == 'de' else '€12 spent in October'})
+        self.pulse.side_effect = answer
+        for _ in range(2):
+            for language, spending, issue in (('de', '12 € im Oktober ausgegeben', 'Problem: Server ausgefallen seit 04:53'),
+                                               ('en', '€12 spent in October', 'Issue: Server down since 04:53')):
+                status, data, headers = self.request(token='admin-one', headers={'Accept-Language': language})
+                self.assertEqual(status, 200)
+                self.assertEqual(headers['Content-Language'], language)
+                live = {p['slug']: p['live'] for p in data['projects']}
+                self.assertEqual(live, {'aresium': spending, 'other': 'Website 5 ms', 'private': issue})
+                self.assertEqual(data['ideas'], self.state['ideas'])
+                self.assertEqual(data['chronicle'], self.state['chronicle'])
+                self.assertEqual(data['projects'][0]['blurb'], 'Fixture')
+                self.assertEqual(data['projects'][0]['detail'], self.state['projects'][0]['detail'])
+        self.assertEqual(self.pulse.call_count, 4)  # One pulse and overview per language, shared across provinces.
+        self.request(headers={'Accept-Language': 'de'})
+        self.assertEqual(self.pulse.call_count, 6)  # A second account cannot reuse the admin's lines.
+        with patch.object(server, 'time', return_value=server.time() + 61):
+            self.request(token='admin-one', headers={'Accept-Language': 'de'})
+        self.assertEqual(self.pulse.call_count, 8)
+
+    def test_ring_response_uses_request_language(self):
+        self.pulse.side_effect = lambda request, **kw: Pulse({'line': request.get_header('Accept-language')})
+        status, data, headers = self.request('/api/empire/ring', method='POST', body={'add': 'aresium'},
+                                             headers={'Accept-Language': 'de'})
+        self.assertEqual(status, 200)
+        self.assertEqual(data['projects'][0]['live'], 'de')
+        self.assertEqual(headers['Content-Language'], 'de')
+
+    def test_auth_errors_are_translated_when_read_from_the_cache(self):
+        for upstream, status, english, german in (
+                (403, 403, 'This account has no access to Ares Empire.',
+                 'Dieses Konto hat keinen Zugang zu Ares Empire.'),
+                (0, 503, 'Login service unavailable, try again in a minute.',
+                 'Anmeldedienst nicht erreichbar, versuch es in einer Minute noch einmal.')):
+            server._cache.clear()
+            with patch.object(server, 'pb_call', return_value=(upstream, {})):
+                for language, expected in (('en', english), ('de', german)):
+                    with self.subTest(upstream=upstream, language=language):
+                        result, data, headers = self.request(headers={'Accept-Language': language})
+                        self.assertEqual((result, data), (status, {'error': expected}))
+                        self.assertEqual(headers['Content-Language'], language)
+
+    def test_account_action_errors_follow_request_language(self):
+        self.request()  # Prime authentication; below only the account write is faked.
+        for upstream, status, english, german in (
+                (400, 400, 'Invalid account request.', 'Ungültige Kontoanfrage.'),
+                (401, 401, 'unauthenticated', 'unauthenticated'),
+                (403, 403, 'Forbidden.', 'Kein Zugang.'),
+                (404, 404, 'Account not found.', 'Konto nicht gefunden.'),
+                (0, 503, 'Account service unavailable, try again in a minute.',
+                 'Kontodienst nicht erreichbar, versuch es in einer Minute noch einmal.'),
+                (200, 503, 'Account service returned an unreadable response.',
+                 'Die Antwort des Kontodienstes ist nicht lesbar.')):
+            with patch.object(server, 'pb_call', return_value=(upstream, {})):
+                for language, expected in (('en', english), ('de', german)):
+                    with self.subTest(upstream=upstream, language=language):
+                        result, data, headers = self.request('/api/empire/ring', method='POST', body={'add': 'other'},
+                                                             headers={'Accept-Language': language})
+                        self.assertEqual((result, data), (status, {'error': expected}))
+                        self.assertEqual(headers['Content-Language'], language)
+
+    def test_missing_state_and_admin_errors_follow_request_language(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory, \
+                patch.object(server, 'STATE_PATH', str(Path(directory) / 'missing.json')), \
+                patch.object(server, 'load_state', side_effect=self.real_load_state):
+            for language, expected in (('en', 'Hub data unavailable, try again in a minute.'),
+                                       ('de', 'Hub-Daten nicht erreichbar, versuch es in einer Minute noch einmal.')):
+                self.assertEqual(self.request(headers={'Accept-Language': language})[:2],
+                                 (503, {'error': expected}))
+        for language, expected in (('en', 'Administrator access required.'),
+                                   ('de', 'Dafür brauchst du Administratorrechte.')):
+            self.assertEqual(self.request('/api/empire/approvals', headers={'Accept-Language': language})[:2],
+                             (403, {'error': expected}))
+
+    def test_german_browser_still_gets_english_login_pages(self):
+        for path, phrase in (('/login', 'One account for every service'), ('/login/email', 'Log in'),
+                              ('/signup', 'Create'), ('/forgot', 'Reset')):
+            with self.subTest(path=path):
+                status, body, headers = self.request(path, token=None, headers={'Accept-Language': 'de'})
+                self.assertEqual(status, 200)
+                self.assertEqual(headers['Content-Language'], 'en')
+                self.assertIn(phrase.lower().encode(), body.lower())
+        with patch.object(server, 'pb_call', return_value=(200, {'record': {'id': 'unapproved'}})):
+            status, body, headers = self.request('/login', token=None, method='POST',
+                raw=b'email=fixture%40example.com&password=fixture-password', headers={'Accept-Language': 'de'})
+            self.assertEqual(status, 503)  # Malformed login stays English, too.
+            self.assertEqual(headers['Content-Language'], 'en')
+            self.assertIn(b'Login is unavailable right now.', body)
 
     def test_accounts_and_cached_records_are_isolated(self):
         first = self.request()[1]

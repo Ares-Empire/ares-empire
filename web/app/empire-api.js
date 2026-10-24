@@ -33,7 +33,8 @@
     try {
       response = await fetch(path, {
         credentials: "same-origin",
-        ...(body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
+        headers: { "Accept-Language": "en", ...(body ? { "Content-Type": "application/json" } : {}) },
+        ...(body ? { method: "POST", body: JSON.stringify(body) } : {}),
       });
     } catch (_) {
       throw new Error("The Empire could not be reached. Check your connection and try again.");
