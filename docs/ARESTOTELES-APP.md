@@ -15,6 +15,14 @@ Weltbild`, repo `carlsenares/opinions`, rules in its own `CLAUDE.md`). The websi
   his thinking. Structured edits for what the phone is good at: confirm a draft position, reword it, change or drop a
   view (the old one goes to "How my view changed", never overwritten), add a position, set a note's confidence, adopt
   or dismiss one of Claude's callouts. A free Markdown editor for everything else, and a quick note into `Inbox/`.
+- **Looking up comes first** (Patrik, 2026-10-24, after using it: "usually I just want to quickly look up a fact, a
+  figure or a source"): position cards show one short line (the vault's bold part); long notes open with their
+  sections closed, each with its first sentence; every note has Figures & dates, Sources and Terms; search shows the
+  matching sentences first and jumps to them.
+- **Positions are not changed on the phone** (Patrik: they are "very considered and well built"): a position offers
+  Discuss (now with Claude, or later: a `kind: discuss` Inbox note the next session brings up), Edit (the wording) and
+  Note (an Inbox note about it). Any paragraph or list item can be edited on its own. The server keeps the change and
+  drop edits, unused by the app.
 - **Discuss with Claude, no API key:** a Discuss button hands the topic to the Claude app, where Claude Code works on
   the vault repo with its `CLAUDE.md`, like on the laptop, on Patrik's subscription. Tested 2026-10-24: a session
   from the phone pushes straight to `main`. No AI inside the app.
