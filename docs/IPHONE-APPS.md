@@ -24,7 +24,21 @@ running on the simulator with one shared login; TestFlight and push wait for App
 - iPhone work happens with **Claude Code on the MacBook** (Xcode only runs on macOS), so
   Claude can build, run the simulator and fix errors directly. Server work stays on the server.
 
-## Verified facts (checked 2026-10-23 against Apple's docs)
+## iPhone features: check for every app
+
+When an app is built or extended, check which of these fit it (Patrik, 2026-10-24: "remember to check if an app we
+built can benefit from iPhone features"). Note the answer in the app's decision record, also when it is "none".
+
+- Widgets (home and lock screen), interactive widgets and Control Center controls (do something without opening the app)
+- Live Activities (a running thing on the lock screen and Dynamic Island: a hunt, an incident, a sync)
+- Siri and Shortcuts (App Intents; also Spotlight and the Action button)
+- Share sheet in and out (send a file or link into the app), notifications with actions
+- Spotlight search of the app's content
+- Maps and location, Calendar and Reminders, camera and document scanning, Face ID
+- Apple's on-device AI (Foundation Models, iOS 26; iPhone 15 Pro or newer): private classification and summaries
+  without data leaving the phone
+
+ (checked 2026-10-23 against Apple's docs)
 
 | Claim | Verified | Source |
 |---|---|---|
