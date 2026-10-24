@@ -1,6 +1,7 @@
 # Arestoteles app — decision record
 
-**Decided 2026-10-24 (Patrik).** Arestoteles stops being a trading bot and becomes the iPhone app for Patrik's
+**Decided 2026-10-24 (Patrik).** Status (2026-10-24): server live at `www.ares-empire.de/api/arestoteles`, app built
+(simulator; TestFlight pending), checked against the real vault (78 notes, 29 positions). Arestoteles stops being a trading bot and becomes the iPhone app for Patrik's
 Weltbild: his Obsidian vault of topics, positions, mechanisms, events and questions (`~/Documents/Patrik Breeck/
 Weltbild`, repo `carlsenares/opinions`, rules in its own `CLAUDE.md`). The website arestoteles.de stays as it is.
 

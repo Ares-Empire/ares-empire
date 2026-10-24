@@ -83,7 +83,7 @@ Mirror of `EMPIRE.projects`. Status vocabulary: `SCOUTED` (idea) → `BESIEGING`
 | Province | State | Domain | What it is |
 |---|---|---|---|
 | **Aresium** | CONQUERED | aresium.de | Personal finance command — VR Bank + PayPal, imported and understood. |
-| **Arestoteles** | CONQUERED | arestoteles.de | AI portfolio strategist — theses, falsifiers, conviction. |
+| **Arestoteles** | CONQUERED | arestoteles.de | Patrik's Weltbild on the phone — positions, topics, mechanisms, events; read, search, edit, discuss with Claude. |
 | **Aresync** | BESIEGING | — | Git sync across Windows & Mac — every repo, everywhere, automatically. |
 | **Arescope** | BESIEGING | — | Personal exposure scanner — searches public sources for your own name, emails and photos, an AI rates each finding, fixes are proposed. Works in parts; no phone app planned (2026-10-24). |
 
@@ -101,7 +101,7 @@ repo as a top-level folder, and live services and data volumes depend on their p
 | **Aresium** | **Empire login** (website, hub hand-off and API for the app) | **built** (simulator; TestFlight pending) | `aresium` |
 | **Arestemis** | **Empire login** (API for the app, no website) | **built** (simulator; TestFlight pending): [docs/ARESTEMIS-APP.md](docs/ARESTEMIS-APP.md) | `Arestemis` |
 | **Aresus** (+ Aresync) | **Empire login** (API for the app, no website; Aresync reports with machine tokens) | **built** (simulator; TestFlight pending): [docs/ARESUS-APP.md](docs/ARESUS-APP.md) | `aresus`, `aresync` |
-| **Arestoteles** | own login | — | `Arestoteles` |
+| **Arestoteles** | **Empire login** (API for the app); the website keeps its own login | **built** (simulator; TestFlight pending): [docs/ARESTOTELES-APP.md](docs/ARESTOTELES-APP.md) | `Arestoteles`, vault `carlsenares/opinions` |
 | **Ares Empire** (hub) | **Empire login** — sign-up, approval and password reset live here; the push service for all apps ([docs/PUSH.md](docs/PUSH.md)) | **built** (simulator; TestFlight pending): [docs/EMPIRE-APP.md](docs/EMPIRE-APP.md) | `ares-empire` |
 
 All empire repos live in the GitHub organization **[Ares-Empire](https://github.com/Ares-Empire)**
@@ -149,6 +149,7 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y").
 
+- **2026-10-24 · arestoteles** — Arestoteles became the iPhone app for Patrik's Weltbild: his positions first, each with the evidence behind it, topics with briefings, mechanisms, an events timeline and search in English and German; positions can be confirmed, reworded or changed (old views kept with their date), notes edited, and any topic handed to Claude for a discussion that writes back to the vault. The trading bot is gone; the website stays.
 - **2026-10-24 · empire** — Every Empire app now speaks English and German: each app follows the iPhone's language, and the servers write their status lines, notes and notifications in that language too. The rule holds for every future app.
 - **2026-10-24 · arestemis** — Arestemis's search got simpler: flat or WG, how many move in, sizes, cold and warm rent ranges, dates, portals and extras, each field optional on its own; a sentence can fill in the fields.
 - **2026-10-24 · aresus** — Aresus reached the home and lock screens: a widget that says "All running" or names the issue, always with how old the check is; and the Empire app's province cards now carry Aresus's live line for each province.

@@ -161,6 +161,7 @@
 
     // ── Chronicle: what was done, newest first (Claude Code appends here) ──
     chronicle: [
+      { at: "2026-10-24", project: "arestoteles", text: "Arestoteles became the iPhone app for Patrik's Weltbild: his positions first, each with the evidence behind it, topics with briefings, mechanisms, an events timeline and search in English and German; positions can be confirmed, reworded or changed (old views kept with their date), notes edited, and any topic handed to Claude for a discussion that writes back to the vault. The trading bot is gone; the website stays." },
       { at: "2026-10-24", project: "empire", text: "Every Empire app now speaks English and German: each app follows the iPhone's language, and the servers write their status lines, notes and notifications in that language too. The rule holds for every future app." },
       { at: "2026-10-24", project: "arestemis", text: "Arestemis's search got simpler: flat or WG, how many move in, sizes, cold and warm rent ranges, dates, portals and extras, each field optional on its own; a sentence can fill in the fields." },
       { at: "2026-10-24", project: "aresus", text: "Aresus reached the home and lock screens: a widget that says \"All running\" or names the issue, always with how old the check is; and the Empire app's province cards now carry Aresus's live line for each province." },

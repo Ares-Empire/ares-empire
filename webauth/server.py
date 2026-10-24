@@ -68,7 +68,8 @@ PULSE_URLS = {"aresium": "https://aresium.de/api/pulse"}
 ARESUS_OVERVIEW_URL = os.environ.get("ARESUS_OVERVIEW_URL", "http://127.0.0.1:8098/api/aresus/overview")
 # iPhone apps by province (URL scheme), whoever may see the province: the Empire app opens a province in its app
 # when it is installed. Not part of the catalog, which only says what other accounts may add.
-APP_SCHEMES = {"aresium": "aresium://", "arestemis": "arestemis://", "aresus": "aresus://"}
+APP_SCHEMES = {"aresium": "aresium://", "arestemis": "arestemis://", "aresus": "aresus://",
+               "arestoteles": "arestoteles://"}
 LIVE_CACHE_SECS = 60
 
 # Reachable without a session: the login pages and the images they show.

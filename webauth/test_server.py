@@ -529,7 +529,8 @@ class DataAndTransportTests(unittest.TestCase):
 
     def test_catalog_is_separate_and_matches_current_contract(self):
         self.assertEqual(server.load_catalog(), {'aresium': {'users': 'coming-soon'}})
-        self.assertEqual(server.APP_SCHEMES, {'aresium': 'aresium://', 'arestemis': 'arestemis://', 'aresus': 'aresus://'})
+        self.assertEqual(server.APP_SCHEMES, {'aresium': 'aresium://', 'arestemis': 'arestemis://', 'aresus': 'aresus://',
+                                              'arestoteles': 'arestoteles://'})
 
     def test_pb_transport_methods_and_forwarded_ip(self):
         for method in ('POST', 'PATCH', 'GET', 'DELETE'):
