@@ -16,8 +16,8 @@ Everything the app or a server writes **as part of the interface**: titles, butt
 errors, status words and lines, summaries, notifications, and the AI's notes about a listing.
 
 **Not translated:** what people or other services wrote (listings, applications, transactions and their categories,
-commit subjects, log lines), names (Aresium, WG-Gesucht, provinces), and for now the hub's chronicle and province
-texts, which are written in English (translating them means writing every entry twice; Patrik decides).
+commit subjects, log lines), names (Aresium, WG-Gesucht, provinces), and the hub's chronicle and province texts: they stay English, also
+inside the German apps (Patrik, 2026-10-24: not worth writing every entry twice).
 
 ## How it reads
 
@@ -44,7 +44,8 @@ The language follows the app, so a server never stores a "user language" setting
 
 ## Websites
 
-This decision is for the iPhone apps. Whether the websites (hub, Aresium) get German too is open (Patrik decides).
+The websites (hub, Aresium) stay English only (Patrik, 2026-10-24). Their API calls send `Accept-Language: en`, so a
+German browser still gets English from the servers.
 
 ## Where the details live
 
