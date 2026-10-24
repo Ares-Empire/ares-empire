@@ -1,7 +1,7 @@
 # iPhone apps — decision record
 
-**Decided 2026-10-23.** Status (2026-10-24): **Aresium and the Empire app built** in `empire-ios`, running on the
-simulator with one shared login; TestFlight waits for Apple to approve the developer account.
+**Decided 2026-10-23.** Status (2026-10-24): **Aresium, the Empire app, Arestemis and Aresus built** in `empire-ios`,
+running on the simulator with one shared login; TestFlight and push wait for Apple to approve the developer account.
 
 ## The decision
 
@@ -66,6 +66,8 @@ worth trying once the app is shared with a real group of users.
    Safari vs the app).
 5. Later: Aresium for several users (each person's data separated on the server).
 6. ✅ (simulator; TestFlight pending) The Empire itself on the phone: [EMPIRE-APP.md](EMPIRE-APP.md) (throne room, per-user ring, approvals).
+7. ✅ (simulator; TestFlight pending) Arestemis ([ARESTEMIS-APP.md](ARESTEMIS-APP.md)) and Aresus with Aresync
+   ([ARESUS-APP.md](ARESUS-APP.md)), on one push service for all apps ([PUSH.md](PUSH.md)), 2026-10-24.
 
 ## Links
 

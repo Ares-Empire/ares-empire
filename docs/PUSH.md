@@ -1,7 +1,7 @@
 # Empire push — one push service for every app
 
 **Decided 2026-10-24** with Patrik, for the Arestemis and Aresus apps (Telegram retires once push works on the phone).
-Status: built, not deployed yet; runs as a dry run until the APNs key exists. Code: `push/` in this repo; Swift side:
+Status (2026-10-24): **deployed** as `empire-push.service`, a dry run until the APNs key exists; Aresus and Arestemis send through it. Code: `push/` in this repo; Swift side:
 `empire-ios/Shared/Push/`.
 
 ## Why one service

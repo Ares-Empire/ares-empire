@@ -1,7 +1,10 @@
 # Aresus on the phone — decision record
 
-**Decided 2026-10-24** with Patrik. Status: being built. Server: the new `aresus` repo (API contract: `docs/API.md`
+**Decided 2026-10-24** with Patrik. Server: the new `aresus` repo (API contract: `docs/API.md`
 there); app: `empire-ios/Aresus`. Push: [PUSH.md](PUSH.md).
+
+**Status (2026-10-24): built.** Server live (`aresus.service`, `/api/aresus/*`), the MacBook and the server report
+their Aresync runs, app on the simulator (tested live); push waits for the Apple key (PUSH.md).
 
 ## What it is
 

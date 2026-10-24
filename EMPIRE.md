@@ -94,9 +94,11 @@ repo as a top-level folder, and live services and data volumes depend on their p
 
 | Province | Login | iPhone app | Repo |
 |---|---|---|---|
-| **Aresium** | **Empire login** (website, hub hand-off and API for the app) | **planned (first app)** in `empire-ios` | `aresium` |
+| **Aresium** | **Empire login** (website, hub hand-off and API for the app) | **built** (simulator; TestFlight pending) | `aresium` |
+| **Arestemis** | **Empire login** (API for the app, no website) | **built** (simulator; TestFlight pending): [docs/ARESTEMIS-APP.md](docs/ARESTEMIS-APP.md) | `Arestemis` |
+| **Aresus** (+ Aresync) | **Empire login** (API for the app, no website; Aresync reports with machine tokens) | **built** (simulator; TestFlight pending): [docs/ARESUS-APP.md](docs/ARESUS-APP.md) | `aresus`, `aresync` |
 | **Arestoteles** | own login | — | `Arestoteles` |
-| **Ares Empire** (hub) | **Empire login** — sign-up, approval and password reset live here | **planned**: [docs/EMPIRE-APP.md](docs/EMPIRE-APP.md) | `ares-empire` |
+| **Ares Empire** (hub) | **Empire login** — sign-up, approval and password reset live here; the push service for all apps ([docs/PUSH.md](docs/PUSH.md)) | **built** (simulator; TestFlight pending): [docs/EMPIRE-APP.md](docs/EMPIRE-APP.md) | `ares-empire` |
 
 All empire repos live in the GitHub organization **[Ares-Empire](https://github.com/Ares-Empire)**
 (aresync follows once every laptop runs the org-aware version). Each repo keeps its own
@@ -143,6 +145,9 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y").
 
+- **2026-10-24 · aresus** — Aresus went live as the empire's watchtower: every minute it checks each province on the server (services, websites, certificates, deploys), keeps incidents and uptime, and receives a report from every Aresync run on the MacBook and the server. Its iPhone app lists the provinces (issues first, then active, then inactive) and the sync runs, and pushes when something breaks or a sync fails. The server now deploys the hub, Arestemis and Aresus by itself after a push.
+- **2026-10-24 · arestemis** — Arestemis became an iPhone app: the search set in fields (places anywhere in Germany), the hunt started and paused from the phone, an AI check of every listing against the whole search, matches with their states, and the application text (written once or by AI per listing). The server was rebuilt for Empire accounts; push notifications replace Telegram once the phone can receive them.
+- **2026-10-24 · empire** — One push service for every Empire app: apps register with their Empire login, provinces send through it. Runs as a dry run until Apple approves the developer account.
 - **2026-10-24 · empire** — The Empire got its own iPhone app: the approved phone hub rebuilt natively (ring, chronicle, province pages, adding a province, approvals), on the one login shared with Aresium; opening a province starts its app when installed. Runs on the simulator; TestFlight waits for Apple.
 - **2026-10-24 · empire** — The hub reached the phone: each account now sees its own ring (Patrik everything plus Approvals; others their provinces and a "+" to add the ones opened to them, today Aresium as coming soon), on the desktop's own wheel and chronicle. Approvals run with Patrik's own login, no superuser secret on the hub.
 - **2026-10-23 · aresium** — The Aresium iPhone app grew to the full mobile site: transaction detail and recategorise, import (button and share sheet), the red Aresium mode with the ARESIUM band and intro, and two home-screen widgets (this month's spending line; Groceries + Drogerie). The server now also sends the recategorise choices and each month's running total; the old browser calculation and the paint animation are gone.

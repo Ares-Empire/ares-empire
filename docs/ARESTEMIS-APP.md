@@ -1,7 +1,10 @@
 # Arestemis on the phone — decision record
 
-**Decided 2026-10-24** with Patrik. Status: being built. Server: `Arestemis` repo (API contract: `docs/API.md` there);
+**Decided 2026-10-24** with Patrik. Server: `Arestemis` repo (API contract: `docs/API.md` there);
 app: `empire-ios/Arestemis`. Push: [PUSH.md](PUSH.md).
+
+**Status (2026-10-24): built.** Server live (`arestemis.service`, `/api/arestemis/*`), app on the simulator, tested
+live with a test account; push waits for the Apple key (PUSH.md).
 
 ## What it is
 
