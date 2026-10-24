@@ -14,6 +14,7 @@ Runs daily at 04:00 (systemd timer empire-sync.timer). For every GitHub repo who
    per repo per day. Failure is logged and retried the next day; it never blocks 1. or 2.
 
 What it preserves (never overwritten):
+  - `name` once set (a new repo's name gets a capital first letter: "arescope" → "Arescope"; fix by hand after)
   - `logo`, and `url` / `domain` if already set by hand
   - `detail.changelog` (append-only history)
   - any project with `"lock": true` (hand-tuned, skipped entirely)
@@ -288,6 +289,12 @@ def homepage_domain(homepage: str | None) -> str:
     return re.sub(r"^https?://", "", homepage.strip()).rstrip("/")
 
 
+def display_name(name: str) -> str:
+    """How a province is called on the hub and in the apps: a capital first letter, the rest as written."""
+    name = name.strip()
+    return name[:1].upper() + name[1:]
+
+
 def basic_entry(repo: dict, readme: str | None, today: date) -> dict:
     """A complete tile from GitHub data alone, in the same shape the LLM returns."""
     intro = readme_intro(readme)
@@ -364,8 +371,8 @@ def merge_project(existing: dict | None, repo: str, gen: dict | None,
     `gen` is the LLM answer (or None if it failed or was skipped). Text fields come from `gen`;
     without it, an existing project keeps its text and a new one uses `fallback` (the basic
     entry). Status: `gen`'s if valid, else the existing one, else `fallback_status`; a live
-    domain lifts it to CONQUERED. Logo, url, domain set by hand, and the changelog history are
-    always kept."""
+    domain lifts it to CONQUERED. The name, logo, url, domain set by hand, and the changelog history
+    are always kept."""
     slug = repo.lower()
     existing = existing or {}
     text = gen or (fallback if not existing else None) or {}
@@ -397,7 +404,7 @@ def merge_project(existing: dict | None, repo: str, gen: dict | None,
 
     merged = {
         "slug": slug,
-        "name": str(text.get("name") or existing.get("name") or repo).strip(),
+        "name": existing.get("name") or display_name(str(text.get("name") or repo)),
         "url": existing.get("url") or (f"https://{domain}" if domain else ""),
         "logo": existing.get("logo") or PLACEHOLDER_LOGO,
         "status": status,

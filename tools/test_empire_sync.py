@@ -109,6 +109,12 @@ class NewRepos(Base):
         self.assertEqual(projects["aresos"]["status"], "MUSTERING")
         self.assertFalse(json.loads(self.meta_path.read_text())["repos"]["aresos"]["needs_llm"])
 
+    def test_new_lowercase_repo_gets_a_capital_first_letter(self):
+        self.write_state([])
+        projects, state, _ = self.run_sync([repo("arescope")])
+        self.assertEqual(projects["arescope"]["name"], "Arescope")
+        self.assertEqual(state["chronicle"][0]["text"], "Mustered Arescope into the circle")
+
     def test_old_repo_without_description_falls_back_to_readme_and_is_mustering(self):
         self.write_state([])
         projects, _, _ = self.run_sync([repo("AresOS", pushed="2026-01-01T00:00:00Z")])
@@ -135,6 +141,15 @@ class ExistingRepos(Base):
         self.assertEqual(p["status"], "BESIEGING")
         self.assertEqual(p["detail"]["changelog"][0], {"at": "2026-10-22", "text": "Ares-Empire/aresync commit"})
         self.assertEqual(state["chronicle"], [])
+
+    def test_a_name_once_set_is_kept(self):
+        self.write_state([project("aresync", name="Aresync")])
+        self.meta_path.write_text(json.dumps({"repos": {"aresync": {"pushed_at": "2026-06-01T00:00:00Z"}}}))
+        gen = {"name": "aresync", "blurb": "b", "about": "a", "status": "BESIEGING",
+               "features": [], "wip": [], "ideas": [], "domain": ""}
+        projects, _, _ = self.run_sync([repo("aresync")], llm=mock.Mock(return_value=gen))
+        self.assertEqual(projects["aresync"]["name"], "Aresync")
+        self.assertEqual(projects["aresync"]["blurb"], "b")
 
     def test_llm_is_tried_at_most_once_a_day(self):
         self.write_state([project("aresync")])
