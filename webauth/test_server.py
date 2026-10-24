@@ -322,25 +322,31 @@ class HubTests(unittest.TestCase):
             with self.subTest(upstream=upstream), patch.object(server, 'pb_call', return_value=(upstream, {})):
                 self.assertEqual(self.request('/api/empire/ring', method='POST', body={'add': 'other'})[0], expected)
 
+    def aresium_pulse_calls(self):
+        return [c for c in self.pulse.call_args_list if c.args[0].full_url == server.PULSE_URLS['aresium']]
+
+    def aresium_pulses(self):
+        return len(self.aresium_pulse_calls())
+
     def test_live_failure_is_null_and_cached_per_account(self):
         self.assertIsNone(self.request()[1]['projects'][0]['live'])
         self.request()
-        self.assertEqual(self.pulse.call_count, 1)
+        self.assertEqual(self.aresium_pulses(), 1)
         self.request(token='user-two')  # Aresium in addable also has a live field.
-        self.assertEqual(self.pulse.call_count, 2)
-        request = self.pulse.call_args.args[0]
+        self.assertEqual(self.aresium_pulses(), 2)
+        request = self.aresium_pulse_calls()[-1].args[0]
         self.assertEqual(request.full_url, 'https://aresium.de/api/pulse')
         self.assertEqual(request.get_header('Authorization'), 'Bearer user-two')
-        self.assertEqual(self.pulse.call_args.kwargs, {'timeout': 2})
+        self.assertEqual(self.aresium_pulse_calls()[-1].kwargs, {'timeout': 2})
 
     def test_live_success_and_expiry(self):
         self.pulse.side_effect = lambda *a, **kw: Pulse({'line': 'Nothing imported yet'})
         self.assertEqual(self.request()[1]['projects'][0]['live'], 'Nothing imported yet')
         self.request()
-        self.assertEqual(self.pulse.call_count, 1)
+        self.assertEqual(self.aresium_pulses(), 1)
         with patch.object(server, 'time', return_value=server.time() + 61):
             self.request()
-        self.assertEqual(self.pulse.call_count, 2)
+        self.assertEqual(self.aresium_pulses(), 2)
 
     def test_live_bad_json_or_shape_or_http_error_is_null(self):
         for response in (lambda: io.BytesIO(b'not json'), lambda: Pulse({'line': 12}),
@@ -354,6 +360,27 @@ class HubTests(unittest.TestCase):
                     self.pulse.side_effect = None
                     self.pulse.return_value = result
                 self.assertIsNone(self.request()[1]['projects'][0]['live'])
+
+    def test_other_provinces_get_their_line_from_aresus(self):
+        def answer(request, timeout):
+            if request.full_url == server.ARESUS_OVERVIEW_URL:
+                return Pulse({'provinces': [{'slug': 'other', 'state': 'active', 'line': 'Website 5 ms'},
+                                            {'slug': 'private', 'state': 'issue', 'line': 'Server down since 04:53'},
+                                            {'slug': 'aresium', 'state': 'active', 'line': 'Website 7 ms'}]})
+            return Pulse({'line': '€12 spent in October'})
+        self.pulse.side_effect = answer
+        live = {p['slug']: p['live'] for p in self.request(token='admin-one')[1]['projects']}
+        self.assertEqual(live, {'aresium': '€12 spent in October', 'other': 'Website 5 ms',
+                                'private': 'Issue: Server down since 04:53'})
+        self.request(token='admin-one')
+        aresus_calls = [c for c in self.pulse.call_args_list if c.args[0].full_url == server.ARESUS_OVERVIEW_URL]
+        self.assertEqual(len(aresus_calls), 1)  # one overview per account and minute, not one per province
+        self.assertEqual(aresus_calls[0].args[0].get_header('Authorization'), 'Bearer admin-one')
+
+    def test_no_aresus_access_means_no_line(self):
+        self.pulse.side_effect = urllib.error.HTTPError(server.ARESUS_OVERVIEW_URL, 403, '', {}, None)
+        live = {p['slug']: p['live'] for p in self.request(token='admin-one')[1]['projects']}
+        self.assertEqual(live, {'aresium': None, 'other': None, 'private': None})
 
     def test_live_truncated_response_is_null(self):
         self.pulse.side_effect = http.client.IncompleteRead(b'partial')

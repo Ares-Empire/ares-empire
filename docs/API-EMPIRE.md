@@ -52,5 +52,7 @@ A province's iPhone app (`app`, its URL scheme) does not depend on who may see i
 ## Live lines
 
 The server asks each province for one line with the visitor's own token (cached per account for a minute) and puts it
-in `live`. Today only Aresium answers, from `GET /api/pulse` there (this month's spending, or "Nothing imported for
-<month> yet"); other provinces get a line when they have something worth saying.
+in `live`. Aresium answers from `GET /api/pulse` there (this month's spending, or "Nothing imported for <month> yet").
+Every other province gets Aresus's line for it (2026-10-24): one `GET /api/aresus/overview` per account and minute on
+localhost (`ARESUS_OVERVIEW_URL`), "Issue: " in front when the province has one (e.g. "Off on purpose · website up",
+"Issue: Server down since 04:53"). Accounts without the `aresus` service get no line.

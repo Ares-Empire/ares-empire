@@ -56,6 +56,9 @@ STATE_PATH = os.environ.get(
 CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
 # Plain JSON snapshot of web/app/empire-data.js, usable without a JS runtime.
 PULSE_URLS = {"aresium": "https://aresium.de/api/pulse"}
+# Every other province gets its line from Aresus, the watchtower (one overview per account and minute, asked with the
+# visitor's own token; accounts without the "aresus" service get no line). Same host, so localhost.
+ARESUS_OVERVIEW_URL = os.environ.get("ARESUS_OVERVIEW_URL", "http://127.0.0.1:8098/api/aresus/overview")
 # iPhone apps by province (URL scheme), whoever may see the province: the Empire app opens a province in its app
 # when it is installed. Not part of the catalog, which only says what other accounts may add.
 APP_SCHEMES = {"aresium": "aresium://", "arestemis": "arestemis://", "aresus": "aresus://"}
@@ -181,10 +184,44 @@ _live_cache: dict[tuple[str, str], tuple[str | None, float]] = {}
 _live_lock = threading.Lock()
 
 
+def _fetch_json(url: str, token: str):
+    """GET with the visitor's token; None on any failure (live lines never turn into hub errors)."""
+    try:
+        req = urllib.request.Request(url, headers={"Authorization": "Bearer " + token})
+        with urllib.request.urlopen(req, timeout=2) as r:
+            data = json.load(r)
+            return data if r.status == 200 else None
+    except urllib.error.HTTPError as e:
+        e.close()
+    except (OSError, ValueError, HTTPException):
+        pass
+    return None
+
+
+def aresus_lines(account_id: str, token: str) -> dict[str, str]:
+    """slug -> Aresus's line for that province ("Issue: " in front when it has one), cached per account."""
+    key = (account_id, "__aresus__")
+    with _live_lock:
+        hit = _live_cache.get(key)
+    if hit and hit[1] > time():
+        return hit[0]
+    lines: dict[str, str] = {}
+    data = _fetch_json(ARESUS_OVERVIEW_URL, token)
+    provinces = data.get("provinces") if isinstance(data, dict) else None
+    for p in provinces if isinstance(provinces, list) else []:
+        if isinstance(p, dict) and isinstance(p.get("slug"), str) and isinstance(p.get("line"), str) and p["line"]:
+            lines[p["slug"]] = ("Issue: " if p.get("state") == "issue" else "") + p["line"]
+    with _live_lock:
+        if len(_live_cache) >= 1000:
+            _live_cache.clear()
+        _live_cache[key] = (lines, time() + LIVE_CACHE_SECS)
+    return lines
+
+
 def live_line(slug: str, account_id: str, token: str) -> str | None:
     url = PULSE_URLS.get(slug)
     if not url:
-        return None
+        return aresus_lines(account_id, token).get(slug)
     key = (account_id, slug)
     with _live_lock:
         hit = _live_cache.get(key)
