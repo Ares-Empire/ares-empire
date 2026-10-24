@@ -93,21 +93,6 @@
         },
       },
       {
-        slug: "arescribe",
-        name: "Arescribe",
-        url: "",
-        logo: "brand/athena.webp",
-        status: "MUSTERING",
-        domain: "",
-        blurb: "Maps-review scribe — text it a place and notes, it writes the review.",
-        detail: {
-          about: "Athena's craft. Text the Arescribe bot a place plus a few notes and it composes " +
-            "a fitting Google Maps review automatically — and can post it for you.",
-          features: ["Telegram bot input", "Place-aware review generation", "Google Maps posting"],
-          setup: "", wip: [], ideas: [], changelog: [],
-        },
-      },
-      {
         slug: "aresolus",
         name: "Aresolus",
         url: "",
@@ -121,21 +106,6 @@
           features: ["Best-fare flight search", "Flexible date / route hunting"],
           ideas: ["Trains & buses", "Price-drop alerts"],
           setup: "", wip: [], changelog: [],
-        },
-      },
-      {
-        slug: "arescrypt",
-        name: "Arescrypt",
-        url: "",
-        logo: "brand/cerberus.webp",
-        status: "MUSTERING",
-        domain: "",
-        blurb: "Personal password vault — the empire's three-headed guard.",
-        detail: {
-          about: "Cerberus at the gate. Arescrypt is a personal password manager — a single, " +
-            "guarded vault for every credential.",
-          features: ["Encrypted vault", "Personal credential store"],
-          setup: "", wip: [], ideas: [], changelog: [],
         },
       },
       {
@@ -177,29 +147,6 @@
             "every project, alerts the moment something goes down, and gathers status in one place.",
           features: ["Uptime & health monitoring", "Down alerts", "Single status board"],
           setup: "", wip: [], ideas: [], changelog: [],
-        },
-      },
-      {
-        slug: "aresis",
-        name: "Aresis",
-        url: "",
-        logo: "brand/nemesis.png",
-        status: "BESIEGING",
-        domain: "",
-        blurb: "Privacy guardian — scans your exposed personal data and proposes fixes.",
-        detail: {
-          about: "Nemesis, who balances exposure. Aresis is a personal exposure scanner and " +
-            "privacy-remediation engine: feed it identifiers you own (email, username, name), it " +
-            "runs them through OSINT sources, has an LLM judge each finding by severity, and " +
-            "proposes concrete fixes — to shrink your digital footprint, never to investigate others. " +
-            "The full scan→judge→remediate→report pipeline runs end to end.",
-          features: [
-            "OSINT exposure scan across breach & footprint sources",
-            "LLM severity judgement (info → critical)",
-            "Concrete remediation steps per finding",
-            "Self-audit only (ownership-gated)",
-          ],
-          setup: "", wip: ["Deploy behind shared nginx"], ideas: ["Optional auth → privacy SaaS"], changelog: [],
         },
       },
     ],

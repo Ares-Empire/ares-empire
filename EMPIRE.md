@@ -85,7 +85,7 @@ Mirror of `EMPIRE.projects`. Status vocabulary: `SCOUTED` (idea) → `BESIEGING`
 | **Aresium** | CONQUERED | aresium.de | Personal finance command — VR Bank + PayPal, imported and understood. |
 | **Arestoteles** | CONQUERED | arestoteles.de | AI portfolio strategist — theses, falsifiers, conviction. |
 | **Aresync** | BESIEGING | — | Git sync across Windows & Mac — every repo, everywhere, automatically. |
-| **Aresis** | BESIEGING | — | Privacy guardian — scans your exposed personal data and proposes fixes. Scan→judge→remediate pipeline runs end to end. |
+| **Arescope** | BESIEGING | — | Personal exposure scanner — searches public sources for your own name, emails and photos, an AI rates each finding, fixes are proposed. Works in parts; no phone app planned (2026-10-24). |
 
 ---
 
