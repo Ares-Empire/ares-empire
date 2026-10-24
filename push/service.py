@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import re
+from dataclasses import replace
 
 from push.accounts import Accounts, may_use
 from push.apns import INTERRUPTIONS, MAX_PAYLOAD, Apns, Message
@@ -17,7 +18,8 @@ DEVICE_TOKEN = re.compile(r"[0-9a-f]{64,200}")
 ENVIRONMENTS = ("sandbox", "production")
 USER_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 MESSAGE_TEXTS = ("title", "subtitle", "body", "url", "thread", "category", "collapse_id")
-SEND_FIELDS = frozenset({"app", "to", "interruption", "sound", *MESSAGE_TEXTS})
+SEND_FIELDS = frozenset({"app", "to", "interruption", "sound", "localized", *MESSAGE_TEXTS})
+LOCALIZED_FIELDS = frozenset({"title", "subtitle", "body"})
 
 
 def parse_app(body: dict) -> str:
@@ -41,8 +43,8 @@ def parse_device(body: dict, with_environment: bool) -> tuple[str, str, str]:
     return app, token, environment
 
 
-def parse_send(body: dict) -> tuple[Message, str | None]:
-    """The message of a /send request and its account (None = every device of the app)."""
+def parse_send(body: dict) -> tuple[dict[str, Message], str | None]:
+    """The English/German messages and their account (None = every device of the app)."""
     # Strict on purpose: the senders are our own services, and a misspelt field (say "collapse") would otherwise
     # silently go missing on the phone.
     unknown = sorted(set(body) - SEND_FIELDS)
@@ -72,7 +74,22 @@ def parse_send(body: dict) -> tuple[Message, str | None]:
     sound = body.get("sound", False)
     if not isinstance(sound, bool):
         raise APIError(400, "sound must be true or false.")
-    return Message(app=app, interruption=interruption, sound=sound, **texts), user
+    localized = body.get("localized", {})
+    if not isinstance(localized, dict) or set(localized) - {"de"}:
+        raise APIError(400, 'localized must be an object containing only "de".')
+    german = localized.get("de", {})
+    if not isinstance(german, dict) or set(german) - LOCALIZED_FIELDS:
+        raise APIError(400, "localized.de may contain only title, subtitle and body.")
+    if any(not isinstance(value, str) for value in german.values()):
+        raise APIError(400, "localized.de fields must be strings.")
+    english = Message(app=app, interruption=interruption, sound=sound, **texts)
+    messages = {"en": english, "de": replace(english, **german)}
+    for message in messages.values():
+        if not message.title and not message.body:
+            raise APIError(400, "A notification needs a title or a body.")
+        if len(message.payload()) > MAX_PAYLOAD:
+            raise APIError(400, "The notification is larger than Apple's 4 KB limit.")
+    return messages, user
 
 
 class PushService:
@@ -92,10 +109,13 @@ class PushService:
         if not empire_token:
             raise APIError(401, "unauthenticated")
         app, token, environment = parse_device(body, with_environment=True)
+        language = body.get("language", "en")
+        if language not in ("en", "de"):
+            raise APIError(400, 'language must be "en" or "de".')
         record = self.accounts.account(empire_token, client_ip)
         if not may_use(record, APPS[app]):
             raise APIError(403, "This account has no access to this app.")
-        moved = self.store.register(app, token, record["id"], environment)
+        moved = self.store.register(app, token, record["id"], environment, language)
         log.info("registered %s device %s (%s)%s", app, short(token), environment,
                  ", moved from another account" if moved else "")
 
@@ -111,31 +131,39 @@ class PushService:
     # Internal API (province services on this host)
 
     def send(self, body: dict) -> dict:
-        message, user = parse_send(body)
-        payload = message.payload()
-        if len(payload) > MAX_PAYLOAD:
-            raise APIError(400, "The notification is larger than Apple's 4 KB limit.")
-        devices = self.store.devices(message.app, user)
-        sent = failed = removed = 0
-        if self.apns is None:
-            sent = len(devices)  # the devices it would have reached
-        else:
-            for device in devices:
+        messages, user = parse_send(body)
+        app = messages["en"].app
+        devices = self.store.devices(app, user)
+        results: dict[str, dict] = {}
+        payloads = {language: message.payload() for language, message in messages.items()}
+        for device in devices:
+            language = device.language
+            message = messages[language]
+            result = results.setdefault(language, {"sent": 0, "failed": 0, "dry_run": self.dry_run, "removed": 0})
+            if self.apns is None:
+                result["sent"] += 1  # the devices it would have reached
+            else:
+                payload = payloads[language]
                 outcome = self.apns.send(device.token, device.environment, message, payload)
                 if outcome.status == "sent":
-                    sent += 1
+                    result["sent"] += 1
                     continue
-                failed += 1
+                result["failed"] += 1
                 if outcome.status == "stale":
                     self.store.remove(device.app, device.token)
-                    removed += 1
+                    result["removed"] += 1
                 log.warning("%s device %s: %s (%s)%s", message.app, short(device.token), outcome.status,
                             outcome.reason, ", removed" if outcome.status == "stale" else "")
-        answer = {"sent": sent, "failed": failed, "dry_run": self.dry_run}
-        self.store.log(message.app, user or "all", message.title, message.body, message.url,
-                       {**answer, "removed": removed})
-        log.info("%s %s to %s: %d sent, %d failed", "dry run" if self.dry_run else "sent", message.app,
-                 "all" if user is None else "one account", sent, failed)
+        answer = {"sent": sum(r["sent"] for r in results.values()),
+                  "failed": sum(r["failed"] for r in results.values()), "dry_run": self.dry_run}
+        # Retain the existing outbox entry for sends with no recipients as well.
+        if not results:
+            results["en"] = {**answer, "removed": 0}
+        for language, result in results.items():
+            message = messages[language]
+            self.store.log(app, user or "all", message.title, message.body, message.url, result, language)
+        log.info("%s %s to %s: %d sent, %d failed", "dry run" if self.dry_run else "sent", app,
+                 "all" if user is None else "one account", answer["sent"], answer["failed"])
         return answer
 
     def health(self) -> dict:

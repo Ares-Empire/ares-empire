@@ -7,6 +7,7 @@ import copy
 import io
 import json
 import logging
+import sqlite3
 import tempfile
 import threading
 import unittest
@@ -166,6 +167,27 @@ class PushTestCase(unittest.TestCase):
 
 
 class DeviceTests(PushTestCase):
+    def test_device_language_defaults_to_english_and_updates_at_registration(self):
+        body = {"app": APP, "token": DEVICE_A, "environment": "sandbox"}
+        for fields, expected in (({}, "en"), ({"language": "de"}, "de"), ({"language": "en"}, "en"),
+                                 ({"language": "de"}, "de"), ({}, "en")):
+            with self.subTest(fields=fields):
+                self.assertEqual(self.request(body={**body, **fields})[0], 204)
+                self.assertEqual(self.store.device(APP, DEVICE_A).language, expected)
+        # The header controls API sentences; it never sets the device's notification language.
+        self.request(body=body, headers={"Accept-Language": "de"})
+        self.assertEqual(self.store.device(APP, DEVICE_A).language, "en")
+        self.assertEqual(len(self.store.devices(APP)), 1)
+
+    def test_invalid_device_language_is_rejected_without_registering(self):
+        for language in ("fr", "DE", "de-DE", "", None, 1, True, [], {}):
+            with self.subTest(language=language):
+                status, _, _ = self.request(body={"app": APP, "token": DEVICE_A, "environment": "sandbox",
+                                                  "language": language})
+                self.assertEqual(status, 400)
+        self.assertEqual(self.store.devices(APP), [])
+        self.assertEqual(self.pb_calls, [])
+
     def test_register_stores_the_device_for_the_account(self):
         status, data, headers = self.request(body={"app": APP, "token": DEVICE_A, "environment": "sandbox"})
         self.assertEqual(status, 204)
@@ -290,6 +312,66 @@ class SendTests(PushTestCase):
         self.register(DEVICE_B, "member-one", "production")
         self.register(DEVICE_C, "member-two", "production")
 
+    def test_localized_text_is_selected_per_device_with_field_fallback(self):
+        self.request(body={"app": APP, "token": DEVICE_B, "environment": "production", "language": "de"})
+        status, data, _ = self.send(subtitle="Source", localized={"de": {"title": "980 € · 42 m²"}})
+        self.assertEqual((status, data), (200, {"sent": 2, "failed": 0, "dry_run": False}))
+        english, german = [r["payload"]["aps"]["alert"] for r in self.apple.requests]
+        self.assertEqual(english, {"title": "€980 · 42 m² · Example street", "subtitle": "Source",
+                                   "body": "2 rooms, from 1 Dec."})
+        self.assertEqual(german, {"title": "980 € · 42 m²", "subtitle": "Source", "body": english["body"]})
+        outbox = {row["language"]: row for row in self.store.outbox()}
+        self.assertEqual(set(outbox), {"en", "de"})
+        for language, alert in (("en", english), ("de", german)):
+            self.assertEqual(outbox[language]["title"], alert["title"])
+            self.assertEqual(outbox[language]["body"], alert["body"])
+            self.assertEqual(outbox[language]["result"],
+                             {"sent": 1, "failed": 0, "dry_run": False, "removed": 0})
+
+    def test_german_fields_can_override_or_explicitly_clear_each_field(self):
+        self.request(body={"app": APP, "token": DEVICE_A, "environment": "sandbox", "language": "de"})
+        self.send(subtitle="Source", localized={"de": {"title": "Titel", "subtitle": "Untertitel", "body": "Text"}})
+        self.assertEqual(self.apple.requests[0]["payload"]["aps"]["alert"],
+                         {"title": "Titel", "subtitle": "Untertitel", "body": "Text"})
+        self.apple.requests.clear()
+        self.send(subtitle="Source", localized={"de": {"title": "", "subtitle": "", "body": "Text"}})
+        self.assertEqual(self.apple.requests[0]["payload"]["aps"]["alert"], {"body": "Text"})
+
+    def test_german_device_without_translation_gets_english_text(self):
+        self.request(body={"app": APP, "token": DEVICE_A, "environment": "sandbox", "language": "de"})
+        self.send()
+        self.assertEqual(self.apple.requests[0]["payload"], self.apple.requests[1]["payload"])
+        self.assertEqual({row["language"] for row in self.store.outbox()}, {"en", "de"})
+
+    def test_localized_validation_is_atomic_even_without_german_recipients(self):
+        for localized in (None, [], "de", {"en": {}}, {"fr": {}}, {"de": None}, {"de": []},
+                          {"de": {"url": "bad"}}, {"de": {"titel": "typo"}}, {"de": {"body": 3}},
+                          {"de": {"subtitle": None}}, {"de": {"title": False}},
+                          {"de": {"title": "", "body": ""}}, {"de": {"body": "x" * 4096}}):
+            with self.subTest(localized=str(localized)[:80]):
+                self.assertEqual(self.send(localized=localized)[0], 400)
+        self.assertEqual(self.apple.requests, [])
+        self.assertEqual(self.store.outbox(), [])
+
+    def test_payload_limit_is_per_variant_and_counts_utf8_bytes(self):
+        self.request(body={"app": APP, "token": DEVICE_A, "environment": "sandbox", "language": "de"})
+        # Two 2.3 KB alerts together exceed 4 KB, but each delivered notification fits.
+        self.assertEqual(self.send(title="", body="x" * 2300, localized={"de": {"body": "y" * 2300}})[0], 200)
+        self.apple.requests.clear()
+        body = {"app": APP, "to": {"all": True}, "title": "Alert", "localized": {"de": {"body": "ü" * 2050}}}
+        self.assertEqual(self.request("/send", raw=json.dumps(body, ensure_ascii=False).encode())[0], 400)
+        self.assertEqual(self.apple.requests, [])
+
+    def test_outbox_results_stay_with_the_device_language_on_failure(self):
+        self.request(body={"app": APP, "token": DEVICE_B, "environment": "production", "language": "de"})
+        self.apple.answers[DEVICE_B] = (410, "Unregistered")
+        self.assertEqual(self.send(localized={"de": {"body": "Nachricht"}})[1],
+                         {"sent": 1, "failed": 1, "dry_run": False})
+        outbox = {row["language"]: row for row in self.store.outbox()}
+        self.assertEqual(outbox["en"]["result"], {"sent": 1, "failed": 0, "removed": 0, "dry_run": False})
+        self.assertEqual(outbox["de"]["result"], {"sent": 0, "failed": 1, "removed": 1, "dry_run": False})
+        self.assertEqual(outbox["de"]["body"], "Nachricht")
+
     def test_send_to_one_account_builds_apples_request(self):
         status, data, _ = self.send(subtitle="WG-Gesucht", url="arestemis://match/123", thread="matches",
                                     category="ARESTEMIS_MATCH", collapse_id="match-123",
@@ -384,6 +466,17 @@ class SendTests(PushTestCase):
 class DryRunTests(PushTestCase):
     dry_run = True
 
+    def test_dry_run_records_selected_text_and_language_without_sending(self):
+        self.register(DEVICE_A)
+        self.request(body={"app": APP, "token": DEVICE_B, "environment": "production", "language": "de"})
+        self.assertEqual(self.send(localized={"de": {"body": "2 Zimmer, ab 1. Dez."}})[1],
+                         {"sent": 2, "failed": 0, "dry_run": True})
+        outbox = {row["language"]: row for row in self.store.outbox()}
+        self.assertEqual(outbox["de"]["body"], "2 Zimmer, ab 1. Dez.")
+        self.assertEqual(outbox["en"]["body"], "2 rooms, from 1 Dec.")
+        self.assertTrue(all(row["result"]["sent"] == 1 and row["result"]["dry_run"] for row in outbox.values()))
+        self.assertEqual(self.apple.requests, [])
+
     def test_dry_run_sends_nothing_and_fills_the_outbox(self):
         self.register(DEVICE_A)
         self.register(DEVICE_B, environment="production")
@@ -393,6 +486,7 @@ class DryRunTests(PushTestCase):
         self.assertEqual(self.store.outbox(), [{
             "id": 1, "at": store.stamp(START), "app": APP, "user_or_all": "memberone000001",
             "title": "€980 · 42 m² · Example street", "body": "2 rooms, from 1 Dec.", "url": "arestemis://match/7",
+            "language": "en",
             "result": {"sent": 2, "failed": 0, "dry_run": True, "removed": 0}}])
         self.assertEqual(self.send(to={"user": "nobody"})[1], {"sent": 0, "failed": 0, "dry_run": True})
 
@@ -408,6 +502,86 @@ class DryRunTests(PushTestCase):
         self.register()
         status, data, _ = self.request("/health", method="GET", token=None)
         self.assertEqual((status, data), (200, {"ok": True, "dry_run": True, "devices": {APP: 1}}))
+
+
+class MigrationTests(PushTestCase):
+    def test_old_devices_and_outbox_default_to_english_and_migration_is_repeatable(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            path = str(Path(directory) / "old.db")
+            with sqlite3.connect(path) as db:
+                db.executescript("""
+                    CREATE TABLE devices (app TEXT NOT NULL, token TEXT NOT NULL, user TEXT NOT NULL,
+                        environment TEXT NOT NULL, created TEXT NOT NULL, updated TEXT NOT NULL, UNIQUE(app, token));
+                    CREATE TABLE outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, app TEXT NOT NULL,
+                        user_or_all TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, url TEXT NOT NULL,
+                        result TEXT NOT NULL);
+                """)
+                db.execute("INSERT INTO devices VALUES (?, ?, ?, ?, ?, ?)",
+                           (APP, DEVICE_A, "memberone000001", "sandbox", store.stamp(START), store.stamp(START)))
+                db.execute("INSERT INTO outbox (at, app, user_or_all, title, body, url, result) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                           (store.stamp(START), APP, "all", "Old title", "Old body", "", '{"sent": 1}'))
+            db.close()
+            for _ in range(2):
+                migrated = store.Store(path, clock=self.clock)
+                try:
+                    self.assertEqual(migrated.device(APP, DEVICE_A).language, "en")
+                    self.assertEqual(migrated.devices(APP)[0].language, "en")
+                    self.assertEqual(migrated.outbox()[0]["language"], "en")
+                    self.assertEqual(migrated.outbox()[0]["body"], "Old body")
+                finally:
+                    migrated.close()
+            migrated = store.Store(path, clock=self.clock)
+            try:
+                with patch.object(self.service, "store", migrated):
+                    self.assertEqual(self.send(localized={"de": {"body": "Neuer Text"}})[0], 200)
+                    self.assertEqual(self.apple.requests[-1]["payload"]["aps"]["alert"]["body"], "2 rooms, from 1 Dec.")
+                    self.assertEqual(self.request(body={"app": APP, "token": DEVICE_A, "environment": "sandbox",
+                                                       "language": "de"})[0], 204)
+                    self.assertEqual(migrated.device(APP, DEVICE_A).language, "de")
+            finally:
+                migrated.close()
+
+
+class LanguageTests(PushTestCase):
+    def test_accept_language_parsing_through_public_api(self):
+        for header, expected in ((None, "en"), ("de", "de"), ("de-DE", "de"),
+                                 ("de-DE,de;q=0.9,en;q=0.8", "de"), ("en", "en"),
+                                 ("en-GB,de;q=0.5", "en"), ("fr", "en"), ("broken", "en"),
+                                 ("fr,de;q=0.8,en;q=0.9", "en"), ("de;q=0.8,en;q=0.8", "de"),
+                                 ("en;q=0.8,de;q=0.8", "en"), ("de;q=0", "en"),
+                                 ("de;q=oops", "en"), ("de;q=1.1", "en"), ("de;q=-1", "en"),
+                                 ("de;q=NaN", "en"), ("DE-de;Q=0.9,en;q=0.8", "de")):
+            with self.subTest(header=header):
+                status, data, headers = self.request(token=None, body={},
+                    headers={"Accept-Language": header} if header is not None else {})
+                self.assertEqual((status, data), (401, {"error": "unauthenticated"}))
+                self.assertEqual(headers["Content-Language"], expected)
+
+    def test_app_facing_errors_follow_header_including_cached_auth(self):
+        cases = [
+            ("This account has no access to this app.", "Dieses Konto hat keinen Zugang zu dieser App.", 403,
+             (200, {"record": self.records["empire-only"]})),
+            ("This account is not active.", "Dieses Konto ist nicht aktiv.", 403, (403, {})),
+            ("Login service unavailable, try again in a minute.",
+             "Anmeldedienst nicht erreichbar, versuch es in einer Minute noch einmal.", 503, (0, {})),
+            ("The account server returned an unreadable answer.",
+             "Die Antwort des Anmeldedienstes ist nicht lesbar.", 503, (200, {})),
+        ]
+        for english, german, status, answer in cases:
+            self.accounts._cache.clear()
+            with patch.object(self.accounts, "refresh", return_value=answer):
+                for language, expected in (("en", english), ("de", german)):
+                    with self.subTest(english=english, language=language):
+                        result, data, headers = self.request(
+                            body={"app": APP, "token": DEVICE_A, "environment": "sandbox"},
+                            headers={"Accept-Language": language})
+                        self.assertEqual((result, data), (status, {"error": expected}))
+                        self.assertEqual(headers["Content-Language"], language)
+        for language, expected in (("en", "Internal error."), ("de", "Interner Fehler.")):
+            with patch.object(self.service, "register", side_effect=RuntimeError("broken")), \
+                    patch.object(server.log, "exception"):
+                self.assertEqual(self.request(body={}, headers={"Accept-Language": language})[:2],
+                                 (500, {"error": expected}))
 
 
 class CleanUpTests(PushTestCase):

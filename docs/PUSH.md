@@ -29,6 +29,13 @@ push service ──HTTP/2, ES256 token──▶ Apple (api.push.apple.com / api.
 
 ## Public API (apps)
 
+### Language
+
+API error sentences follow `Accept-Language`; responses set `Content-Language: en|de`. Among English/German tags,
+the highest `q` wins (first on a tie); unsupported or unreadable headers fall back to English. Codes such as
+`unauthenticated` and developer validation messages stay unchanged. The header does not set notification language:
+that is registered per device below.
+
 Auth: `Authorization: Bearer <Empire token>`, checked like every service checks a login
 ([ACCOUNTS.md → How a service checks a login](ACCOUNTS.md#how-a-service-checks-a-login)): `auth-refresh` must answer 200
 and the account's `services` must contain the service of that app (table below). Cached 60 s per token.
@@ -43,6 +50,10 @@ and the account's `services` must contain the service of that app (table below).
 - `POST /api/push/devices` `{app, token, environment: "sandbox" | "production"}` → `204`. `token` is the APNs device
   token as lowercase hex (64–200 chars). Upsert by `(app, token)`: the newest account wins (a phone that switches
   account moves its token). Apps call this at every launch while signed in, so `updated` shows the device is alive.
+- **CONTRACT ADDITION (2026-10-24, languages):** registration accepts optional `language: "en" | "de"`, default `en`;
+  any other value is `400`. Existing device rows migrate to `en`. Every upsert updates the language, including
+  resetting it to `en` when omitted. Example: `{"app":"de.ares-empire.arestemis","token":"<APNs lowercase hex>",
+  "environment":"sandbox","language":"de"}`. Apps re-register at launch after a language change.
 - `DELETE /api/push/devices` `{app, token}` → `204` (always, also when unknown). Apps call it on log out, and when their
   service answers 403 (the account lost access). **CONTRACT ADDITION (2026-10-24):** it needs a valid login but not the
   app's service (else an account that lost access could not remove its device), and it removes the device only while
@@ -61,6 +72,9 @@ and the account's `services` must contain the service of that app (table below).
   "title": "€980 · 42 m² · Schwabing",
   "subtitle": "WG-Gesucht",
   "body": "2 rooms, from 1 Dec. Fits your search.",
+  "localized": {
+    "de": {"title": "980 € · 42 m² · Schwabing", "body": "2 Zimmer, ab 1. Dez. Passt zu deiner Suche."}
+  },
   "url": "arestemis://match/123",
   "thread": "matches",
   "category": "ARESTEMIS_MATCH",
@@ -72,6 +86,12 @@ and the account's `services` must contain the service of that app (table below).
 
 - `to` is `{"user": id}` (that account's devices of this app) or `{"all": true}` (every device registered for this app;
   Aresus uses it, since only accounts with the `aresus` service can register).
+- **CONTRACT ADDITION (2026-10-24, languages):** optional `localized: {"de": {"title"?, "subtitle"?, "body"?}}` supplies
+  German strings as in the example. A `de` device gets each supplied field; omitted fields fall back independently
+  to the top-level English text. An empty string clears that field. English devices always get top-level text.
+  Only `de` and those three string fields are allowed; unknown languages/fields, non-objects and non-string values
+  are `400`. Both resulting notifications must have a title or body and fit Apple's 4 KB limit (UTF-8 bytes,
+  including the rest of the payload); all validation happens before any delivery, even with no recipients.
 - `interruption`: `passive | active | time-sensitive` (default `active`; `passive` also sends with low priority). `url`
   is handed to the app when the notification is tapped. `category` names actions the app registered (e.g. "Open
   listing"). `sound: true` plays the default sound (default `false`). `title` or `body` is required; every other field
@@ -95,7 +115,8 @@ simulator is tested with `xcrun simctl push <udid> <bundle id> payload.apns`.
 
 ## Operating
 
-- **Install or update** (also after every change in `push/`): `sudo bash deploy/install-push.sh`. It creates the user,
+- **Install or update** (also after every change in `push/` or `empire_language.py`): `sudo bash deploy/install-push.sh`.
+  It creates the user,
   `/opt/empire-push` (venv + code), `/var/lib/empire-push`, `/etc/empire-push`, installs the unit, restarts the service
   and prints `/health`. Caddy, inside the `ares-empire.de, www.ares-empire.de` site and before the hub's catch-all:
 
@@ -105,8 +126,10 @@ simulator is tested with `xcrun simctl push <udid> <bundle id> payload.apns`.
   }
   ```
 - **Logs:** `journalctl -u empire-push -f` (tokens appear only as their first 6 characters). Last messages, also in a
-  dry run: `sudo sqlite3 /var/lib/empire-push/push.db "SELECT at, app, user_or_all, title, result FROM outbox ORDER BY
-  id DESC LIMIT 20"`.
+  dry run: `sudo sqlite3 /var/lib/empire-push/push.db "SELECT at, app, user_or_all, language, title, result FROM outbox
+  ORDER BY id DESC LIMIT 20"`. Each send records one row per recipient language, with the selected title/body and
+  that language's counts; a `de` row may contain English fallback fields. Sends with no recipients keep an `en` row
+  with zero counts. Old outbox rows migrate to `en`. The last 200 rows stay; no device tokens are stored there.
 - **Adding the key** (once Apple approved the team): developer.apple.com → Keys → a key with "Apple Push Notifications
   service", download `AuthKey_<KEYID>.p8` (only once possible). Then on the server:
   `sudo install -m 600 -o empire-push -g empire-push AuthKey_<KEYID>.p8 /etc/empire-push/`, set `APNS_KEY_FILE`,
@@ -115,3 +138,46 @@ simulator is tested with `xcrun simctl push <udid> <bundle id> payload.apns`.
   sending.
 - **Tests** (Mac or server): `python3 -m venv .venv && .venv/bin/pip install -r push/requirements.txt`, then
   `.venv/bin/python -m unittest push/test_push.py`.
+
+### Language rollout (lead, on the server)
+
+Deploy this push service **before the provinces** start sending `localized`, or the previous service will reject
+their requests. The hub restarts through its existing deployment after the lead pushes the merged change to `main`;
+the push service still needs its explicit install step. From the updated `/root/ares-empire` checkout:
+
+```bash
+sudo bash deploy/install-push.sh
+sudo systemctl is-active empire-push
+curl -fsS http://127.0.0.1:8096/health
+sudo sqlite3 /var/lib/empire-push/push.db "SELECT language, COUNT(*) FROM devices GROUP BY language"
+sudo sqlite3 /var/lib/empire-push/push.db "SELECT language, COUNT(*) FROM outbox GROUP BY language"
+```
+
+Check acceptance without notifying any device (an unused fixture account, no `all` broadcast):
+
+```bash
+curl -fsS http://127.0.0.1:8096/send -H 'Content-Type: application/json' \
+  --data '{"app":"de.ares-empire.empire","to":{"user":"languagecheck00"},"title":"Language check","localized":{"de":{"title":"Sprachprüfung"}}}'
+curl -sS -D - -X POST http://127.0.0.1:8095/api/push/devices -H 'Accept-Language: de' \
+  -H 'Content-Type: application/json' --data '{}'
+```
+
+Expect `{"sent":0,"failed":0,"dry_run":...}` for the first and `401`, `Content-Language: de`,
+`{"error":"unauthenticated"}` for the second. Confirm no delivery in the zero-count outbox row. Then deploy the
+province language changes. With a test phone registered in German, inspect its next expected notification and the
+`de` outbox row's selected text and counts (including dry run); no test broadcast is needed.
+
+For the hub after its automatic deployment:
+
+```bash
+sudo systemctl is-active ares-empire
+curl -sS -D - http://172.18.0.1:5185/api/empire -H 'Accept-Language: de'
+rg 'Accept-Language' web/app/empire-api.js
+```
+
+The unauthenticated API check is `401` with `Content-Language: de`; the website script contains the explicit `en`
+header. In an authenticated Empire app, compare `en` and `de` `/api/empire` responses: `Content-Language` and live
+lines follow the request (an Aresus issue starts with `Problem: ` in German). Province texts/chronicle/ideas remain
+English. The English website must keep English lines in a German browser. Use an existing authenticated session;
+never paste or log its token. If either service fails, inspect `journalctl -u empire-push -n 50` or
+`journalctl -u ares-empire -n 50` respectively.

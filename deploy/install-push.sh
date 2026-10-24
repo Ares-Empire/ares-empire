@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install or update the Empire push service. Safe to re-run (also after every code change in push/).
+# Install or update the Empire push service. Re-run after changes in push/ or empire_language.py.
 #   sudo bash deploy/install-push.sh
 # Code and venv go to /opt/empire-push (root-owned, read-only for the service), data to /var/lib/empire-push
 # (never touched here), the APNs key (once there is one) to /etc/empire-push. See docs/PUSH.md → Operating.
@@ -29,6 +29,7 @@ install -d -m 755 "$OPT/push.new"
 find "$REPO/push" -maxdepth 1 -name '*.py' ! -name 'test_*' -exec install -m 644 {} "$OPT/push.new/" \;
 rm -rf "${OPT:?}/push"
 mv "$OPT/push.new" "$OPT/push"
+install -m 644 "$REPO/empire_language.py" "$OPT/empire_language.py"
 
 install -m 644 "$REPO/deploy/systemd/empire-push.service" /etc/systemd/system/empire-push.service
 systemctl daemon-reload

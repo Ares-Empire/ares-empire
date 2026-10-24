@@ -22,11 +22,13 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
+from empire_language import request_language
 from push.accounts import Accounts
 from push.apns import Apns, HttpxTransport, ProviderToken
 from push.config import HOST, APIError, Config
 from push.service import PushService
 from push.store import Store
+from push.texts import text
 
 log = logging.getLogger("push")
 
@@ -58,12 +60,16 @@ class Handler(BaseHTTPRequestHandler):
                 raise APIError(404, "Unknown route.")
             route(self)
         except APIError as e:
-            self.send_json({"error": e.message}, e.status)
+            self.send_json({"error": text(e.message, self.language)}, e.status)
         except Exception:
             log.exception("%s %s failed", self.command, path)
-            self.send_json({"error": "Internal error."}, 500)
+            self.send_json({"error": text("Internal error.", self.language)}, 500)
 
     do_GET = do_POST = do_DELETE = do_PUT = do_PATCH = do_HEAD = _dispatch
+
+    @property
+    def language(self) -> str:
+        return request_language(self.headers.get("Accept-Language"))
 
     def bearer(self) -> str:
         match = re.fullmatch(r"Bearer\s+(\S+)", self.headers.get("Authorization", ""), re.I)
@@ -95,6 +101,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(data).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Language", self.language)
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
