@@ -1,0 +1,3 @@
+# Empire push service. Installed into /opt/empire-push/venv by deploy/install-push.sh.
+httpx[http2]==0.28.1   # APNs speaks only HTTP/2
+cryptography==50.0.2   # the ES256 provider token
