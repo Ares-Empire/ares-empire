@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Real API-rule checks against an isolated PocketBase 0.40.6. No mail hooks or live data.
+# Real API-rule checks against an isolated PocketBase 0.40.6. No live data. Of the mail hooks only the feedback hook
+# runs, and its mail goes to a local SMTP sink in the temp folder (never Resend, never the system's sendmail).
 set -euo pipefail
 POCKETBASE="${POCKETBASE:-$HOME/.pocketbase-test/pocketbase}"
 RULES_ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -9,14 +10,62 @@ if [ "$("$POCKETBASE" --version)" != "pocketbase version 0.40.6" ]; then
 fi
 RULES_TMP="$(mktemp -d)"
 RULES_PID=''
+SINK_PID=''
 cleanup() {
   if [ -n "$RULES_PID" ]; then kill "$RULES_PID" 2>/dev/null || true; wait "$RULES_PID" 2>/dev/null || true; fi
+  if [ -n "$SINK_PID" ]; then kill "$SINK_PID" 2>/dev/null || true; wait "$SINK_PID" 2>/dev/null || true; fi
   rm -rf "$RULES_TMP"
 }
 trap cleanup EXIT
-mkdir "$RULES_TMP/hooks" "$RULES_TMP/public"
-# Exercise the email visibility hook, without loading the production mail hooks.
-cp "$RULES_ROOT/pb_hooks/admin-visibility.pb.js" "$RULES_TMP/hooks/"
+mkdir "$RULES_TMP/hooks" "$RULES_TMP/public" "$RULES_TMP/mail"
+# Exercise the email visibility hook and the feedback mail hook, without the sign-up mail hooks.
+cp "$RULES_ROOT/pb_hooks/admin-visibility.pb.js" "$RULES_ROOT/pb_hooks/feedback.pb.js" "$RULES_TMP/hooks/"
+# A local SMTP sink: accepts every message and writes it to $RULES_TMP/mail/<n>.eml (no TLS, no auth, no relaying).
+python3 - "$RULES_TMP/mail" >"$RULES_TMP/sink.log" 2>&1 <<'PY' &
+import itertools, os, socketserver, sys
+folder = sys.argv[1]
+numbers = itertools.count(1)
+
+
+class Session(socketserver.StreamRequestHandler):
+    def handle(self):
+        self.wfile.write(b'220 sink ESMTP\r\n')
+        while line := self.rfile.readline():
+            verb = line[:4].upper()
+            if verb == b'DATA':
+                self.wfile.write(b'354 end with a dot\r\n')
+                lines = []
+                while (part := self.rfile.readline()) not in (b'.\r\n', b''):
+                    lines.append(part[1:] if part.startswith(b'..') else part)
+                with open(os.path.join(folder, f'{next(numbers)}.eml'), 'wb') as message:
+                    message.writelines(lines)
+                self.wfile.write(b'250 kept\r\n')
+            elif verb == b'QUIT':
+                self.wfile.write(b'221 bye\r\n')
+                return
+            else:  # EHLO (no extensions: no STARTTLS, no AUTH), MAIL, RCPT, RSET, NOOP
+                self.wfile.write(b'250 ok\r\n')
+
+
+class Sink(socketserver.ThreadingTCPServer):
+    daemon_threads = True
+
+
+with Sink(('127.0.0.1', 0), Session) as sink:
+    with open(os.path.join(folder, 'port.tmp'), 'w') as port:
+        port.write(str(sink.server_address[1]))
+    os.rename(os.path.join(folder, 'port.tmp'), os.path.join(folder, 'port'))
+    sink.serve_forever()
+PY
+SINK_PID=$!
+for attempt in $(seq 100); do [ -f "$RULES_TMP/mail/port" ] && break; sleep .05; done
+if [ ! -f "$RULES_TMP/mail/port" ]; then
+  echo 'FAIL start the SMTP sink'
+  cat "$RULES_TMP/sink.log" >&2
+  exit 1
+fi
+SINK_PORT="$(cat "$RULES_TMP/mail/port")"
+rm "$RULES_TMP/mail/port"
 RULES_PORT="$(python3 - <<'PY'
 import socket
 with socket.socket() as sock:
@@ -37,13 +86,16 @@ fi
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" \
   --publicDir "$RULES_TMP/public" >"$RULES_TMP/server.log" 2>&1 &
 RULES_PID=$!
-export RULES_PORT RULES_PASSWORD RULES_TMP
+export RULES_PORT RULES_PASSWORD RULES_TMP SINK_PORT
 python3 - <<'PY'
+import email
+import email.policy
 import json
 import os
 import subprocess
 import sys
 import time
+import urllib.parse
 
 base = 'http://127.0.0.1:' + os.environ['RULES_PORT']
 password = os.environ['RULES_PASSWORD']
@@ -101,6 +153,39 @@ def refused(method, record_id, body, token):
     return status in (400, 403, 404)
 
 
+FEEDBACK = '/api/collections/feedback/records'
+SMTP_SINK = {'enabled': True, 'host': '127.0.0.1', 'port': int(os.environ['SINK_PORT']), 'tls': False,
+             'username': '', 'password': ''}
+
+
+def feedback(owner, **extra):
+    return {'user': owner, 'app': 'arestoteles', 'kind': 'idea',
+            'message': 'Fictional idea: search could also look inside the panels.',
+            'app_version': '1.0 (12)', 'system': 'iOS 27.0 · iPhone', 'language': 'en', **extra}
+
+
+def mails(at_least=0):
+    """The messages the SMTP sink kept, oldest first (waits a moment for `at_least` of them)."""
+    folder = os.environ['RULES_TMP'] + '/mail'
+    for attempt in range(60):
+        names = sorted(os.listdir(folder), key=lambda name: int(name.split('.')[0]))
+        if len(names) >= at_least:
+            break
+        time.sleep(.05)
+    return [email.message_from_bytes(open(os.path.join(folder, name), 'rb').read(), policy=email.policy.default)
+            for name in names]
+
+
+def logged(message):
+    """Whether PocketBase logged `message` (its logger writes in batches, so give it a few seconds)."""
+    query = '/api/logs?filter=' + urllib.parse.quote(f"message = '{message}'")
+    for attempt in range(80):
+        if must('GET', query, token=supertoken)['totalItems']:
+            return True
+        time.sleep(.1)
+    return False
+
+
 try:
     for attempt in range(100):
         try:
@@ -113,10 +198,9 @@ try:
         raise RuntimeError('PocketBase did not start')
 
     bootstrap = login('_superusers', 'bootstrap@example.com')
-    # Isolate SMTP too: never contact the Resend host from the real migrations.
-    must('PATCH', '/api/settings', {'rateLimits': {'enabled': False},
-         'smtp': {'enabled': False, 'host': '127.0.0.1',
-         'port': 9, 'tls': False, 'username': '', 'password': ''}}, bootstrap)
+    # Isolate SMTP too: never contact the Resend host from the real migrations. Mail goes to the local sink (with
+    # SMTP switched off, PocketBase would hand it to the system's sendmail instead).
+    must('PATCH', '/api/settings', {'rateLimits': {'enabled': False}, 'smtp': SMTP_SINK}, bootstrap)
     for collection in ('users', '_superusers'):
         must('PATCH', '/api/collections/' + collection, {'authAlert': {'enabled': False}}, bootstrap)
     superuser = must('POST', '/api/collections/_superusers/records', {
@@ -206,8 +290,72 @@ try:
                {'identity': 'pending@example.com', 'password': password})[0] == 403 and
           call('POST', '/api/collections/users/auth-with-password',
                {'identity': 'verified-pending@example.com', 'password': password})[0] == 403)
+
+    # Contact & support (feedback): sent by the account itself, mailed to Patrik, read only by superusers.
+    status, sent = call('POST', FEEDBACK, feedback(normal['id']), user_token)
+    check('user can send own feedback', status == 200 and sent.get('user') == normal['id'])
+    kept = mails(at_least=1)
+    mail = kept[-1] if kept else None
+    check('feedback is mailed to Patrik, Reply-To the account', len(kept) == 1 and
+          mail['To'] == 'REDACTED-EMAIL' and mail['Reply-To'] == 'user@example.com' and
+          mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
+          mail['Subject'] == '[Arestoteles] Idea: Fictional idea: search could also look inside the panels.')
+    text = mail.get_body(('plain',)).get_content() if mail else ''
+    check('feedback mail names kind, app, version, system, language, account and the message',
+          all(part in text for part in ('Kind:     Idea', 'App:      Arestoteles', 'Version:  1.0 (12)',
+                                        'System:   iOS 27.0 · iPhone', 'Language: en', 'Account:  user@example.com',
+                                        'Fictional idea: search could also look inside the panels.')))
+    status, _ = call('POST', FEEDBACK, feedback(normal['id'], message='Fictional ' * 20), user_token)
+    check('the subject cuts a long message on a word', status == 200 and
+          mails(at_least=2)[-1]['Subject'] == '[Arestoteles] Idea: ' + ' '.join(['Fictional'] * 6) + '…')
+    check('user cannot send feedback as another account',
+          call('POST', FEEDBACK, feedback(admin['id']), user_token)[0] in (400, 403))
+    check('feedback without a login is refused', call('POST', FEEDBACK, feedback(normal['id']))[0] in (400, 403))
+    for label, body in [('an unknown kind', {'kind': 'complaint'}), ('an unknown app', {'app': 'nope'}),
+                        ('no kind', {'kind': ''}), ('no app', {'app': ''}), ('an empty message', {'message': ''}),
+                        ('a message of blanks', {'message': '  \n  '}), ('a message over 5000', {'message': 'x' * 5001}),
+                        ('a version over 40', {'app_version': '1' * 41}), ('a system over 80', {'system': 's' * 81}),
+                        ('an unknown language', {'language': 'fr'})]:
+        check('feedback with ' + label + ' is refused',
+              call('POST', FEEDBACK, feedback(normal['id'], **body), user_token)[0] == 400)
+    check('feedback of 5000 characters is taken',
+          call('POST', FEEDBACK, feedback(normal['id'], message='x' * 5000), user_token)[0] == 200)
+    for who, token in [('user', user_token), ('admin', admin_token)]:
+        status, listed = call('GET', FEEDBACK, token=token)
+        check(who + ' cannot list feedback', status == 403 or (status == 200 and listed['items'] == []))
+        check(who + ' cannot view feedback', call('GET', FEEDBACK + '/' + sent['id'], token=token)[0] in (403, 404))
+    check('user cannot change own feedback',
+          call('PATCH', FEEDBACK + '/' + sent['id'], {'message': 'Changed'}, user_token)[0] in (403, 404))
+    check('user cannot delete own feedback', call('DELETE', FEEDBACK + '/' + sent['id'], token=user_token)[0] in (403, 404)
+          and must('GET', FEEDBACK + '/' + sent['id'], token=supertoken)['message'] == sent['message'])
+    listed = must('GET', FEEDBACK + '?perPage=100', token=supertoken)
+    check('superuser can list and view feedback', sent['id'] in {r['id'] for r in listed['items']})
+    revoked = create('revoked@example.com', approved=True, verified=True, services=['empire'])
+    revoked_token = login('users', 'revoked@example.com')
+    must('PATCH', '/api/collections/users/records/' + revoked['id'], {'approved': False}, supertoken)
+    check('an account no longer approved cannot send feedback',
+          call('POST', FEEDBACK, feedback(revoked['id']), revoked_token)[0] in (400, 403))
+    # The mail fails (nothing listens on port 9): the feedback is kept and the failure logged.
+    must('PATCH', '/api/settings', {'smtp': {**SMTP_SINK, 'port': 9}}, supertoken)
+    before = len(mails())
+    status, unsent = call('POST', FEEDBACK, feedback(normal['id'], kind='problem'), user_token)
+    must('PATCH', '/api/settings', {'smtp': SMTP_SINK}, supertoken)
+    check('a failed feedback email keeps the feedback', status == 200 and len(mails()) == before and
+          call('GET', FEEDBACK + '/' + unsent['id'], token=supertoken)[0] == 200)
+    check('a failed feedback email is logged', logged('feedback email failed'))
+    rules = must('GET', '/api/settings', token=supertoken)['rateLimits']['rules']
+    check('feedback rate limit is 10 per hour',
+          {'label': 'feedback:create', 'audience': '', 'duration': 3600, 'maxRequests': 10} in rules)
+    must('PATCH', '/api/settings', {'rateLimits': {'enabled': True}}, supertoken)
+    statuses = [call('POST', FEEDBACK, feedback(normal['id'], message=f'Fictional message {n}'), user_token)[0]
+                for n in range(11)]
+    must('PATCH', '/api/settings', {'rateLimits': {'enabled': False}}, supertoken)
+    check('the 11th feedback within the hour is refused (429)', statuses == [200] * 10 + [429])
+
     status, _ = call('DELETE', '/api/collections/users/records/' + normal['id'], token=user_token)
     check('normal user can still delete own account', status == 204)
+    query = FEEDBACK + '?filter=' + urllib.parse.quote(f"user = '{normal['id']}'")
+    check("an account's feedback goes with the account", must('GET', query, token=supertoken)['totalItems'] == 0)
 except Exception as exc:
     check(str(exc), False)
 if not failures:
@@ -218,7 +366,25 @@ PY
 kill "$RULES_PID"
 wait "$RULES_PID" 2>/dev/null || true
 RULES_PID=''
-# 0. service_arestoteles down: arestoteles is no longer offered, the four earlier services stay.
+# 0. feedback down: the collection and its rate limit are gone, the accounts stay.
+if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
+  --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
+  echo 'FAIL migration down (feedback)'
+  cat "$RULES_TMP/down.log" >&2
+  exit 1
+fi
+python3 - <<'PY'
+import json, os, sqlite3, sys
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    collections = {row[0] for row in db.execute('SELECT name FROM _collections')}
+    tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    settings = json.loads(db.execute("SELECT value FROM _params WHERE id = 'settings'").fetchone()[0])
+labels = [rule['label'] for rule in settings['rateLimits']['rules']]
+ok = 'feedback' not in collections | tables and 'feedback:create' not in labels and 'users' in collections
+print(('PASS' if ok else 'FAIL') + ' migration down removes the feedback collection and its rate limit')
+sys.exit(0 if ok else 1)
+PY
+# 1. service_arestoteles down: arestoteles is no longer offered, the four earlier services stay.
 if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
   echo 'FAIL migration down (arestoteles)'
@@ -234,7 +400,7 @@ ok = services['values'] == ['empire', 'aresium', 'arestemis', 'aresus'] and serv
 print(('PASS' if ok else 'FAIL') + ' migration down removes arestoteles only')
 sys.exit(0 if ok else 1)
 PY
-# 1. services_arestemis_aresus down: the services field offers only empire and aresium again.
+# 2. services_arestemis_aresus down: the services field offers only empire and aresium again.
 if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
   echo 'FAIL migration down (services)'
@@ -251,7 +417,7 @@ ok = services['values'] == ['empire', 'aresium'] and services['maxSelect'] == 2 
 print(('PASS' if ok else 'FAIL') + ' migration down restores the two original services')
 sys.exit(0 if ok else 1)
 PY
-# 2. admin_ring down.
+# 3. admin_ring down.
 if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
   echo 'FAIL migration down'
@@ -279,3 +445,13 @@ else
   cat "$RULES_TMP/down.log" "$RULES_TMP/up.log" >&2
   exit 1
 fi
+python3 - <<'PY'
+import json, os, sqlite3, sys
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    collections = {row[0] for row in db.execute('SELECT name FROM _collections')}
+    settings = json.loads(db.execute("SELECT value FROM _params WHERE id = 'settings'").fetchone()[0])
+labels = [rule['label'] for rule in settings['rateLimits']['rules']]
+ok = 'feedback' in collections and labels.count('feedback:create') == 1
+print(('PASS' if ok else 'FAIL') + ' migration up adds the feedback collection and one rate limit again')
+sys.exit(0 if ok else 1)
+PY
