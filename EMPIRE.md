@@ -52,6 +52,10 @@ When restructuring: go in steps that keep the live service working; before switc
 version gives the same results as the old one; then delete the old code. When the better structure is much
 bigger than the task at hand, tell Patrik what, why and roughly how big before starting.
 
+**Every app speaks English and German** (Patrik, 2026-10-24), the current ones and every future one: the iPhone's
+language decides, English is the fallback. Interface text is translated, including the sentences servers write for the
+apps and the notifications; content people wrote is not. Rules: [docs/LANGUAGES.md](docs/LANGUAGES.md).
+
 ---
 
 ## The hub (what the website is)

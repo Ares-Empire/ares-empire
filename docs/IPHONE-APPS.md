@@ -15,6 +15,8 @@ running on the simulator with one shared login; TestFlight and push wait for App
   sign-up). The free Apple ID route was rejected: those apps stop opening after 7 days and
   need a re-install from the Mac every week.
 - Apps are installed through **TestFlight**, not the public App Store.
+- Every app speaks **English and German** from its first screen, following the iPhone's language
+  ([LANGUAGES.md](LANGUAGES.md), 2026-10-24).
 - The apps log in with an **Ares Empire account** from day one (see [ACCOUNTS.md](ACCOUNTS.md)),
   even while Patrik is the only user, so sharing later is a server-only change.
 - Code lives in one repo for all iPhone apps: **[`empire-ios`](https://github.com/Ares-Empire/empire-ios)**.

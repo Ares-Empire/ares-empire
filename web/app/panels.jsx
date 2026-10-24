@@ -419,6 +419,7 @@ BESIEGING — under active build.
 - Registered in the manifest as \`${slug}\` (web/app/empire-data.js → projects[]).
 - When it goes live: status → CONQUERED, add a domain + a logo at brand/${slug}.png.
 - Append a line to the EMPIRE.md Chronicle whenever you do meaningful work here.
+- Its apps speak English and German from the first screen (../../docs/LANGUAGES.md).
 
 ## Notes
 TODO — stack, deploy, domain.
