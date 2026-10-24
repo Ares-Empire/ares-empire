@@ -168,6 +168,12 @@ try:
                      {'approved': True, 'services': ['empire']}, admin_token)
     check('admin can approve and set services', status == 200 and user(pending['id'])['approved'] is True
           and user(pending['id'])['services'] == ['empire'])
+    status, _ = call('PATCH', '/api/collections/users/records/' + pending['id'],
+                     {'services': ['empire', 'arestemis', 'aresus']}, admin_token)
+    check('admin can give the arestemis and aresus services', status == 200 and
+          sorted(user(pending['id'])['services']) == ['arestemis', 'aresus', 'empire'])
+    status, _ = call('PATCH', '/api/collections/users/records/' + pending['id'], {'services': ['empire']}, admin_token)
+    check('unknown services are still refused', refused('PATCH', pending['id'], {'services': ['nope']}, admin_token))
     for field, value in [('email', 'changed@example.com'), ('password', password + 'new'),
                          ('admin', True), ('name', 'Changed'), ('ring', ['aresium']),
                          ('verified', True), ('emailVisibility', True), ('avatar', ''),
@@ -208,10 +214,28 @@ if not failures:
     print(f'PASS all {checks} API rule checks', flush=True)
 sys.exit(1 if failures else 0)
 PY
-# Exercise the new migration's down and up against the same disposable database.
+# Exercise the newest migrations' down and up against the same disposable database.
 kill "$RULES_PID"
 wait "$RULES_PID" 2>/dev/null || true
 RULES_PID=''
+# 1. services_arestemis_aresus down: the services field offers only empire and aresium again.
+if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
+  --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
+  echo 'FAIL migration down (services)'
+  cat "$RULES_TMP/down.log" >&2
+  exit 1
+fi
+python3 - <<'PY'
+import json, os, sqlite3, sys
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    fields = json.loads(db.execute('SELECT fields FROM _collections WHERE name = ?', ('users',)).fetchone()[0])
+services = next(field for field in fields if field['name'] == 'services')
+ok = services['values'] == ['empire', 'aresium'] and services['maxSelect'] == 2 and \
+    {'admin', 'ring'} <= {field['name'] for field in fields}
+print(('PASS' if ok else 'FAIL') + ' migration down restores the two original services')
+sys.exit(0 if ok else 1)
+PY
+# 2. admin_ring down.
 if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
   echo 'FAIL migration down'
