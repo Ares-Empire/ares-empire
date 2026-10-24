@@ -22,10 +22,12 @@ bot with one search in a config file, stopped since Patrik found his flat. It be
 
 ## Decisions
 
-- **Fields, not free text, for the search** (Patrik: "lots of it can be deterministic"): kinds (own flat, room in a WG,
-  empty 2-person WG), places, optional districts, warm rent (with optional size tiers), m², rooms, flatmates, move-in
-  window, sublets, furnished, portals, and one optional "anything else" text. A "describe it" helper may fill the fields
-  from a sentence; the fields stay the one source of truth.
+- **Fields, not free text, for the search** (Patrik: "lots of it can be deterministic"). **Simplified the same day**
+  (API version 2, Patrik: the three kind buttons and the tiers were too fiddly): Flat or WG / Flat / WG, people moving
+  in, max flatmates, size ranges (the flat; the room of a WG), places with optional areas, cold and warm rent ranges,
+  move-in window and temporary offers, portals, and the "extras" text (furnished goes there). **Every filter is
+  optional on its own** (it only changes how many listings pass); only a place and a portal are required. "Describe
+  it" (a line that opens a sheet) fills the fields from a sentence; the fields stay the one source of truth.
 - **The AI checks every listing against the whole search** (Patrik: many listings did not fulfil the filters). Two
   stages: (1) the fields are checked on the portal's structured data (exact, cheap); (2) every listing that passes is
   checked by the AI against the whole search **and** its full text (cold rent shown as warm, short sublets, flat
