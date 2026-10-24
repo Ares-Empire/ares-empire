@@ -38,7 +38,8 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
 - **Users** (`users` collection): email + password, plus
   - `approved` — set by a superuser or an admin approving another account; login needs
     `verified = true && approved = true`.
-  - `services` — which provinces the account may use (`empire`, `aresium`; add more in a new migration).
+  - `services` — which provinces the account may use (`empire`, `aresium`, `arestemis`, `aresus`, `arestoteles`; add
+    more in a new migration).
   - `admin` — only a superuser may set this, including at sign-up.
   - `ring` — JSON list of province slugs, editable by the account itself. Adding a province does not grant access.
   - Normal users can rename themselves, change password and delete their account. They can't touch

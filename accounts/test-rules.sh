@@ -218,6 +218,22 @@ PY
 kill "$RULES_PID"
 wait "$RULES_PID" 2>/dev/null || true
 RULES_PID=''
+# 0. service_arestoteles down: arestoteles is no longer offered, the four earlier services stay.
+if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
+  --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
+  echo 'FAIL migration down (arestoteles)'
+  cat "$RULES_TMP/down.log" >&2
+  exit 1
+fi
+python3 - <<'PY'
+import json, os, sqlite3, sys
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    fields = json.loads(db.execute('SELECT fields FROM _collections WHERE name = ?', ('users',)).fetchone()[0])
+services = next(field for field in fields if field['name'] == 'services')
+ok = services['values'] == ['empire', 'aresium', 'arestemis', 'aresus'] and services['maxSelect'] == 4
+print(('PASS' if ok else 'FAIL') + ' migration down removes arestoteles only')
+sys.exit(0 if ok else 1)
+PY
 # 1. services_arestemis_aresus down: the services field offers only empire and aresium again.
 if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
