@@ -1,6 +1,7 @@
 # iPhone apps — decision record
 
-**Decided 2026-10-23.** Status: planned, first app = **Aresium**.
+**Decided 2026-10-23.** Status (2026-10-24): **Aresium and the Empire app built** in `empire-ios`, running on the
+simulator with one shared login; TestFlight waits for Apple to approve the developer account.
 
 ## The decision
 
@@ -58,13 +59,13 @@ worth trying once the app is shared with a real group of users.
    Still one request per page load, so switching months stays instant (1,246 transactions on 2026-10-23:
    milliseconds on the server). Before switching, the old and new calculation must give identical numbers
    on the real data. Agreed 2026-10-23.
-4. `empire-ios`: the Aresium app (login, dashboard, transactions, recategorise, import via share
+4. ✅ (simulator; TestFlight pending) `empire-ios`: the Aresium app (login, dashboard, transactions, recategorise, import via share
    sheet), then a widget. **Import stays in the app** (Patrik: very handy on the phone). **Template:** the
    mobile website (`aresium/web/public/app/mobile.jsx`) has the layout, gestures and spacing worked out;
    the SwiftUI screens follow it, compared side by side on the simulator (mobile site in the simulator's
    Safari vs the app).
 5. Later: Aresium for several users (each person's data separated on the server).
-6. The Empire itself on the phone: [EMPIRE-APP.md](EMPIRE-APP.md) (throne room, per-user ring, approvals).
+6. ✅ (simulator; TestFlight pending) The Empire itself on the phone: [EMPIRE-APP.md](EMPIRE-APP.md) (throne room, per-user ring, approvals).
 
 ## Links
 

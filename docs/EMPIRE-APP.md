@@ -1,6 +1,7 @@
 # The Empire on the phone — decision record
 
-**Decided 2026-10-24** with Patrik. Status: planned. Builds on [IPHONE-APPS.md](IPHONE-APPS.md) (native SwiftUI apps
+**Decided 2026-10-24** with Patrik. Status (2026-10-24): **built** — the phone website is live, the iPhone app
+(`empire-ios/Empire`) works on the simulator; TestFlight waits for Apple (open items: `empire-ios/CLAUDE.md` → Open). Builds on [IPHONE-APPS.md](IPHONE-APPS.md) (native SwiftUI apps
 in `empire-ios`, TestFlight) and [ACCOUNTS.md](ACCOUNTS.md) (Empire accounts in PocketBase).
 
 ## What the Empire is on a phone
@@ -66,10 +67,10 @@ unactivated bot). A `coming-soon` province can be added; its card then says "com
 
 ## Order of work
 
-1. **Mobile hub (website):** the throne room at phone widths, built against the `/api/empire` shape above with sample
+1. ✅ **Mobile hub (website):** the throne room at phone widths, built against the `/api/empire` shape above with sample
    data for an admin and for a normal user. Look and feel decided on screenshots, then refined.
-2. **Accounts + hub API:** the PocketBase migration (tested on a copy before the live server), per-account
+2. ✅ **Accounts + hub API:** the PocketBase migration (tested on a copy before the live server), per-account
    `/api/empire`, ring actions, approvals, live lines.
-3. **Empire iPhone app** in `empire-ios` (a second app target; shared code — login, API client, design tokens —
+3. ✅ **Empire iPhone app** in `empire-ios` (simulator; TestFlight pending) (a second app target; shared code — login, API client, design tokens —
    moves into a shared folder now that a second app exists), following the mobile hub.
 4. Later: multi-user Aresium; then flip Aresium to `open` in the catalog.
