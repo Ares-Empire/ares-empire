@@ -308,6 +308,8 @@ try:
     status, _ = call('POST', FEEDBACK, feedback(normal['id'], message='Fictional ' * 20), user_token)
     check('the subject cuts a long message on a word', status == 200 and
           mails(at_least=2)[-1]['Subject'] == '[Arestoteles] Idea: ' + ' '.join(['Fictional'] * 6) + '…')
+    check("the apps' request form (Authorization: Bearer <token>) is taken", call(
+          'POST', FEEDBACK, feedback(normal['id'], app='empire', kind='question'), 'Bearer ' + user_token)[0] == 200)
     check('user cannot send feedback as another account',
           call('POST', FEEDBACK, feedback(admin['id']), user_token)[0] in (400, 403))
     check('feedback without a login is refused', call('POST', FEEDBACK, feedback(normal['id']))[0] in (400, 403))
