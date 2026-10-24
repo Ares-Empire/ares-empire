@@ -1,0 +1,38 @@
+# /etc/systemd/system/empire-push.service
+# Empire push service (push/server.py): device registration for the apps on 127.0.0.1:8095 (Caddy routes
+# www.ares-empire.de/api/push/* there) and /send for the province services on 127.0.0.1:8096 (never routed).
+# Installed by deploy/install-push.sh, which copies the code to /opt/empire-push. Settings: push/.env.example.
+[Unit]
+Description=Ares Empire push service
+After=network-online.target empire-accounts.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=empire-push
+Group=empire-push
+WorkingDirectory=/opt/empire-push
+# Read by systemd itself (as root) before the service starts; optional: without it the service runs as a dry run.
+EnvironmentFile=-/root/ares-empire/push/.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/empire-push/venv/bin/python -m push.server
+Restart=always
+RestartSec=3
+
+# Hardening: it can only write its own data folder.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/var/lib/empire-push
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

@@ -97,6 +97,8 @@ grows on its own.
 - `ares-empire.service` (`deploy/systemd/`) runs `webauth/server.py` on the docker bridge
   `172.18.0.1:5185`, reading settings from `.env`. Logins are checked against `empire-accounts`
   (PocketBase, `deploy/install-accounts.sh`).
+- `empire-push.service` (`push/`, `deploy/install-push.sh`): one push service for every Empire app; Caddy routes
+  `/api/push/*` to it. Contract and operating notes: [docs/PUSH.md](docs/PUSH.md).
 - Caddy proxies the domain → the service and handles TLS itself. (`deploy/nginx/` and the TLS
   scripts are from the old nginx setup, kept for reference.)
 - **Updating the site:** edit `web/…`; the service serves from disk live (no rebuild).

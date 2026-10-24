@@ -20,3 +20,6 @@ data/*.tmp
 # Codex run outputs
 codex-runs/
 build/
+
+# local virtualenv for the push service and its tests
+.venv/
