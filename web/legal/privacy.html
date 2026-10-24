@@ -28,8 +28,8 @@ which services you may use, the provinces you put on your hub, and when the acco
     and a warning when someone logs in to your account from a new device. When you sign up, I get an email with your
     email address so I can approve you.</li>
   <li><strong>Legal basis:</strong> Art. 6(1)(b) GDPR (providing the service you signed up for).</li>
-  <li><strong>How long:</strong> until you delete your account. An account I have not approved stays until I approve
-    or delete it.</li>
+  <li><strong>How long:</strong> until your account is deleted (section 12). An account I have not approved stays
+    until I approve or delete it.</li>
 </ul>
 
 <h3>Staying logged in</h3>
@@ -40,12 +40,15 @@ service you asked for (§ 25(2) no. 2 TDDDG). There are no other cookies: no tra
 
 <h2>4. Server logs and security</h2>
 <p>Whenever your browser or an app talks to my server, the server sees your device's <strong>IP address</strong>, the
-time and the address requested. The account server keeps a request log with IP addresses for
-[lead to confirm: 5 days, PocketBase's default] to find faults and stop abuse (for example, too many login attempts).
-The services behind the apps write the IP address and the address requested (which can include a search term) to the
-server's system log, kept for [lead to confirm: 14 days]. To warn you about logins from a new device, the account
-server remembers which devices your account logged in from until the account is deleted.
-[lead to confirm: what this record contains.]</p>
+time and the address requested. The account server keeps a request log with IP addresses, but without your account,
+for 5 days, to find faults and stop abuse (for example, too many login attempts). The services behind the apps write
+the IP address and the address requested (which can include a search term) to the server's system log, which is kept
+for 14 days.</p>
+<p>To warn you about logins from a new device, the account server keeps a fingerprint for each of the last five
+devices or browsers your account logged in from: a hash (MD5) of the IP address together with the browser's
+identification (user agent), not the IP address itself, with the time it was first and last used. When a login comes
+from a new fingerprint, you get an email naming that login's time, IP address and browser. The fingerprints are
+deleted when you change your password or your account is deleted.</p>
 <p>Legal basis: Art. 6(1)(f) GDPR. My legitimate interest is keeping the services secure and working.</p>
 
 <h2>5. Data on your iPhone</h2>
@@ -58,7 +61,7 @@ in this policy.</p>
 <h2>6. Push notifications (Arestemis, Aresus)</h2>
 <p>If you allow notifications, the app sends the <strong>device token</strong> that Apple assigns to it, together with
 your account and the app's language, to my push service. Notifications are delivered through Apple's Push
-Notification service (Apple Inc.), which receives the token and the text of each notification (for example the rent
+Notification service (section 11), which receives the token and the text of each notification (for example the rent
 and area of a new flat, or which service has a problem).</p>
 <ul>
   <li><strong>How long:</strong> the device entry is deleted when you log out, when your account loses access, when
@@ -78,8 +81,8 @@ application texts written for you. Listings are public adverts and can contain t
 <p>Every listing that passes your exact filters is checked by an AI model against your whole search. For this,
 Arestemis sends your search, your "About you" text and the listing to <strong>Groq</strong> (Groq, Inc., USA). For an
 application written by AI it also sends your own application text and the contact name in the listing; "Describe it"
-sends the sentence you typed. Groq returns the answer; [lead to confirm: Groq does not keep the data / keeps it for
-… days]. Please write in "About you" only what you would tell a landlord, and nothing sensitive (for example about
+sends the sentence you typed. Groq processes this data only to give the answer, under its data processing addendum
+(section 11). Please write in "About you" only what you would tell a landlord, and nothing sensitive (for example about
 health or religion). Nothing is required there.</p>
 <p>Applications are never sent by Arestemis. You copy the text and send it yourself on the portal, where the portal's
 privacy policy applies. Photos of a listing load directly from the portal's server, so that portal sees your IP
@@ -87,16 +90,15 @@ address; "Open listing" opens the portal's page.</p>
 <ul>
   <li><strong>How long:</strong> your search, the listings found for it and their states until you delete the hunt in
     the app; filtered-out listings 7 days; listings nobody needs any more 30 days; the list of listings already seen
-    180 days. Your settings until your account is deleted [lead to confirm: deleting the account removes them].</li>
+    180 days. Your settings until your account is deleted.</li>
   <li><strong>Legal basis:</strong> Art. 6(1)(b) GDPR (the search and the AI check are the service you use).</li>
 </ul>
 
 <h2>8. Contact and support</h2>
 <p>If you write to me with the "Contact &amp; support" form in an app, I receive the kind of message, your text, the
 app, its version, the iPhone's system version and type, the app's language and your account. The message is stored on
-the account server and sent to me by email, with your email address as the reply address. I use it only to answer
-and to improve the apps, and delete it [lead to confirm: 12 months after the matter is closed], or earlier with your
-account. The same holds when you email me directly.</p>
+the account server and sent to my mailbox by email, with your email address as the reply address. I use it only to
+answer and to improve the apps, and delete it 12 months after the matter is closed, or earlier with your account. The same holds when you email me directly.</p>
 <p>Legal basis: Art. 6(1)(b) GDPR for questions about your account or the service, otherwise Art. 6(1)(f) (answering
 you).</p>
 
@@ -114,27 +116,30 @@ you).</p>
 
 <h2>10. The websites</h2>
 <p>The log-in page and the hub load their fonts from Google Fonts (Google Ireland Ltd. / Google LLC), and the hub
-loads program libraries from unpkg.com. Your browser then sends your IP address to these providers.
-[lead to confirm: replace with self-hosted files, then delete this section.] This page itself loads nothing from other
-servers.</p>
+loads program libraries from unpkg.com. Your browser then sends your IP address to these providers. This page itself
+loads nothing from other servers.</p>
 
 <h2>11. Who else receives data</h2>
 <ul>
   <li><strong>netcup GmbH</strong> (Karlsruhe, Germany) hosts the server, under a data processing agreement
     (Art. 28 GDPR) [lead to confirm].</li>
-  <li><strong>Resend</strong> (Resend, Inc., USA) sends the emails (your email address and the mail's content).</li>
+  <li><strong>Resend</strong> (Resend, Inc., USA) sends the emails, from servers in the USA (your email address and
+    the mail's content).</li>
   <li><strong>Groq</strong> (Groq, Inc., USA) runs the AI check of Arestemis (section 7).</li>
-  <li><strong>Apple</strong> delivers push notifications (section 6).</li>
-  <li><strong>GitHub</strong> stores the code and my notes repository; no data of other users.</li>
-  <li>My email provider receives support messages [lead to confirm: provider].</li>
+  <li><strong>Apple</strong> (for the EU: Apple Distribution International Ltd., Ireland) delivers push notifications
+    (section 6).</li>
+  <li><strong>GitHub</strong> (GitHub, Inc., USA) stores the code and my notes repository; no data of other users.</li>
+  <li><strong>IONOS SE</strong> (Montabaur, Germany) hosts my mailbox, which receives support messages and the emails
+    you send me.</li>
 </ul>
 <p>No data is sold or used for advertising.</p>
 
 <h3>Transfers outside the EU</h3>
-<p>Resend, Groq, Apple and GitHub are based in the USA. For Resend the transfer rests on the EU–US Data Privacy
-Framework (Art. 45 GDPR) and the EU Standard Contractual Clauses in its data processing agreement; for Groq on the
-Standard Contractual Clauses (Art. 46(2)(c) GDPR) in its data processing agreement. [lead to confirm: Groq, Apple and
-GitHub safeguards.]</p>
+<p>Resend, Groq, Apple and GitHub process data in the USA. Resend and GitHub are certified under the EU–US Data
+Privacy Framework, for which the EU has decided that it protects data adequately (Art. 45 GDPR). Groq is not; it is
+bound by the EU Standard Contractual Clauses in its customer data processing addendum, which is part of its terms
+(Art. 46(2)(c) GDPR). Apple transfers data from the EU to the USA under Standard Contractual Clauses as well, as its
+privacy policy states.</p>
 
 <h2>12. Your rights</h2>
 <p>You have the right to</p>
@@ -146,8 +151,9 @@ GitHub safeguards.]</p>
   <li><strong>object</strong> at any time, for reasons arising from your particular situation, to processing based on
     Art. 6(1)(f) (Art. 21).</li>
 </ul>
-<p>To use these rights, or to delete your account, write to me at
-<a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a>. [lead to confirm: deleting the account in the apps.]</p>
+<p>To use these rights, write to me at <a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a>. That is also how
+you delete your account for now: I then delete the account and its data in every service, including your Arestemis
+search, settings and listings and the devices registered for notifications.</p>
 <p>You may also complain to a data protection supervisory authority (Art. 77 GDPR), for example the one where you
 live, or the one responsible for me: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18,
 91522 Ansbach, <a href="https://www.lda.bayern.de">www.lda.bayern.de</a>.</p>

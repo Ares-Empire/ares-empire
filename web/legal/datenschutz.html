@@ -31,8 +31,8 @@ Konto angelegt und geändert wurde.</p>
     einloggt. Wenn du dich registrierst, bekomme ich eine E-Mail mit deiner E-Mail-Adresse, damit ich dich freigeben
     kann.</li>
   <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO (der Dienst, für den du dich registriert hast).</li>
-  <li><strong>Wie lange:</strong> bis du dein Konto löschst. Ein Konto, das ich nicht freigegeben habe, bleibt, bis
-    ich es freigebe oder lösche.</li>
+  <li><strong>Wie lange:</strong> bis dein Konto gelöscht wird (Abschnitt 12). Ein Konto, das ich nicht freigegeben
+    habe, bleibt, bis ich es freigebe oder lösche.</li>
 </ul>
 
 <h3>Angemeldet bleiben</h3>
@@ -44,12 +44,15 @@ Analyse.</p>
 
 <h2>4. Server-Logs und Sicherheit</h2>
 <p>Wenn dein Browser oder eine App mit meinem Server spricht, sieht der Server die <strong>IP-Adresse</strong> deines
-Geräts, die Uhrzeit und die aufgerufene Adresse. Der Kontoserver führt ein Anfrage-Protokoll mit IP-Adressen für
-[lead to confirm: 5 Tage, Voreinstellung von PocketBase], um Fehler zu finden und Missbrauch zu stoppen (zum Beispiel
-zu viele Anmeldeversuche). Die Dienste hinter den Apps schreiben IP-Adresse und aufgerufene Adresse (die einen
-Suchbegriff enthalten kann) ins Systemprotokoll des Servers, das [lead to confirm: 14 Tage] aufbewahrt wird. Damit
-er dich vor Anmeldungen von neuen Geräten warnen kann, merkt sich der Kontoserver, von welchen Geräten dein Konto
-angemeldet wurde, bis das Konto gelöscht wird. [lead to confirm: was dieser Eintrag enthält.]</p>
+Geräts, die Uhrzeit und die aufgerufene Adresse. Der Kontoserver führt ein Anfrage-Protokoll mit IP-Adressen, aber
+ohne dein Konto, für 5 Tage, um Fehler zu finden und Missbrauch zu stoppen (zum Beispiel zu viele Anmeldeversuche).
+Die Dienste hinter den Apps schreiben IP-Adresse und aufgerufene Adresse (die einen Suchbegriff enthalten kann) ins
+Systemprotokoll des Servers, das 14 Tage aufbewahrt wird.</p>
+<p>Damit er dich vor Anmeldungen von neuen Geräten warnen kann, speichert der Kontoserver für die letzten fünf Geräte
+oder Browser, mit denen sich dein Konto angemeldet hat, je einen Fingerabdruck: einen Hash (MD5) aus IP-Adresse und
+Browser-Kennung (User-Agent), nicht die IP-Adresse selbst, mit dem Zeitpunkt der ersten und letzten Nutzung. Kommt
+eine Anmeldung mit einem neuen Fingerabdruck, bekommst du eine E-Mail mit Uhrzeit, IP-Adresse und Browser dieser
+Anmeldung. Die Fingerabdrücke werden gelöscht, wenn du dein Passwort änderst oder dein Konto gelöscht wird.</p>
 <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Mein berechtigtes Interesse ist, dass die Dienste sicher und
 zuverlässig laufen.</p>
 
@@ -64,7 +67,7 @@ dein iPhone nur so, wie in dieser Erklärung beschrieben.</p>
 <h2>6. Mitteilungen (Arestemis, Aresus)</h2>
 <p>Wenn du Mitteilungen erlaubst, schickt die App das <strong>Geräte-Token</strong>, das Apple ihr zuteilt, zusammen
 mit deinem Konto und der Sprache der App an meinen Push-Dienst. Zugestellt werden die Mitteilungen über Apples Push
-Notification Service (Apple Inc.), der das Token und den Text jeder Mitteilung bekommt (zum Beispiel Miete und Gegend
+Notification Service (Abschnitt 11), der das Token und den Text jeder Mitteilung bekommt (zum Beispiel Miete und Gegend
 einer neuen Wohnung oder welcher Dienst ein Problem hat).</p>
 <ul>
   <li><strong>Wie lange:</strong> Der Geräte-Eintrag wird gelöscht, wenn du dich abmeldest, wenn dein Konto den Zugang
@@ -86,8 +89,8 @@ Anzeigen und können den Namen eines Vermieters oder Mitbewohners enthalten.</p>
 <p>Jedes Angebot, das deine genauen Filter erfüllt, prüft ein KI-Modell gegen deine ganze Suche. Dafür schickt
 Arestemis deine Suche, deinen Text „Über dich“ und das Angebot an <strong>Groq</strong> (Groq, Inc., USA). Für eine
 Bewerbung, die die KI schreibt, zusätzlich deinen eigenen Bewerbungstext und den Kontaktnamen aus der Anzeige; „Beschreiben“
-schickt den Satz, den du eingibst. Groq schickt das Ergebnis zurück; [lead to confirm: Groq speichert die Daten
-nicht / speichert sie … Tage]. Schreib bei „Über dich“ bitte nur, was du auch einem Vermieter sagen würdest, und nichts
+schickt den Satz, den du eingibst. Groq verarbeitet diese Daten nur, um die Antwort zu geben, nach seinem Vertrag zur
+Auftragsverarbeitung (Abschnitt 11). Schreib bei „Über dich“ bitte nur, was du auch einem Vermieter sagen würdest, und nichts
 Sensibles (etwa zu Gesundheit oder Religion). Pflicht ist dort nichts.</p>
 <p>Arestemis verschickt nie Bewerbungen. Du kopierst den Text und schickst ihn selbst über das Portal, dort gilt
 dessen Datenschutzerklärung. Fotos eines Angebots lädt die App direkt vom Server des Portals, das Portal sieht dabei
@@ -95,8 +98,7 @@ deine IP-Adresse; „Angebot öffnen“ öffnet die Seite des Portals.</p>
 <ul>
   <li><strong>Wie lange:</strong> deine Suche, die dafür gefundenen Angebote und ihr Stand, bis du die Jagd in der App
     löschst; aussortierte Angebote 7 Tage; Angebote, die nicht mehr gebraucht werden, 30 Tage; die Liste schon
-    gesehener Angebote 180 Tage. Deine Einstellungen, bis dein Konto gelöscht wird [lead to confirm: das Löschen des
-    Kontos entfernt sie].</li>
+    gesehener Angebote 180 Tage. Deine Einstellungen, bis dein Konto gelöscht wird.</li>
   <li><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO (die Suche und die KI-Prüfung sind der Dienst, den
     du nutzt).</li>
 </ul>
@@ -104,9 +106,9 @@ deine IP-Adresse; „Angebot öffnen“ öffnet die Seite des Portals.</p>
 <h2>8. Kontakt und Support</h2>
 <p>Wenn du mir über „Kontakt &amp; Support“ in einer App schreibst, bekomme ich die Art der Nachricht, deinen Text, die
 App, ihre Version, Systemversion und Typ des iPhones, die Sprache der App und dein Konto. Die Nachricht wird auf dem
-Kontoserver gespeichert und mir per E-Mail geschickt, mit deiner E-Mail-Adresse als Antwortadresse. Ich nutze sie nur,
-um dir zu antworten und die Apps zu verbessern, und lösche sie [lead to confirm: 12 Monate nach Erledigung], spätestens
-mit deinem Konto. Dasselbe gilt, wenn du mir direkt eine E-Mail schreibst.</p>
+Kontoserver gespeichert und per E-Mail in mein Postfach geschickt, mit deiner E-Mail-Adresse als Antwortadresse. Ich
+nutze sie nur, um dir zu antworten und die Apps zu verbessern, und lösche sie 12 Monate nach Erledigung, früher mit
+deinem Konto. Dasselbe gilt, wenn du mir direkt eine E-Mail schreibst.</p>
 <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO bei Fragen zu deinem Konto oder zum Dienst, sonst Art. 6 Abs. 1
 lit. f (dir zu antworten).</p>
 
@@ -126,28 +128,31 @@ lit. f (dir zu antworten).</p>
 
 <h2>10. Die Websites</h2>
 <p>Die Anmeldeseite und der Hub laden ihre Schriften von Google Fonts (Google Ireland Ltd. / Google LLC), der Hub
-außerdem Programmbibliotheken von unpkg.com. Dein Browser schickt dabei deine IP-Adresse an diese Anbieter.
-[lead to confirm: durch eigene Dateien ersetzen, dann diesen Abschnitt löschen.] Diese Seite selbst lädt nichts von
-anderen Servern.</p>
+außerdem Programmbibliotheken von unpkg.com. Dein Browser schickt dabei deine IP-Adresse an diese Anbieter. Diese
+Seite selbst lädt nichts von anderen Servern.</p>
 
 <h2>11. Wer außerdem Daten bekommt</h2>
 <ul>
   <li><strong>netcup GmbH</strong> (Karlsruhe) betreibt den Server, mit einem Vertrag zur Auftragsverarbeitung
     (Art. 28 DSGVO) [lead to confirm].</li>
-  <li><strong>Resend</strong> (Resend, Inc., USA) verschickt die E-Mails (deine E-Mail-Adresse und den Inhalt der
-    Nachricht).</li>
+  <li><strong>Resend</strong> (Resend, Inc., USA) verschickt die E-Mails, von Servern in den USA (deine
+    E-Mail-Adresse und den Inhalt der Nachricht).</li>
   <li><strong>Groq</strong> (Groq, Inc., USA) führt die KI-Prüfung von Arestemis aus (Abschnitt 7).</li>
-  <li><strong>Apple</strong> stellt Mitteilungen zu (Abschnitt 6).</li>
-  <li><strong>GitHub</strong> speichert den Code und das Repository meiner Notizen; keine Daten anderer Nutzer.</li>
-  <li>Mein E-Mail-Anbieter bekommt Support-Nachrichten [lead to confirm: Anbieter].</li>
+  <li><strong>Apple</strong> (in der EU: Apple Distribution International Ltd., Irland) stellt Mitteilungen zu
+    (Abschnitt 6).</li>
+  <li><strong>GitHub</strong> (GitHub, Inc., USA) speichert den Code und das Repository meiner Notizen; keine Daten
+    anderer Nutzer.</li>
+  <li><strong>IONOS SE</strong> (Montabaur) betreibt mein Postfach, in dem Support-Nachrichten und E-Mails an mich
+    ankommen.</li>
 </ul>
 <p>Daten werden weder verkauft noch für Werbung genutzt.</p>
 
 <h3>Übermittlung in Länder außerhalb der EU</h3>
-<p>Resend, Groq, Apple und GitHub sitzen in den USA. Für Resend stützt sich die Übermittlung auf das EU-US Data
-Privacy Framework (Art. 45 DSGVO) und die EU-Standardvertragsklauseln in seinem Vertrag zur Auftragsverarbeitung, für
-Groq auf die Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO) in seinem Vertrag zur Auftragsverarbeitung.
-[lead to confirm: Garantien für Groq, Apple und GitHub.]</p>
+<p>Resend, Groq, Apple und GitHub verarbeiten Daten in den USA. Resend und GitHub sind nach dem EU-US Data Privacy
+Framework zertifiziert, für das die EU entschieden hat, dass es Daten angemessen schützt (Art. 45 DSGVO). Groq ist es
+nicht; Groq ist an die EU-Standardvertragsklauseln in seinem Vertrag zur Auftragsverarbeitung gebunden, der Teil
+seiner Bedingungen ist (Art. 46 Abs. 2 lit. c DSGVO). Apple übermittelt Daten aus der EU in die USA ebenfalls auf
+Grundlage von Standardvertragsklauseln, so steht es in Apples Datenschutzrichtlinie.</p>
 
 <h2>12. Deine Rechte</h2>
 <p>Du hast das Recht,</p>
@@ -159,8 +164,9 @@ Groq auf die Standardvertragsklauseln (Art. 46 Abs. 2 lit. c DSGVO) in seinem Ve
   <li>einer Verarbeitung nach Art. 6 Abs. 1 lit. f aus Gründen, die sich aus deiner besonderen Situation ergeben,
     jederzeit zu <strong>widersprechen</strong> (Art. 21).</li>
 </ul>
-<p>Um diese Rechte zu nutzen oder dein Konto zu löschen, schreib mir an
-<a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a>. [lead to confirm: Konto in den Apps löschen.]</p>
+<p>Um diese Rechte zu nutzen, schreib mir an <a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a>. So löschst
+du vorerst auch dein Konto: Ich lösche dann das Konto und seine Daten in allen Diensten, auch deine Suche,
+Einstellungen und Angebote in Arestemis und die für Mitteilungen angemeldeten Geräte.</p>
 <p>Du kannst dich außerdem bei einer Datenschutz-Aufsichtsbehörde beschweren (Art. 77 DSGVO), zum Beispiel bei der an
 deinem Wohnort oder bei der für mich zuständigen: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA),
 Promenade 18, 91522 Ansbach, <a href="https://www.lda.bayern.de">www.lda.bayern.de</a>.</p>
