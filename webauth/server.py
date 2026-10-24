@@ -4,11 +4,13 @@
 Accounts live in PocketBase (https://auth.ares-empire.de, see docs/ACCOUNTS.md). This server
 talks to it on localhost: log in, sign up, password reset. The session cookie holds the
 Empire token; every request re-checks it (approved, has the "empire" service) with a short
-cache, so un-approving someone locks them out within a minute. Stdlib only.
+cache, so un-approving someone locks them out within a minute. The privacy policy and imprint are open to
+everyone (webauth/legal.py). Stdlib only.
 
 Config (env, from .env — never committed):
   EMPIRE_AUTH_URL   PocketBase base URL (default http://127.0.0.1:8090)
   WEB_ROOT          dir to serve (default: web)        HOST / PORT
+  LEGAL_PREVIEW     1 = serve legal pages that are still drafts (local preview only, never on the server)
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ if not __package__:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from empire_language import request_language
+from webauth import legal
 from webauth.texts import text
 
 WEB_ROOT = os.environ.get("WEB_ROOT", "web")
@@ -84,8 +87,10 @@ def is_brand_image(path: str) -> bool:
     return clean.startswith("/brand/") and clean == path and clean.lower().endswith(BRAND_IMAGE_TYPES)
 
 
+# The legal pages (/datenschutz, /privacy, /impressum, /imprint) are open too: they are answered before the gate
+# (webauth/legal.py), and their font is listed here.
 OPEN_PATHS = frozenset({"/login", "/login/email", "/signup", "/forgot", "/logout", "/favicon.ico",
-                        "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"})
+                        "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"}) | legal.ASSET_PATHS
 
 
 # ── Talking to the accounts server ───────────────────────────────────────────
@@ -495,6 +500,9 @@ def handoff_page(url: str, token: str) -> bytes:
 # ── HTTP ─────────────────────────────────────────────────────────────────────
 
 class Handler(SimpleHTTPRequestHandler):
+    # Python's table lacks the font types on some versions (the legal pages' self-hosted font).
+    extensions_map = {**SimpleHTTPRequestHandler.extensions_map, ".ttf": "font/ttf", ".woff2": "font/woff2"}
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=WEB_ROOT, **kwargs)
 
@@ -514,15 +522,24 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
-    def _send_html(self, body: bytes, status: int = 200) -> None:
+    def _send_html(self, body: bytes, status: int = 200, language: str = "en") -> None:
         self.send_response(status)
         self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Language", "en")
+        self.send_header("Content-Language", language)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(body)
+
+    def _send_legal(self, path: str) -> None:
+        """A legal page for everyone, logged in or not; 404 while it is missing or still a draft."""
+        rendered = legal.render(path, WEB_ROOT, preview=legal.preview_enabled())
+        if rendered is None:
+            self.log_message("legal page %s not published (missing, or still holds a draft marker)", path)
+            return self.send_error(HTTPStatus.NOT_FOUND)
+        body, language = rendered
+        self._send_html(body, language=language)
 
     def _token(self) -> str:
         return session_token(self.headers.get("Cookie"))
@@ -607,6 +624,8 @@ class Handler(SimpleHTTPRequestHandler):
         path = url.path
         if path == "/api/empire" or path.startswith("/api/empire/"):
             return self._api(path)
+        if path in legal.PAGES:
+            return self._send_legal(path)
         if path in ("/login", "/login/email", "/signup", "/forgot"):
             if self._authed():
                 return self._redirect("/")
@@ -634,6 +653,8 @@ class Handler(SimpleHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/empire" or path.startswith("/api/empire/"):
             return self._api(path)
+        if path in legal.PAGES:
+            return self._send_legal(path)
         if path not in OPEN_PATHS and not self._web_gate():
             return
         return super().do_HEAD()
