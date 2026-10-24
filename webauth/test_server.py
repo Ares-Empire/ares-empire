@@ -59,7 +59,7 @@ class HubTests(unittest.TestCase):
             'chronicle': [{'project': p, 'text': p, 'at': '2026-10-24'}
                           for p in ('aresium', 'other', 'private', 'unknown', 'empire')],
         }
-        self.catalog = {'aresium': {'users': 'coming-soon', 'app': 'aresium://'}, 'other': {'users': 'open'}}
+        self.catalog = {'aresium': {'users': 'coming-soon'}, 'other': {'users': 'open'}}
         self.enterContext(patch.object(server, 'pb_call', side_effect=self.pb))
         self.enterContext(patch.object(server, 'load_state', side_effect=lambda: copy.deepcopy(self.state)))
         self.enterContext(patch.object(server, 'load_catalog', side_effect=lambda: copy.deepcopy(self.catalog)))
@@ -387,7 +387,8 @@ class DataAndTransportTests(unittest.TestCase):
                 self.assertEqual(server.load_state()['projects'], [])
 
     def test_catalog_is_separate_and_matches_current_contract(self):
-        self.assertEqual(server.load_catalog(), {'aresium': {'users': 'coming-soon', 'app': 'aresium://'}})
+        self.assertEqual(server.load_catalog(), {'aresium': {'users': 'coming-soon'}})
+        self.assertEqual(server.APP_SCHEMES, {'aresium': 'aresium://', 'arestemis': 'arestemis://', 'aresus': 'aresus://'})
 
     def test_pb_transport_methods_and_forwarded_ip(self):
         for method in ('POST', 'PATCH', 'GET', 'DELETE'):

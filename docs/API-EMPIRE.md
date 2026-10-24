@@ -43,9 +43,11 @@ Auth as Aresium's `/api/*` (`aresium/docs/API-DATA.md` → Auth): session cookie
 ## Catalog
 
 `webauth/catalog.json` (committed; not in `data/state.json`, which the empire sync rewrites) lists, per province slug,
-`users: "open" | "coming-soon"` and optionally `app` (its iPhone URL scheme). A province not listed is private: only
-admins see it. Only listed provinces can be in a non-admin ring. Today: `{"aresium": {"users": "coming-soon",
-"app": "aresium://"}}`.
+`users: "open" | "coming-soon"`. A province not listed is private: only admins see it. Only listed provinces can be in
+a non-admin ring. Today: `{"aresium": {"users": "coming-soon"}}`.
+
+A province's iPhone app (`app`, its URL scheme) does not depend on who may see it, so it is not in the catalog but in
+`APP_SCHEMES` in `webauth/server.py` (2026-10-24: `aresium://`, `arestemis://`, `aresus://`).
 
 ## Live lines
 

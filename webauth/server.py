@@ -56,6 +56,9 @@ STATE_PATH = os.environ.get(
 CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
 # Plain JSON snapshot of web/app/empire-data.js, usable without a JS runtime.
 PULSE_URLS = {"aresium": "https://aresium.de/api/pulse"}
+# iPhone apps by province (URL scheme), whoever may see the province: the Empire app opens a province in its app
+# when it is installed. Not part of the catalog, which only says what other accounts may add.
+APP_SCHEMES = {"aresium": "aresium://", "arestemis": "arestemis://", "aresus": "aresus://"}
 LIVE_CACHE_SECS = 60
 
 # Reachable without a session: the login pages and the images they show.
@@ -249,7 +252,7 @@ def empire_data(record: dict, token: str, client_ip: str) -> dict:
         slug = project["slug"]
         entry = catalog.get(slug, {})
         return {**project, "state": "open" if admin else entry["users"],
-                "app": entry.get("app"), "live": live_line(slug, record["id"], token)}
+                "app": APP_SCHEMES.get(slug), "live": live_line(slug, record["id"], token)}
 
     projects = state.get("projects", [])
     # Keep the version-1 field names and all province metadata.
