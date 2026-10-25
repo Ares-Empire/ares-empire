@@ -26,16 +26,22 @@ developer enrollment has been pending since 2026-10-23.
    `empire-ios/CLAUDE.md` → Light mode). Left for the phone: both looks checked once TestFlight runs.
 2. **TestFlight** as soon as Apple approves: the signing team, App Store Connect records, upload, then push
    notifications (APNs key) and retiring Telegram (`empire-ios/CLAUDE.md` → Open 1–3 and 6;
-   `empire-ios/docs/APP-STORE.md` for the forms). Open questions for Patrik there: the demo account's mailbox, and
-   whether reviewers may see Aresus's real server state.
+   `empire-ios/docs/APP-STORE.md` for the forms). The builds go only to Patrik (internal testing: no Apple review).
+   Apple reviews an app only when it goes to other people (App Store or external testers); its demo account then gets
+   an extra address on Patrik's domain. Aresus and Aresync stay Patrik's own tools and never go to others (Patrik,
+   2026-10-25).
 3. **Aresium for other people:** their data stays on their iPhone (imports, categories, storage); no bank data on the
    server. Its section goes into the privacy policy before it opens ([PRIVACY.md](docs/PRIVACY.md) → the rule).
-4. **Aresync file sharing from the phone:** Patrik's idea (2026-10-25), not specified yet. Ask him what it should
-   do before planning it.
+   Needs a plan and tests first (Patrik, 2026-10-25): imports from other banks; suggested categories that people
+   change and extend; sorting learned from their own corrections; auto-sort for the rest only if they switch it on
+   (Apple's on-device model or the server without storing anything, to be decided); each layer measured on Patrik's
+   own transactions before choosing.
+4. **Aresync file sharing from the phone:** Patrik's idea (2026-10-25), on hold: he will say what it should do when
+   it comes up; not needed for the current work.
 5. **New apps**, each built on the standard from its first screen.
 
-**Smaller open items:** a privacy/imprint link
-on the signed-in hub, aresium.de and arestoteles.de; the rest is in `empire-ios/CLAUDE.md` → Open and
+**Smaller open items:** a privacy/imprint link on the signed-in hub, aresium.de and arestoteles.de (being
+built 2026-10-25); the rest is in `empire-ios/CLAUDE.md` → Open and
 [PRIVACY.md](docs/PRIVACY.md) → To do.
 
 ---
