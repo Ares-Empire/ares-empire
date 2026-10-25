@@ -131,8 +131,8 @@
               ? "Decline " + (account.name || account.email) + "’s request? The account and its other apps stay."
               : "Decline " + (account.name || account.email) + "? This deletes their pending sign-up."}</p>
               <div className="em-actions"><button className="em-secondary" disabled={busy} onClick={() => setDeclining(null)}>Keep account</button>
-                <button className="em-danger" disabled={busy} onClick={() => onDecide(account.id, { decline: true })}>Confirm decline</button></div></div>
-              : <div className="em-actions"><button className="em-primary" disabled={busy} onClick={() => onDecide(account.id, { approve: true })}><Glyph name="Check" size={16} />Approve</button>
+                <button className="em-danger" disabled={busy} onClick={() => onDecide(account.id, { decline: true, requested: account.requested })}>Confirm decline</button></div></div>
+              : <div className="em-actions"><button className="em-primary" disabled={busy} onClick={() => onDecide(account.id, { approve: true, requested: account.requested })}><Glyph name="Check" size={16} />Approve</button>
                 <button className="em-secondary" disabled={busy} onClick={() => setDeclining(account.id)}>Decline</button></div>}
           </article>)}</div></React.Fragment> : <div className="em-empty-state"><Glyph name="Check" size={30} /><h2>No pending accounts.</h2></div>}
       {busy && <p className="em-empty" role="status">Updating account…</p>}
@@ -196,9 +196,9 @@
       locked.current = true; setBusy(true); setError(null);
       try {
         const account = (accounts || []).find((a) => a.id === id);
-        await API.decide(id, decision);
-        // Refresh the authoritative list (and count); the action has no body contract.
-        const result = await API.approvals();
+        // The decision answers the fresh list; when the hub could not read it (approvals: null), ask again.
+        const answer = await API.decide(id, decision);
+        const result = answer && Array.isArray(answer.approvals) ? answer.approvals : await API.approvals();
         if (alive.current) {
           setAccounts(result); setData((current) => ({ ...current, pending: result.length }));
           setNotice(account && account.approved ? (decision.approve ? "Access granted." : "Request declined.")
@@ -225,7 +225,7 @@
             {admin && <button className={"em-icon-button" + (expanded ? " is-active" : "")} aria-pressed={expanded}
               aria-label={expanded ? "Show the provinces" : "Show the expansions"} title={expanded ? "Provinces" : "Expansions"}
               onClick={() => setExpanded(!expanded)}><Glyph name={expanded ? "Orbit" : "Maximize2"} size={18} /></button>}
-            {admin && <button className="em-icon-button em-inbox" aria-label={"Approvals, " + data.pending + " pending"} title="Approvals" onClick={approvals}>
+            {admin && <button className="em-icon-button em-inbox" aria-label={data.pending === null ? "Approvals" : "Approvals, " + data.pending + " pending"} title="Approvals" onClick={approvals}>
               <Glyph name="Inbox" size={19} />{data.pending > 0 && <span className="em-count">{data.pending}</span>}</button>}
             <a className="em-icon-button" href={API.sampleMode ? "login.html" : "/logout"} aria-label="Log out" title="Log out"><Glyph name="LogOut" size={19} /></a>
           </div>

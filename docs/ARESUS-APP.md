@@ -34,7 +34,8 @@ Aresus, the watchtower province, combined with Aresync in one **iPhone app** (no
   something or failed; quiet runs collapse into one line per machine and day.
 - **Server deploys through Aresync** (Patrik approved auto-deploy, 2026-10-24): the server's Aresync also pulls
   `Arestemis`, `aresus` and `aresync` and runs a hook that restarts the service, plus the missing hook for the hub.
-- **Who may use it:** accounts with the `aresus` service (Patrik decides).
+- **Who may use it:** accounts with the `aresus` service (Patrik decides) whose id is in Aresus's
+  `EMPIRE_ALLOWED_USERS`, its owner (2026-10-25; empty = nobody). Pushes go to those accounts only.
 - **Accent colour: lightning blue** (Zeus), only as an accent, which also keeps green and red free for the status
   words. Icon: the Zeus bust on black; the Aresync tab uses the Janus bust.
 - Later: Aresus can give the hub's Empire app a live line per province (up/down), and a home-screen widget.

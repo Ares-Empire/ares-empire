@@ -23,6 +23,7 @@ import posixpath
 import re
 import sys
 import threading
+import traceback
 import urllib.error
 import urllib.request
 from http import HTTPStatus
@@ -63,11 +64,12 @@ PROVINCES = {
 # empire_sync. Missing → 503 and the frontend uses its embedded seed.
 STATE_PATH = os.environ.get(
     "EMPIRE_STATE", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "state.json"))
+# Which provinces other accounts may add (docs/API-EMPIRE.md → Catalog).
 CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
-# Plain JSON snapshot of web/app/empire-data.js, usable without a JS runtime.
 PULSE_URLS = {"aresium": "https://aresium.de/api/pulse"}
 # Every other province gets its line from Aresus, the watchtower (one overview per account and minute, asked with the
-# visitor's own token; accounts without the "aresus" service get no line). Same host, so localhost.
+# visitor's own token; accounts Aresus does not let in get no line: it needs the "aresus" service and its owner
+# allowlist). Same host, so localhost.
 ARESUS_OVERVIEW_URL = os.environ.get("ARESUS_OVERVIEW_URL", "http://127.0.0.1:8098/api/aresus/overview")
 # iPhone apps by province (URL scheme), whoever may see the province: the Empire app opens a province in its app
 # when it is installed. Not part of the catalog, which only says what other accounts may add.
@@ -135,9 +137,12 @@ _cache: dict[str, tuple[dict, float]] = {}
 _cache_lock = threading.Lock()
 
 
+UNAUTHENTICATED = "Please log in again."
+
+
 def token_access(token: str, client_ip: str | None = None) -> dict:
     """Keep token rejection, lack of access, and outages distinct, as in Aresium."""
-    unauthenticated = {"outcome": "denied", "status": 401, "error": "unauthenticated"}
+    unauthenticated = {"outcome": "denied", "status": 401, "error": UNAUTHENTICATED}
     forbidden = {"outcome": "denied", "status": 403, "error": "This account has no access to Ares Empire."}
     unavailable = {"outcome": "unavailable", "status": 503,
                    "error": "Login service unavailable, try again in a minute."}
@@ -173,13 +178,102 @@ def forget_token(token: str) -> None:
         _cache.pop(hashlib.sha256(token.encode()).hexdigest(), None)
 
 
+def log(message: str) -> None:
+    sys.stderr.write(message + "\n")
+
+
+# Every error of the JSON API is {"error": <a sentence in the request's language>, "code": <one of these>}
+# (docs/API-EMPIRE.md → Errors). Codes are stable English words that clients act on; they are never translated.
+# By status; a 403 on an admin route is admin_only instead (the account is not an admin).
+CODES = {400: "bad_request", 401: "unauthorized", 403: "no_access", 404: "not_found",
+         413: "bad_request", 500: "server_error", 503: "unavailable"}
+ERROR_CODES = frozenset(CODES.values()) | {"admin_only"}
+SERVER_ERROR = "Something went wrong on the server. Try again later."
+
+
 class APIError(Exception):
-    def __init__(self, status: int, message: str):
+    def __init__(self, status: int, message: str, code: str | None = None):
         self.status = status
         self.message = message
+        self.code = code or CODES[status]
 
 
-def load_state() -> dict:
+# ── Hub data in the contract's shape ─────────────────────────────────────────
+# data/state.json is written by empire_sync and edited by hand (the chronicle, EMPIRE.md), so it can miss a field or
+# hold a wrong type. hub_state() is the one place that brings it to the contract (docs/API-EMPIRE.md → Hub data):
+# every field with its type, the documented default for what is missing, entries without what identifies them skipped.
+SLUG = re.compile(r"[a-z0-9][a-z0-9-]{0,63}")
+PLACEHOLDER_LOGO = "brand/ares-bust.webp"  # the empire crest, as empire_sync gives a new province
+
+
+def _string(value: object, default: str = "") -> str:
+    return value if isinstance(value, str) else default
+
+
+def _strings(value: object) -> list[str]:
+    return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
+
+
+def _dated(entry: object, with_project: bool) -> dict | None:
+    """A chronicle or changelog entry {at, (project,) text}; None without a date or a text."""
+    if not isinstance(entry, dict) or not _string(entry.get("at")) or not _string(entry.get("text")):
+        return None
+    if with_project:
+        return {"at": entry["at"], "project": entry.get("project") if isinstance(entry.get("project"), str) else None,
+                "text": entry["text"]}
+    return {"at": entry["at"], "text": entry["text"]}
+
+
+def _province(project: object) -> dict | None:
+    """A province's version-1 fields in the contract's shape; None without a usable slug."""
+    if not isinstance(project, dict) or not isinstance(project.get("slug"), str) or not SLUG.fullmatch(project["slug"]):
+        return None
+    slug = project["slug"]
+    detail = project.get("detail") if isinstance(project.get("detail"), dict) else {}
+    changelog = detail.get("changelog") if isinstance(detail.get("changelog"), list) else []
+    return {
+        "slug": slug,
+        "name": _string(project.get("name")) or slug[:1].upper() + slug[1:],
+        "url": _string(project.get("url")),
+        "logo": _string(project.get("logo")) or PLACEHOLDER_LOGO,
+        "status": _string(project.get("status")),
+        "domain": _string(project.get("domain")),
+        "blurb": _string(project.get("blurb")),
+        "detail": {"about": _string(detail.get("about")), "features": _strings(detail.get("features")),
+                   "setup": _string(detail.get("setup")), "wip": _strings(detail.get("wip")),
+                   "ideas": _strings(detail.get("ideas")),
+                   "changelog": [e for e in (_dated(entry, False) for entry in changelog) if e]},
+    }
+
+
+def hub_state(raw: dict) -> dict:
+    """state.json → {projects, ideas, chronicle} exactly as the contract describes them; one log line for what was
+    skipped."""
+    projects, skipped = [], []
+    for number, project in enumerate(raw.get("projects") or [], 1):
+        province = _province(project)
+        if province is None:
+            skipped.append(f"province {number} (no usable slug)")
+        elif any(p["slug"] == province["slug"] for p in projects):
+            skipped.append(f"province {number} (slug {province['slug']} again)")
+        else:
+            projects.append(province)
+    chronicle = raw.get("chronicle") if isinstance(raw.get("chronicle"), list) else []
+    entries = [e for e in (_dated(entry, True) for entry in chronicle) if e]
+    if len(entries) < len(chronicle):
+        skipped.append(f"{len(chronicle) - len(entries)} chronicle entries (no date or text)")
+    ideas = []
+    for idea in raw.get("ideas") if isinstance(raw.get("ideas"), list) else []:
+        if isinstance(idea, dict) and _string(idea.get("title")):
+            ideas.append({"title": idea["title"], "note": _string(idea.get("note"))})
+        else:
+            skipped.append("an idea (no title)")
+    if skipped:
+        log("state.json: skipped " + "; ".join(skipped))
+    return {"projects": projects, "ideas": ideas, "chronicle": entries}
+
+
+def read_state() -> dict:
     # data/state.json is written by empire_sync. Without it the API answers 503 and the website falls back to its
     # embedded seed (web/app/empire-data.js), the only copy of the seed.
     try:
@@ -190,6 +284,10 @@ def load_state() -> dict:
     except (OSError, ValueError):
         pass
     raise APIError(503, "Hub data unavailable, try again in a minute.")
+
+
+def load_state() -> dict:
+    return hub_state(read_state())
 
 
 def load_catalog() -> dict:
@@ -261,12 +359,15 @@ def account_ring(record: dict) -> list[str]:
     return list(dict.fromkeys(s for s in ring if isinstance(s, str))) if isinstance(ring, list) else []
 
 
-def require_pb(status: int) -> None:
+def require_pb(status: int, forbidden: str = "no_access") -> None:
+    """Passes the account server's refusals on with their status and code; everything else is 503 unavailable.
+    `forbidden` is the code of a 403: no_access, or admin_only on the admin routes."""
     if 200 <= status < 300:
         return
     if status in (400, 401, 403, 404):
-        raise APIError(status, {400: "Invalid account request.", 401: "unauthenticated",
-                                403: "Forbidden.", 404: "Account not found."}[status])
+        raise APIError(status, {400: "Invalid account request.", 401: UNAUTHENTICATED,
+                                403: "Forbidden.", 404: "Account not found."}[status],
+                       forbidden if status == 403 else None)
     raise APIError(503, "Account service unavailable, try again in a minute.")
 
 
@@ -281,25 +382,37 @@ def requested_of(item: dict) -> list[str]:
 
 
 def pending_accounts(token: str, client_ip: str, count_only: bool = False):
+    """The accounts waiting for Patrik, each {id, email, name, created, requested, approved, verified} (verified: the
+    email address is confirmed; login needs it too), or with `count_only` how many there are."""
     items = []
     page = 1
     while True:
         query = urlencode({"filter": WAITING, "sort": "created,id", "page": page,
                            "perPage": 1 if count_only else 500,
-                           "fields": "id,email,name,created,requested,approved"})
+                           "fields": "id,email,name,created,requested,approved,verified"})
         status, data = pb_call("/api/collections/users/records?" + query, token=token,
                                client_ip=client_ip, method="GET")
-        require_pb(status)
+        require_pb(status, forbidden="admin_only")
         if not isinstance(data.get("items"), list) or not isinstance(data.get("totalItems"), int):
             raise APIError(503, "Account service returned an unreadable response.")
         if count_only:
             return data["totalItems"]
-        items.extend({**{k: item.get(k, "") for k in ("id", "email", "name", "created")},
-                      "requested": requested_of(item), "approved": item.get("approved") is True}
-                     for item in data["items"])
+        items.extend({**{k: _string(item.get(k)) for k in ("id", "email", "name", "created")},
+                      "requested": requested_of(item), "approved": item.get("approved") is True,
+                      "verified": item.get("verified") is True}
+                     for item in data["items"] if isinstance(item, dict))
         if page >= data.get("totalPages", 1):
             return items
         page += 1
+
+
+def pending_count(token: str, client_ip: str) -> int | None:
+    """How many accounts wait for Patrik; None when the account server cannot say (the hub data comes without it)."""
+    try:
+        return pending_accounts(token, client_ip, count_only=True)
+    except APIError as e:
+        log(f"pending count unavailable: {e.status} {e.message}")
+        return None
 
 
 def empire_data(record: dict, token: str, client_ip: str, language: str = "en") -> dict:
@@ -309,19 +422,17 @@ def empire_data(record: dict, token: str, client_ip: str, language: str = "en") 
 
     def province(project):
         slug = project["slug"]
-        entry = catalog.get(slug, {})
-        return {**project, "state": "open" if admin else entry["users"],
+        return {**project, "state": "open" if admin else catalog[slug]["users"],
                 "app": APP_SCHEMES.get(slug), "live": live_line(slug, record["id"], token, language)}
 
-    projects = state.get("projects", [])
-    # Keep the version-1 field names and all province metadata.
-    return {"version": 2, "me": {"id": record["id"], "name": record.get("name", ""), "admin": admin},
+    projects = state["projects"]
+    return {"version": 2, "me": {"id": record["id"], "name": _string(record.get("name")), "admin": admin},
             "projects": [province(p) for p in projects if admin or p["slug"] in ring],
             "addable": [] if admin else [province(p) for p in projects
                                          if p["slug"] in catalog and p["slug"] not in ring],
-            "chronicle": [e for e in state.get("chronicle", []) if admin or e.get("project") in ring],
-            "ideas": state.get("ideas", []) if admin else [],
-            "pending": pending_accounts(token, client_ip, count_only=True) if admin else 0}
+            "chronicle": [e for e in state["chronicle"] if admin or e["project"] in ring],
+            "ideas": state["ideas"] if admin else [],
+            "pending": pending_count(token, client_ip) if admin else 0}
 
 
 def change_ring(record: dict, token: str, client_ip: str, body: dict, language: str = "en") -> dict:
@@ -344,34 +455,59 @@ def change_ring(record: dict, token: str, client_ip: str, body: dict, language: 
     return empire_data({**record, "ring": ring}, token, client_ip, language)
 
 
+def decision_of(body: dict) -> tuple[str, list[str] | None]:
+    """{approve: true} or {decline: true}, optionally with `requested` (the apps Patrik saw on the card) →
+    ("approve" | "decline", those apps or None)."""
+    action = {key: value for key, value in body.items() if key != "requested"}
+    # `is True`: JSON numbers must not count as true (in Python 1 == True).
+    if set(action) not in ({"approve"}, {"decline"}) or next(iter(action.values())) is not True:
+        raise APIError(400, "Send approve: true or decline: true.")
+    seen = body.get("requested")
+    if seen is not None and (not isinstance(seen, list) or not all(isinstance(s, str) for s in seen)):
+        raise APIError(400, "requested must be a list of apps.")
+    return next(iter(action)), seen
+
+
 def decide_approval(account_id: str, token: str, client_ip: str, body: dict) -> dict:
-    """Approve grants what the account asked for (approved = true, services += requested; the account server then
-    empties requested). Decline deletes an unapproved account, or withdraws an approved account's requests."""
+    """Approve grants the account's requests (approved = true, services += them; the account server then drops them
+    from requested). Decline deletes an account that is not approved yet, or withdraws an approved account's requests.
+    Answers {ok, approvals, pending}: the list as GET /api/empire/approvals gives it, so the app needs no second call."""
     if not re.fullmatch(r"[a-zA-Z0-9]{15}", account_id):
         raise APIError(400, "Invalid account id.")
-    if body != {"approve": True} and body != {"decline": True}:
-        raise APIError(400, "Send approve: true or decline: true.")
-    # bool is intentional: JSON numbers must not count as `true`.
-    if next(iter(body.values())) is not True:
-        raise APIError(400, "Send approve: true or decline: true.")
+    action, seen = decision_of(body)
     path = "/api/collections/users/records/" + account_id
     status, account = pb_call(path + "?" + urlencode({"fields": "id,approved,requested"}),
                               token=token, client_ip=client_ip, method="GET")
-    require_pb(status)
+    require_pb(status, forbidden="admin_only")
     if account.get("id") != account_id:
         raise APIError(503, "Account service returned an unreadable response.")
-    # "+" and "-" add or remove only these values, so a request made meanwhile is neither lost nor granted unseen.
-    requested = requested_of(account)
-    if "approve" in body:
-        status, _ = pb_call(path, {"approved": True, "services+": requested},
-                            token=token, client_ip=client_ip, method="PATCH")
+    current = requested_of(account)
+    # The requests this decision is about: the account's requests as read just now, and when the app sends
+    # `requested` (what Patrik saw on the card) only those he saw. A request made after he looked is neither granted
+    # nor declined: it stays in `requested` and comes back in the list. The "+" and "-" forms change only the values
+    # named, so a request made between this read and the write below stays as well.
+    chosen = current if seen is None else [s for s in current if s in seen]
+    if action == "approve":
+        change = {"approved": True, "services+": chosen}
+        unseen = [s for s in current if s not in chosen]
+        if account.get("approved") is not True and unseen:
+            # A first approval grants everything still in `requested` (accounts.pb.js), so what Patrik did not see
+            # leaves it. An account that is not approved cannot log in, so only an admin can have changed it.
+            change["requested-"] = unseen
+        status, _ = pb_call(path, change, token=token, client_ip=client_ip, method="PATCH")
     elif account.get("approved") is True:
-        status, _ = pb_call(path, {"requested-": requested}, token=token, client_ip=client_ip, method="PATCH")
+        status, _ = pb_call(path, {"requested-": chosen}, token=token, client_ip=client_ip, method="PATCH")
     else:
         # PocketBase enforces approved = false atomically on DELETE.
         status, _ = pb_call(path, token=token, client_ip=client_ip, method="DELETE")
-    require_pb(status)
-    return {"ok": True}
+    require_pb(status, forbidden="admin_only")
+    try:
+        approvals = pending_accounts(token, client_ip)
+    except APIError as e:
+        # The decision is made; only the fresh list is missing. The app then loads it with GET /api/empire/approvals.
+        log(f"approvals list after a decision unavailable: {e.status} {e.message}")
+        return {"ok": True, "approvals": None, "pending": None}
+    return {"ok": True, "approvals": approvals, "pending": len(approvals)}
 
 
 def session_token(cookie_header: str | None) -> str:
@@ -608,33 +744,44 @@ class Handler(SimpleHTTPRequestHandler):
         return body
 
     def _api(self, path: str) -> None:
+        """Every answer of the JSON API: its data, or {"error": <sentence in the request's language>, "code"} with
+        the status (docs/API-EMPIRE.md → Errors). An unexpected exception is logged with its traceback and answered
+        500 server_error, never a dropped connection."""
         try:
-            if "Authorization" in self.headers:
-                match = re.fullmatch(r"Bearer\s+(\S+)", self.headers["Authorization"], re.I)
-                token = match[1] if match else ""
-            else:
-                token = self._token()
-            ip = self._client_ip()
-            access = token_access(token, ip)
-            if access["outcome"] != "allowed":
-                raise APIError(access["status"], access["error"])
-            record = access["record"]
-            if path == "/api/empire/approvals" or path.startswith("/api/empire/approvals/"):
-                if record.get("admin") is not True:
-                    raise APIError(403, "Administrator access required.")
-            if self.command in ("GET", "HEAD") and path == "/api/empire":
-                return self._send_state(record, token, ip)
-            if self.command in ("GET", "HEAD") and path == "/api/empire/approvals":
-                data = pending_accounts(token, ip)
-            elif self.command == "POST" and path == "/api/empire/ring":
-                data = change_ring(record, token, ip, self._json_body(), self.language)
-            elif self.command == "POST" and path.startswith("/api/empire/approvals/"):
-                data = decide_approval(path.rsplit("/", 1)[1], token, ip, self._json_body())
-            else:
-                raise APIError(404, "Unknown API route.")
-            self._send_json(json.dumps(data).encode())
+            status, body = HTTPStatus.OK, json.dumps(self._api_data(path)).encode()
         except APIError as e:
-            self._send_json(json.dumps({"error": text(e.message, self.language)}).encode(), e.status)
+            status, body = e.status, self._api_error(e.message, e.code)
+        except Exception:
+            log(f"{self.command} {path} failed:\n{traceback.format_exc().rstrip()}")
+            status, body = HTTPStatus.INTERNAL_SERVER_ERROR, self._api_error(SERVER_ERROR, "server_error")
+        self._send_json(body, status)
+
+    def _api_error(self, message: str, code: str) -> bytes:
+        return json.dumps({"error": text(message, self.language), "code": code}).encode()
+
+    def _api_data(self, path: str):
+        if "Authorization" in self.headers:
+            match = re.fullmatch(r"Bearer\s+(\S+)", self.headers["Authorization"], re.I)
+            token = match[1] if match else ""
+        else:
+            token = self._token()
+        ip = self._client_ip()
+        access = token_access(token, ip)
+        if access["outcome"] != "allowed":
+            raise APIError(access["status"], access["error"])
+        record = access["record"]
+        if path == "/api/empire/approvals" or path.startswith("/api/empire/approvals/"):
+            if record.get("admin") is not True:
+                raise APIError(403, "Administrator access required.", "admin_only")
+        if self.command in ("GET", "HEAD") and path == "/api/empire":
+            return empire_data(record, token, ip, self.language)
+        if self.command in ("GET", "HEAD") and path == "/api/empire/approvals":
+            return pending_accounts(token, ip)
+        if self.command == "POST" and path == "/api/empire/ring":
+            return change_ring(record, token, ip, self._json_body(), self.language)
+        if self.command == "POST" and path.startswith("/api/empire/approvals/"):
+            return decide_approval(path.rsplit("/", 1)[1], token, ip, self._json_body())
+        raise APIError(404, "Unknown API route.")
 
     @property
     def language(self) -> str:
@@ -709,9 +856,6 @@ class Handler(SimpleHTTPRequestHandler):
                 request_reset(email, ip)
             return self._send_html(forgot_done_page())
         self.send_error(HTTPStatus.NOT_FOUND)
-
-    def _send_state(self, record: dict, token: str, client_ip: str) -> None:
-        self._send_json(json.dumps(empire_data(record, token, client_ip, self.language)).encode())
 
     def _send_json(self, body: bytes, status: int = HTTPStatus.OK) -> None:
         self.send_response(status)

@@ -49,7 +49,7 @@
       throw error;
     }
     if (response.status === 204) return null;
-    // The approval action has no response-body contract; accept an empty body.
+    // Accept an empty body (sample mode); the approval action answers {ok, approvals, pending}.
     const text = await response.text();
     try { return text ? JSON.parse(text) : null; }
     catch (_) { throw new Error("The Empire could not load. Please try again shortly."); }
@@ -58,7 +58,7 @@
   function validate(data) {
     if (!data || data.version !== 2 || !data.me || typeof data.me.admin !== "boolean" ||
         !["projects", "addable", "chronicle", "ideas"].every((key) => Array.isArray(data[key])) ||
-        typeof data.pending !== "number") throw new Error("The Empire could not load. Please try again shortly.");
+        (data.pending !== null && typeof data.pending !== "number")) throw new Error("The Empire could not load. Please try again shortly.");
     return data;
   }
 

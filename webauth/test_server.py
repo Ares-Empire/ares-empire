@@ -13,7 +13,8 @@ import urllib.error
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
-from webauth import legal, server
+from tools import empire_samples as samples
+from webauth import legal, server, texts
 
 
 class Socket:
@@ -74,13 +75,13 @@ class HubTests(unittest.TestCase):
             'admin-one': {'id': 'adminone0000001', 'name': 'Admin', 'admin': True,
                           'approved': True, 'services': ['empire'], 'ring': []},
         }
-        # Waiting for Patrik: a new sign-up, and an approved account asking for two more apps.
+        # Waiting for Patrik: a new sign-up (email not confirmed yet), and an approved account asking for two more apps.
         self.pending = [{'id': 'pending00000001', 'name': 'New', 'email': 'new@example.com',
-                         'created': '2026-10-24 12:00:00Z', 'approved': False, 'admin': False,
-                         'requested': ['arestemis']},
+                         'created': '2026-10-24 12:00:00Z', 'approved': False, 'verified': False, 'admin': False,
+                         'services': [], 'requested': ['arestemis']},
                         {'id': 'asking000000002', 'name': 'Member', 'email': 'member@example.com',
-                         'created': '2026-10-24 13:00:00Z', 'approved': True, 'admin': False,
-                         'requested': ['aresium', 'aresus']}]
+                         'created': '2026-10-24 13:00:00Z', 'approved': True, 'verified': True, 'admin': False,
+                         'services': ['empire'], 'requested': ['aresium', 'aresus']}]
         self.calls = []
         self.state = {
             'projects': [self.province(slug) for slug in ('aresium', 'other', 'private')],
@@ -90,11 +91,12 @@ class HubTests(unittest.TestCase):
         }
         self.catalog = {'aresium': {'users': 'coming-soon'}, 'other': {'users': 'open'}}
         self.enterContext(patch.object(server, 'pb_call', side_effect=self.pb))
-        self.real_load_state = server.load_state
-        self.enterContext(patch.object(server, 'load_state', side_effect=lambda: copy.deepcopy(self.state)))
+        self.real_read_state = server.read_state
+        self.enterContext(patch.object(server, 'read_state', side_effect=lambda: copy.deepcopy(self.state)))
         self.enterContext(patch.object(server, 'load_catalog', side_effect=lambda: copy.deepcopy(self.catalog)))
         self.pulse = self.enterContext(patch.object(server.urllib.request, 'urlopen', side_effect=OSError('no pulse')))
         self.enterContext(patch.object(server.Handler, 'log_message'))
+        self.log = self.enterContext(patch.object(server, 'log'))
 
     @staticmethod
     def province(slug):
@@ -112,8 +114,10 @@ class HubTests(unittest.TestCase):
         if path.startswith('/api/collections/users/records?'):
             query = parse_qs(urlparse(path).query)
             self.assertEqual(query['filter'], ['approved = false || requested:length > 0'])
-            self.assertEqual(query['fields'], ['id,email,name,created,requested,approved'])
-            return 200, {'items': copy.deepcopy(self.pending), 'totalItems': len(self.pending), 'totalPages': 1}
+            self.assertEqual(query['fields'], ['id,email,name,created,requested,approved,verified'])
+            fields = query['fields'][0].split(',')
+            items = [{k: p[k] for k in fields} for p in self.pending]
+            return 200, {'items': items, 'totalItems': len(items), 'totalPages': 1}
         record_path, _, query = path.partition('?')
         account_id = record_path.rsplit('/', 1)[1]
         account = next((p for p in self.pending if p['id'] == account_id), None)
@@ -126,12 +130,17 @@ class HubTests(unittest.TestCase):
             self.assertEqual(parse_qs(query), {'fields': ['id,approved,requested']})
             return (200, {k: account[k] for k in ('id', 'approved', 'requested')}) if account else (404, {})
         if method == 'PATCH':
-            # Approve adds exactly the listed requests; decline (of an approved account) removes exactly them.
-            self.assertIn(body, ({'approved': True, 'services+': account['requested']},
-                                 {'requested-': account['requested']}))
-            if 'requested-' in body:
-                self.assertTrue(account['approved'])
-            self.pending = [p for p in self.pending if p['id'] != account_id]
+            # PocketBase applies the change, then the account server's two rules (accounts.pb.js → settle).
+            self.assertLessEqual(set(body), {'approved', 'services+', 'requested-'})
+            was_approved = account['approved']
+            account['approved'] = body.get('approved', account['approved'])
+            account['services'] += [s for s in body.get('services+', []) if s not in account['services']]
+            account['requested'] = [s for s in account['requested'] if s not in body.get('requested-', [])]
+            if account['approved'] and not was_approved:
+                account['services'] += [s for s in account['requested'] if s not in account['services']]
+            account['requested'] = [s for s in account['requested'] if s not in account['services']]
+            if account['approved'] and not account['requested']:
+                self.pending = [p for p in self.pending if p['id'] != account_id]
             return 200, {'id': account_id}
         if method == 'DELETE':
             self.assertFalse(account['approved'])
@@ -173,7 +182,8 @@ class HubTests(unittest.TestCase):
             with self.subTest(header=header):
                 status, data, headers = self.request(token=None,
                     headers={'Accept-Language': header} if header is not None else {})
-                self.assertEqual((status, data), (401, {'error': 'unauthenticated'}))
+                expected_error = 'Bitte melde dich erneut an.' if expected == 'de' else 'Please log in again.'
+                self.assertEqual((status, data), (401, {'error': expected_error, 'code': 'unauthorized'}))
                 self.assertEqual(headers['Content-Language'], expected)
 
     def test_live_languages_are_forwarded_and_cached_per_account_and_language(self):
@@ -225,14 +235,15 @@ class HubTests(unittest.TestCase):
                 for language, expected in (('en', english), ('de', german)):
                     with self.subTest(upstream=upstream, language=language):
                         result, data, headers = self.request(headers={'Accept-Language': language})
-                        self.assertEqual((result, data), (status, {'error': expected}))
+                        self.assertEqual((result, data), (status, {'error': expected,
+                                                                   'code': server.CODES[status]}))
                         self.assertEqual(headers['Content-Language'], language)
 
     def test_account_action_errors_follow_request_language(self):
         self.request()  # Prime authentication; below only the account write is faked.
         for upstream, status, english, german in (
                 (400, 400, 'Invalid account request.', 'Ungültige Kontoanfrage.'),
-                (401, 401, 'unauthenticated', 'unauthenticated'),
+                (401, 401, 'Please log in again.', 'Bitte melde dich erneut an.'),
                 (403, 403, 'Forbidden.', 'Kein Zugang.'),
                 (404, 404, 'Account not found.', 'Konto nicht gefunden.'),
                 (0, 503, 'Account service unavailable, try again in a minute.',
@@ -244,21 +255,22 @@ class HubTests(unittest.TestCase):
                     with self.subTest(upstream=upstream, language=language):
                         result, data, headers = self.request('/api/empire/ring', method='POST', body={'add': 'other'},
                                                              headers={'Accept-Language': language})
-                        self.assertEqual((result, data), (status, {'error': expected}))
+                        self.assertEqual((result, data), (status, {'error': expected,
+                                                                   'code': server.CODES[status]}))
                         self.assertEqual(headers['Content-Language'], language)
 
     def test_missing_state_and_admin_errors_follow_request_language(self):
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory, \
                 patch.object(server, 'STATE_PATH', str(Path(directory) / 'missing.json')), \
-                patch.object(server, 'load_state', side_effect=self.real_load_state):
+                patch.object(server, 'read_state', side_effect=self.real_read_state):
             for language, expected in (('en', 'Hub data unavailable, try again in a minute.'),
                                        ('de', 'Hub-Daten nicht erreichbar, versuch es in einer Minute noch einmal.')):
                 self.assertEqual(self.request(headers={'Accept-Language': language})[:2],
-                                 (503, {'error': expected}))
+                                 (503, {'error': expected, 'code': 'unavailable'}))
         for language, expected in (('en', 'Administrator access required.'),
                                    ('de', 'Dafür brauchst du Administratorrechte.')):
             self.assertEqual(self.request('/api/empire/approvals', headers={'Accept-Language': language})[:2],
-                             (403, {'error': expected}))
+                             (403, {'error': expected, 'code': 'admin_only'}))
 
     def test_german_browser_still_gets_english_login_pages(self):
         for path, phrase in (('/login', 'One account for every service'), ('/login/email', 'Log in'),
@@ -416,19 +428,24 @@ class HubTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(data, [
             {'id': 'pending00000001', 'email': 'new@example.com', 'name': 'New', 'created': '2026-10-24 12:00:00Z',
-             'requested': ['arestemis'], 'approved': False},
+             'requested': ['arestemis'], 'approved': False, 'verified': False},
             {'id': 'asking000000002', 'email': 'member@example.com', 'name': 'Member',
-             'created': '2026-10-24 13:00:00Z', 'requested': ['aresium', 'aresus'], 'approved': True}])
+             'created': '2026-10-24 13:00:00Z', 'requested': ['aresium', 'aresus'], 'approved': True,
+             'verified': True}])
         self.assertEqual(self.calls[-1][2:], ('admin-one', '192.0.2.10', 'GET'))
 
     def test_approvals_list_reads_unexpected_values_safely(self):
         def pb(path, **kwargs):
-            return 200, {'items': [{'id': 'x', 'requested': 'arestemis', 'approved': 'yes'},
-                                   {'id': 'y', 'requested': ['aresium', 3, None], 'approved': True}],
-                         'totalItems': 2, 'totalPages': 1}
+            return 200, {'items': [{'id': 'x', 'requested': 'arestemis', 'approved': 'yes', 'verified': 1},
+                                   {'id': 'y', 'requested': ['aresium', 3, None], 'approved': True, 'verified': True,
+                                    'name': None},
+                                   'not an account'],
+                         'totalItems': 3, 'totalPages': 1}
         with patch.object(server, 'pb_call', side_effect=pb):
             items = server.pending_accounts('admin-one', '192.0.2.10')
-        self.assertEqual([(i['requested'], i['approved']) for i in items], [([], False), (['aresium'], True)])
+        self.assertEqual([(i['requested'], i['approved'], i['verified']) for i in items],
+                         [([], False, False), (['aresium'], True, True)])
+        self.assertEqual([i['name'] for i in items], ['', ''])
 
     def test_approvals_pagination(self):
         def pb(path, **kwargs):
@@ -449,14 +466,84 @@ class HubTests(unittest.TestCase):
                 status, data, _ = self.request('/api/empire/approvals/' + account_id, token='admin-one',
                                               method='POST', body={action: True})
                 self.assertEqual(status, 200)
-                self.assertEqual(data, {'ok': True})
-                # First the account's current state, then the one write, both with the admin's own token.
-                self.assertEqual(self.calls[-2][0], '/api/collections/users/records/' + account_id +
+                # The answer carries the list as the list route gives it, and its count.
+                other = next(p for p in waiting if p['id'] != account_id)
+                self.assertEqual(data, {'ok': True, 'pending': 1, 'approvals': [
+                    {k: other[k] for k in ('id', 'email', 'name', 'created', 'requested', 'approved', 'verified')}]})
+                self.assertEqual(data['approvals'], self.request('/api/empire/approvals', token='admin-one')[1])
+                calls = self.calls[-4:-1]
+                # The account's current state, the one write, the fresh list: all with the admin's own token.
+                self.assertEqual(calls[0][0], '/api/collections/users/records/' + account_id +
                                  '?fields=id%2Capproved%2Crequested')
-                self.assertEqual(self.calls[-2][2:], ('admin-one', '192.0.2.10', 'GET'))
-                self.assertEqual(self.calls[-1][2:], ('admin-one', '192.0.2.10', method))
-                self.assertEqual(self.calls[-1][1], sent)
+                self.assertEqual([c[2:] for c in calls], [('admin-one', '192.0.2.10', 'GET'),
+                                                          ('admin-one', '192.0.2.10', method),
+                                                          ('admin-one', '192.0.2.10', 'GET')])
+                self.assertEqual(calls[1][1], sent)
+                self.assertTrue(calls[2][0].startswith('/api/collections/users/records?'))
                 self.assertNotIn(account_id, [p['id'] for p in self.pending])
+
+    def test_decision_acts_only_on_the_requests_patrik_saw(self):
+        # Patrik's card showed Aresium; Aresus was asked for after he looked.
+        status, data, _ = self.request('/api/empire/approvals/asking000000002', token='admin-one', method='POST',
+                                       body={'approve': True, 'requested': ['aresium']})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.calls[-2][1], {'approved': True, 'services+': ['aresium']})
+        asking = next(p for p in data['approvals'] if p['id'] == 'asking000000002')
+        self.assertEqual(asking['requested'], ['aresus'])  # still waiting, neither granted nor lost
+        self.assertEqual(data['pending'], 2)
+        # Declining what he saw leaves a newer request waiting too; apps he saw that are no longer asked for are ignored.
+        status, data, _ = self.request('/api/empire/approvals/asking000000002', token='admin-one', method='POST',
+                                       body={'decline': True, 'requested': ['aresium', 'arestemis']})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.calls[-2][1], {'requested-': []})
+        self.assertEqual(next(p for p in data['approvals'] if p['id'] == 'asking000000002')['requested'], ['aresus'])
+        status, data, _ = self.request('/api/empire/approvals/asking000000002', token='admin-one', method='POST',
+                                       body={'decline': True, 'requested': ['aresus']})
+        self.assertEqual(self.calls[-2][1], {'requested-': ['aresus']})
+        self.assertEqual([p['id'] for p in data['approvals']], ['pending00000001'])
+
+    def test_first_approval_grants_only_what_patrik_saw(self):
+        # An admin added Aresus to a sign-up after Patrik looked: the account server would grant all of `requested` on
+        # approval, so the hub takes out what he did not see.
+        self.pending[0]['requested'] = ['arestemis', 'aresus']
+        status, data, _ = self.request('/api/empire/approvals/pending00000001', token='admin-one', method='POST',
+                                       body={'approve': True, 'requested': ['arestemis', 'aresium']})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.calls[-2][1], {'approved': True, 'services+': ['arestemis'], 'requested-': ['aresus']})
+        self.assertEqual([p['id'] for p in data['approvals']], ['asking000000002'])
+        # Without `requested` (as before): everything it asks for now.
+        self.pending.append({**self.pending[0], 'id': 'pending00000003', 'approved': False, 'services': [],
+                             'requested': ['arestemis', 'aresus']})
+        self.request('/api/empire/approvals/pending00000003', token='admin-one', method='POST', body={'approve': True})
+        self.assertEqual(self.calls[-2][1], {'approved': True, 'services+': ['arestemis', 'aresus']})
+
+    def test_decision_requested_must_be_a_list_of_apps(self):
+        self.request(token='admin-one')
+        for requested in ('aresium', [1], [None], {'aresium': True}, True):
+            with self.subTest(requested=requested):
+                status, data, _ = self.request('/api/empire/approvals/asking000000002', token='admin-one',
+                                               method='POST', body={'approve': True, 'requested': requested})
+                self.assertEqual((status, data['code']), (400, 'bad_request'))
+        self.assertFalse([c for c in self.calls if c[4] in ('PATCH', 'DELETE')])
+        # null counts as not sent
+        status, _, _ = self.request('/api/empire/approvals/asking000000002', token='admin-one', method='POST',
+                                    body={'approve': True, 'requested': None})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.calls[-2][1], {'approved': True, 'services+': ['aresium', 'aresus']})
+
+    def test_decision_answer_without_the_list_when_it_cannot_be_read(self):
+        real = self.pb
+
+        def pb(path, body=None, token=None, client_ip=None, method='POST'):
+            if path.startswith('/api/collections/users/records?'):
+                return 0, {}
+            return real(path, body, token, client_ip, method)
+        with patch.object(server, 'pb_call', side_effect=pb):
+            status, data, _ = self.request('/api/empire/approvals/pending00000001', token='admin-one',
+                                           method='POST', body={'approve': True})
+        self.assertEqual((status, data), (200, {'ok': True, 'approvals': None, 'pending': None}))
+        self.assertNotIn('pending00000001', [p['id'] for p in self.pending])  # the decision itself went through
+        self.log.assert_called_once()
 
     def test_approval_of_an_unknown_or_unreadable_account(self):
         self.request(token='admin-one')
@@ -567,6 +654,145 @@ class HubTests(unittest.TestCase):
             with self.subTest(raw=raw[:10]):
                 self.assertEqual(self.request('/api/empire/ring', method='POST', raw=raw)[0], status)
 
+    def test_every_error_carries_its_code(self):
+        self.records['outsider'] = {'id': 'outsider0000001', 'name': 'Out', 'admin': False, 'approved': True,
+                                    'services': ['arestemis'], 'ring': []}
+        cases = [('no token', dict(token=None), 401, 'unauthorized'),
+                 ('a rejected token', dict(token='nobody'), 401, 'unauthorized'),
+                 ('no empire service', dict(token='outsider'), 403, 'no_access'),
+                 ('a member on an admin route', dict(path='/api/empire/approvals'), 403, 'admin_only'),
+                 ('a bad body', dict(path='/api/empire/ring', method='POST', body={}), 400, 'bad_request'),
+                 ('an unknown route', dict(path='/api/empire/nowhere'), 404, 'not_found'),
+                 ('a body over 10 KB', dict(path='/api/empire/ring', method='POST', raw=b'x' * 10001), 413,
+                  'bad_request'),
+                 ('an unknown account', dict(path='/api/empire/approvals/missing00000003', token='admin-one',
+                                             method='POST', body={'approve': True}), 404, 'not_found')]
+        for label, request, status, code in cases:
+            with self.subTest(label):
+                answers = {}
+                for language in ('en', 'de'):
+                    result, answers[language], headers = self.request(**request, headers={'Accept-Language': language})
+                    self.assertEqual((result, answers[language]['code']), (status, code))
+                    self.assertEqual(samples.check_error(answers[language]), [])
+                    self.assertEqual(headers['Content-Language'], language)
+                # The same code in both languages; the sentence is the German one of the English sentence.
+                self.assertEqual(answers['de']['error'], texts.TEXTS[answers['en']['error']]['de'])
+        self.request(token='admin-one')  # authentication cached; below only the account server's answer changes
+        for upstream, path, body, status, code in (
+                (403, '/api/empire/approvals/pending00000001', {'approve': True}, 403, 'admin_only'),
+                (403, '/api/empire/approvals', None, 403, 'admin_only'),
+                (403, '/api/empire/ring', {'add': 'other'}, 403, 'no_access'),
+                (401, '/api/empire/ring', {'add': 'other'}, 401, 'unauthorized'),
+                (400, '/api/empire/ring', {'add': 'other'}, 400, 'bad_request'),
+                (0, '/api/empire/approvals', None, 503, 'unavailable'),
+                (429, '/api/empire/ring', {'add': 'other'}, 503, 'unavailable')):
+            with self.subTest(upstream=upstream, path=path), \
+                    patch.object(server, 'pb_call', return_value=(upstream, {})):
+                result, data, _ = self.request(path, token='admin-one', method='POST' if body else 'GET', body=body)
+                self.assertEqual((result, data['code']), (status, code))
+        with patch.object(server, 'pb_call', return_value=(0, {})):
+            server._cache.clear()
+            self.assertEqual(self.request()[1]['code'], 'unavailable')
+
+    def test_an_unexpected_failure_is_a_500_with_its_traceback_logged(self):
+        for path, method, body, failing in (('/api/empire', 'GET', None, 'empire_data'),
+                                            ('/api/empire/ring', 'POST', {'add': 'other'}, 'change_ring'),
+                                            ('/api/empire/approvals', 'GET', None, 'pending_accounts')):
+            for language, sentence in (('en', 'Something went wrong on the server. Try again later.'),
+                                       ('de', 'Auf dem Server ist etwas schiefgegangen. Versuch es später noch einmal.')):
+                with self.subTest(path=path, language=language), \
+                        patch.object(server, failing, side_effect=KeyError('made-up')):
+                    self.log.reset_mock()
+                    status, data, headers = self.request(path, token='admin-one', method=method, body=body,
+                                                         headers={'Accept-Language': language})
+                    self.assertEqual((status, data), (500, {'error': sentence, 'code': 'server_error'}))
+                    self.assertEqual(headers['Content-Language'], language)
+                    self.log.assert_called_once()
+                    logged = self.log.call_args.args[0]
+                    self.assertTrue(logged.startswith(f'{method} {path} failed:'))
+                    self.assertIn('Traceback', logged)
+                    self.assertIn("KeyError: 'made-up'", logged)
+
+    def test_pending_is_null_when_the_account_server_cannot_count(self):
+        real = self.pb
+        for answer in ((0, {}), (500, {}), (401, {}), (200, {'items': 'x'})):
+            def pb(path, body=None, token=None, client_ip=None, method='POST'):
+                if path.startswith('/api/collections/users/records?'):
+                    return answer
+                return real(path, body, token, client_ip, method)
+            with self.subTest(answer=answer), patch.object(server, 'pb_call', side_effect=pb):
+                self.log.reset_mock()
+                status, data, _ = self.request(token='admin-one')
+                self.assertEqual(status, 200)
+                self.assertIsNone(data['pending'])
+                self.assertEqual([p['slug'] for p in data['projects']], ['aresium', 'other', 'private'])
+                self.assertEqual(samples.check_empire(data), [])
+                self.log.assert_called_once()
+                self.assertIn('pending count unavailable', self.log.call_args.args[0])
+
+    def test_hand_edited_state_is_brought_to_the_contract(self):
+        self.state = {
+            'projects': [
+                {'name': 'No slug'}, {'slug': 42}, {'slug': 'Bad Slug'}, {'slug': ''}, 'not an object', None,
+                {'slug': 'aresium'},
+                {'slug': 'aresium', 'name': 'Again'},
+                {'slug': 'other', 'name': 7, 'url': None, 'logo': '', 'status': ['x'], 'domain': 'd', 'blurb': 'b',
+                 'lock': True, 'extra': {'kept': False},
+                 'detail': {'about': 1, 'features': ['One', 2, None], 'setup': None, 'wip': 'x', 'ideas': ['i'],
+                            'more': 1,
+                            'changelog': [{'at': '2026-10-01', 'text': 'Shipped', 'sha': 'x'}, {'at': '2026-10-02'},
+                                          'x']}},
+                {'slug': 'private', 'detail': 'not an object'},
+            ],
+            'ideas': [{'title': 'Plan'}, {'note': 'no title'}, 'x'],
+            'chronicle': [{'at': '2026-10-24', 'text': 'Empire'}, {'at': '2026-10-24', 'project': 'other', 'text': 'O'},
+                          {'project': 'aresium', 'text': 'no date'}, {'at': '2026-10-24', 'project': 3, 'text': 'odd'},
+                          None, {'at': '2026-10-24', 'project': 'aresium', 'text': ''}],
+        }
+        status, data, _ = self.request(token='admin-one')
+        self.assertEqual(status, 200)
+        self.assertEqual(samples.check_empire(data), [])
+        empty = {'about': '', 'features': [], 'setup': '', 'wip': [], 'ideas': [], 'changelog': []}
+        base = {'url': '', 'logo': 'brand/ares-bust.webp', 'status': '', 'domain': '', 'blurb': '', 'state': 'open',
+                'live': None}
+        self.assertEqual(data['projects'], [
+            {'slug': 'aresium', 'name': 'Aresium', **base, 'detail': empty, 'app': 'aresium://'},
+            {'slug': 'other', 'name': 'Other', **base, 'domain': 'd', 'blurb': 'b', 'app': None,
+             'detail': {**empty, 'features': ['One'], 'ideas': ['i'],
+                        'changelog': [{'at': '2026-10-01', 'text': 'Shipped'}]}},
+            {'slug': 'private', 'name': 'Private', **base, 'detail': empty, 'app': None}])
+        self.assertEqual(data['ideas'], [{'title': 'Plan', 'note': ''}])
+        self.assertEqual(data['chronicle'], [{'at': '2026-10-24', 'project': None, 'text': 'Empire'},
+                                             {'at': '2026-10-24', 'project': 'other', 'text': 'O'},
+                                             {'at': '2026-10-24', 'project': None, 'text': 'odd'}])
+        # One log line per request names what was skipped.
+        self.log.assert_called_once()
+        logged = self.log.call_args.args[0]
+        for part in ('province 1 (no usable slug)', 'province 6 (no usable slug)', 'province 8 (slug aresium again)',
+                     '3 chronicle entries', 'an idea (no title)'):
+            self.assertIn(part, logged)
+        member = self.request()[1]
+        self.assertEqual(samples.check_empire(member), [])
+        self.assertEqual(([p['slug'] for p in member['projects']], [p['slug'] for p in member['addable']]),
+                         (['aresium'], ['other']))
+        for broken in ({'projects': [], 'ideas': 'x', 'chronicle': {'a': 1}}, {'projects': []}):
+            self.state = broken
+            with self.subTest(state=broken):
+                data = self.request(token='admin-one')[1]
+                self.assertEqual((data['projects'], data['ideas'], data['chronicle']), ([], [], []))
+
+    def test_every_api_sentence_is_translated(self):
+        source = Path(server.__file__).read_text(encoding='utf-8')
+        sentences = set(re.findall(r'APIError\(\s*\d+,\s*"([^"]+)"', source))
+        sentences |= {server.UNAUTHENTICATED, server.SERVER_ERROR, 'This account has no access to Ares Empire.',
+                      'Login service unavailable, try again in a minute.', 'Invalid account request.', 'Forbidden.',
+                      'Account not found.'}
+        self.assertGreater(len(sentences), 15)
+        for sentence in sentences:
+            with self.subTest(sentence=sentence):
+                self.assertEqual(texts.TEXTS[sentence]['en'], sentence)
+                self.assertNotEqual(texts.TEXTS[sentence]['de'], sentence)
+
     def test_head_api_returns_no_body(self):
         status, data, headers = self.request(method='HEAD')
         self.assertEqual(status, 200)
@@ -617,10 +843,6 @@ class DataAndTransportTests(unittest.TestCase):
                 else:
                     urlopen.return_value = response
                 self.assertEqual(server.pb_call('/api/collections/users/auth-refresh'), (0, {}))
-
-
-if __name__ == '__main__':
-    unittest.main()
 
 
 class BrandImageTests(unittest.TestCase):

@@ -48,7 +48,8 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
     They can't touch `approved`/`services`/`verified`/`admin`, and can only see their own record. A sign-up cannot
     choose its record id.
   - Admins can list/view all accounts, update only `approved`, `services` and `requested` on other accounts, and
-    delete unapproved accounts. An admin cannot delete an approved account, including their own.
+    delete unapproved accounts. An admin cannot delete an approved account, including their own (deleting their own
+    answers 403 with a sentence that says why, below).
     The `admin-visibility.pb.js` hook exposes account emails to admins for approvals without granting
     PocketBase's broader `manageRule` privileges.
 
@@ -147,6 +148,15 @@ error says both.
   superuser token answers 403, none 401); removes the service from the account's `services` and `requested` and
   answers `200 {services, requested}`; an unknown or missing service is `400`. Leaving an app the account does not
   have changes nothing. It sends no email.
+- **The administrator cannot leave an app or delete his account from an app** (2026-10-25): only an admin gives
+  access and an admin cannot change his own `services`, so Patrik could lock himself out of the hub from the phone.
+  The leave route answers an admin account `403`, and so does `DELETE /api/collections/users/records/<own id>` with an
+  admin's login (a router middleware in `accounts.pb.js` answers before the delete rule, which refuses it anyway but
+  only with PocketBase's generic 404). Both in PocketBase's error shape, the sentence in the request's language
+  (`Accept-Language`, the hub's rule): `{"status": 403, "message": "This is the administrator account; it cannot
+  leave an app or be deleted here.", "data": {}}`, German "Das ist das Administratorkonto. Es kann hier keine App
+  verlassen und nicht gelöscht werden." The route's other sentences are translated the same way (`ANSWERS` in
+  `pb_hooks/lib/accounts.js`).
 
 ### Emails
 
@@ -190,11 +200,15 @@ email failed`, `approved email failed`, `account deletion alert email failed`) a
 ### The hub's approvals (website and Empire app)
 
 `GET /api/empire/approvals` lists new sign-ups and approved accounts with open requests (filter
-`approved = false || requested:length > 0`): `[{id, email, name, created, requested, approved}]`.
-`POST /api/empire/approvals/<id>` `{approve: true}` sends `{approved: true, "services+": <its requests>}`;
-`{decline: true}` deletes an unapproved account or sends `{"requested-": <its requests>}` for an approved one. The
-`+`/`-` forms add or remove only the requests the hub read, so one made meanwhile is neither lost nor granted
-unseen. [API-EMPIRE.md](API-EMPIRE.md).
+`approved = false || requested:length > 0`): `[{id, email, name, created, requested, approved, verified}]`
+(`verified`: the email address is confirmed).
+`POST /api/empire/approvals/<id>` `{approve: true}` sends `{approved: true, "services+": <the requests>}`;
+`{decline: true}` deletes an unapproved account or sends `{"requested-": <the requests>}` for an approved one. "The
+requests" are those the hub reads just before its write; when the app also sends `requested` (the apps the card
+showed, 2026-10-25), only those of them. So a request made after Patrik looked stays waiting, and the `+`/`-` forms
+keep one made between the hub's read and its write as well. A first approval grants everything left in `requested`
+(the hook above), so for a sign-up the hub also sends `"requested-"` with the requests Patrik did not see. The answer
+carries the fresh list, `{ok, approvals, pending}`. [API-EMPIRE.md](API-EMPIRE.md).
 
 ## Website flow
 
@@ -217,7 +231,9 @@ approved and verified (the auth rule runs again), and the returned record's `ser
 the service's name. Cache the answer for a few minutes per token.
 The hub's `GET /api/empire` (provinces, ideas, chronicle) takes the same Bearer token, for an Empire app.
 Reference implementation: `aresium/src/web/empire-auth.ts` (also limits access to the user ids in
-`EMPIRE_ALLOWED_USERS` while Aresium holds only one person's data).
+`EMPIRE_ALLOWED_USERS` while Aresium holds only one person's data). Aresus and Arestoteles do the same since
+2026-10-25: they hold only Patrik's data and are never opened to others, while any account can ask for their service
+and an approval grants it. Empty or unset means nobody gets in; others get the same 403 as "no access".
 
 ## Open questions (decide when building)
 
