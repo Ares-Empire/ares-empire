@@ -20,7 +20,9 @@ data (Aresium, Arestemis, Aresus, Arestoteles, Aresync; checked 2026-10-25: the 
 accounts with a province service) are documented below and named nowhere in the public pages.
 
 **Rule:** when a province is opened to other accounts (its service given to anyone but Patrik, or `open` in the hub
-catalog), its section is added to the public policy, in German and English, **before** that happens.
+catalog), its section is added to the public policy, in German and English, **before** that happens; if it brings a new
+kind of data (beyond the categories below), the AV contract with netcup is updated too (customer panel → Stammdaten →
+AV-Vertrag).
 
 ## Facts that hold everywhere
 
@@ -30,7 +32,12 @@ catalog), its section is added to the public policy, in German and English, **be
 - **Supervisory authority:** Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach,
   www.lda.bayern.de (checked 2026-10-24).
 - **Host:** one netcup VPS in Germany runs every service below (lead, 2026-10-24); Caddy in front, TLS everywhere.
-  Processing agreement (AVV) with netcup signed in the customer panel: **[lead to confirm]** (Patrik).
+  Processing agreement (AVV) with netcup signed in the customer panel: **[lead to confirm]** (Patrik is concluding it,
+  2026-10-25). Declared there: affected persons: Interessenten (contact and support messages), visitors of the
+  websites, users of the websites and apps (registered accounts); data: Personenstammdaten (name, optional; email),
+  Kommunikationsdaten (email, messages), access and usage data (login data, IP addresses, server logs, push device
+  ids), content data of the applications (settings, search profiles, notes), financial data (Aresium's account
+  transactions); no special categories (Art. 9). No payment data, no device location.
 - **DNS:** Hetzner (lead). Hetzner answers name lookups for our domains; it receives no account data.
 - **No tracking** in the apps: no analytics, ads, crash-reporting or other third-party SDKs (lead; the Xcode projects
   have no packages). The websites set one cookie, the login (`empire_session`), and nothing for analytics.
