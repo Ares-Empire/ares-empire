@@ -699,6 +699,27 @@ class LegalPageTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn(b'SIL Open Font License', body)
 
+    def test_the_login_pages_fonts_are_open(self):
+        for path in server.LOGIN_FONTS:
+            with self.subTest(path=path):
+                status, body, headers = send(path)
+                self.assertEqual(status, 200)
+                self.assertEqual(body, (WEB / path.lstrip('/')).read_bytes())
+                expected = 'text/css' if path.endswith('.css') else 'font/ttf'
+                self.assertTrue({k.lower(): v for k, v in headers.items()}['content-type'].startswith(expected))
+
+    def test_the_hub_pages_load_nothing_from_other_hosts(self):
+        # Fonts and scripts are served from web/fonts and web/vendor (no font service, no CDN): the privacy policy
+        # names no third party in the browser.
+        for page in ('index.html', 'login.html', 'wallpaper.html', 'fonts/fonts.css'):
+            text = (WEB / page).read_text(encoding='utf-8')
+            for url in [a or b for a, b in RESOURCE.findall(text)]:
+                with self.subTest(page=page, url=url):
+                    self.assertFalse(url.startswith(('http:', 'https:', '//')))
+                    if not url.startswith(('/', 'data:')):
+                        base = WEB / page if page.endswith('.css') else WEB / 'x'
+                        self.assertTrue((base.parent / url.split('?')[0]).exists())
+
     def test_everything_else_stays_behind_the_login(self):
         for path in ('/legal/privacy.html', '/legal/page.html', '/legal/', '/fonts/', '/fonts/../index.html',
                      '/privacy/', '/privacy.html', '/Privacy', '/fonts/SpaceGrotesk-Variable.ttf/',

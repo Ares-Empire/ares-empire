@@ -13,7 +13,7 @@ served while it contains `[lead to confirm]` or `[ADDRESS]` (`webauth/legal.py`)
 
 This file is the full internal inventory. The public policy covers only processing that concerns people other than
 Patrik, as a normal, neutral German policy (statements and "Sie", no "ich"/"du"; English the same with "you"):
-visiting the websites (server logs, Google Fonts and unpkg until self-hosted), Empire accounts (sign-up, approval,
+visiting the websites (server logs), Empire accounts (sign-up, approval,
 emails, login notices, logs), the website contact form, and in the apps only login, contact & support and push
 registration; recipients, third-country transfers, storage periods, rights, BayLDA. Provinces that hold only Patrik's
 data (Aresium, Arestemis, Aresus, Arestoteles, Aresync; checked 2026-10-25: the account server has only Patrik's two
@@ -70,12 +70,11 @@ AV-Vertrag).
   is the proxy).
 - `GET /api/empire` (website and Empire app): asks Aresium's `/api/pulse` and Aresus's overview with the visitor's
   token for the live lines, cached 60 s per account in memory.
-- **Third parties in the browser:** `web/index.html`, `web/login.html` and `wallpaper.html` load fonts from Google
-  Fonts (`fonts.googleapis.com`, `fonts.gstatic.com`); `index.html` loads React, Babel and Lucide from `unpkg.com`.
-  Every visitor's browser sends its IP to those hosts. aresium.de and arestoteles.de do the same. German courts have
-  ruled against Google Fonts loaded this way (LG München I, 3 O 17493/20). **Fix before other people use the
-  websites:** self-host the fonts (Space Grotesk is in `web/fonts/` now; JetBrains Mono and Cinzel would follow) and
-  the scripts, then delete the "Websites" section of the policy. The legal pages load nothing from other hosts.
+- **No third parties in the browser** (since 2026-10-25): the fonts (`web/fonts/`, `fonts.css`) and the scripts
+  (React, Babel, Lucide in `web/vendor/`, byte-identical to unpkg, hashes in its README) are served by the hub itself;
+  the same on aresium.de and arestoteles.de. Before that, every visitor's browser sent its IP to Google Fonts and
+  unpkg (German courts ruled against Google Fonts loaded this way, LG München I, 3 O 17493/20). A new page or site
+  loads nothing from another host (`webauth/test_server.py` checks the hub's pages).
 
 ### Push service (`empire-push.service`, `push/`)
 
@@ -99,7 +98,7 @@ AV-Vertrag).
 | **Groq** (Groq, Inc., USA) | Each listing that passes the exact checks: the search, `about_me`, the listing (`llm/provider.py` `verify_messages`). AI applications: the listing, `own_text`, `about_me`, the contact name. "Describe it": the sentence typed (not stored by Arestemis). Groq is not certified under the DPF; the safeguard is the Standard Contractual Clauses in Groq's customer data processing addendum, part of its terms (lead, 2026-10-24). The policy names no Groq retention period: Groq processes the data only to give the answer, under that addendum. |
 | **Telegram** | Only for the account in `TELEGRAM_FALLBACK_USER` (Patrik): a copy of each new match to his own chat, until push works. No other account's data. |
 | **Portals** | The server reads WG-Gesucht, Kleinanzeigen, Immowelt (no user data sent). On the phone, listing photos load straight from the portal's image server (`AsyncImage(image_url)`), so the portal sees the phone's IP; "Open listing" opens the portal page. |
-| **Logs** | uvicorn's access log (journald) with the visitor's IP (uvicorn trusts `X-Forwarded-For` from 127.0.0.1 by default) and the full path incl. query, e.g. `GET /places?q=garch`. Journald keeps 14 days since 2026-10-25 (`deploy/journald/retention.conf`). |
+| **Logs** | uvicorn's access log (journald) with the visitor's IP (uvicorn trusts `X-Forwarded-For` from 127.0.0.1 by default), method, path and status; the query string (`?q=` of the place search) is dropped since 2026-10-25 (`main.py`, `_NoQueryInAccessLog`). Journald keeps 14 days since 2026-10-25 (`deploy/journald/retention.conf`). |
 | **Basis** | Art. 6(1)(b) (the AI check and applications are the service asked for). |
 
 ### Aresus (`aresus.service`, `~/aresus`) and Aresync
@@ -109,7 +108,7 @@ AV-Vertrag).
 | **Data** | About Patrik's server and machines, not about app users: check results, incidents (30 days after resolved), uptime per day (14 days), server vitals, last deploy per repo (commit hash, subject, date), Aresync run reports per machine (machine name, OS, times, counts, log lines with repo names and commits, problems, alerts; 30 days). Machine tokens only as SHA-256. |
 | **Users** | Accounts with the `aresus` service (Patrik decides). Their account and push data are covered above. |
 | **Telegram** | Aresync's own alerts go to Patrik's chat until push works (`TG_*` in each Aresync config). |
-| **Logs** | uvicorn access log with IP, as Arestemis. |
+| **Logs** | uvicorn access log with IP, without the query string, as Arestemis. |
 
 ### Aresium (`aresium.service`, `aresium.de`, `~/aresium`)
 
@@ -130,13 +129,14 @@ AV-Vertrag).
 - Edits from the app are committed as "Patrik Breeck (Arestoteles app)" and pushed to GitHub (GitHub, Inc., USA;
   private repo). GitHub is an active EU–US DPF participant (dataprivacyframework.gov participant 6174, next
   certification due 2027-08-03; checked 2026-10-24).
-- Search (`GET /search?q=`) runs on our server (local model, brief E3); the query is not stored, except in uvicorn's
-  access log with the IP.
+- Search (`GET /search?q=`) runs on our server (local model, brief E3); the query is not stored (uvicorn's access log
+  drops the query string since 2026-10-25).
 - On the phone: the vault copy and unsent quick notes in Application Support (file protection), the notes in
   Spotlight (on the device); all deleted at logout.
 - Discuss: copies a prompt to the clipboard and opens `claude.ai/code`, only when tapped; Anthropic then gets what
   the user pastes, under their own Claude account.
-- The website arestoteles.de keeps its own single password (Patrik only) and loads Google Fonts and unpkg like the hub.
+- The website arestoteles.de keeps its own single password (Patrik only) and, like the hub, serves its fonts and
+  scripts itself.
 
 ### Contact & support in the apps (brief E5)
 
@@ -168,9 +168,9 @@ Framework; its DPA also has the SCCs; stored data (sent-mail logs) is in the US 
 ### Backups and copies
 
 - No off-server backup yet (ACCOUNTS.md, ARESUS-APP.md); the policy names none.
-- One-off copies on the server hold personal data: `pb_data.before-services-20261024`,
-  `/root/arestemis-backup-before-languages-20261024.db`, `state.json.bak-*` (STATUS.md). Delete them once no longer
-  needed, and name the backup's retention in the policy when backups exist.
+- The one-off copies made during the builds of 2026-10-24/25 (`pb_data.before-*`, `/root/arestemis-backup-*`,
+  `/root/backups/`, `state.json.bak-*`) were deleted on 2026-10-25. A copy made before a migration is deleted once the
+  migration is checked live. When off-server backups exist, name their retention in the policy.
 
 ## Published
 
@@ -184,12 +184,12 @@ contact form.
    account (Settings → Account); deleting reaches every service with per-account data (`deletions` jobs: Arestemis,
    push); leaving an app deletes its server data first (`DELETE /api/arestemis/me`). The website has no delete button
    yet (the policy names the apps and email). The optional name is now also asked at sign-up in the apps.
-2. **Self-host the website fonts and scripts** (hub, aresium.de, arestoteles.de: Google Fonts, unpkg), then delete
-   section 4 "Externe Inhalte" / "External content" and the Google and unpkg lines in sections 8 and 9 from both
-   policies.
-3. **Search terms in logs:** consider dropping query strings from uvicorn's access log (`--no-access-log` or a
-   filter), since `?q=` carries what people search.
-4. **Links:** the login page links to `/privacy` and `/imprint` now; the signed-in hub, aresium.de and arestoteles.de
-   should get the same footer, and the apps get them in Settings (brief E4b).
-5. **Backups:** delete the one-off copies above once no longer needed; name the retention in the policy when
-   off-server backups exist.
+2. ~~**Self-host the website fonts and scripts.**~~ Done 2026-10-25: hub, aresium.de and arestoteles.de serve them
+   themselves; the policy's "Externe Inhalte" / "External content" section and the Google/unpkg lines are gone (the
+   sections after it moved up by one).
+3. ~~**Search terms in logs.**~~ Done 2026-10-25: Arestemis and Arestoteles drop the query string from uvicorn's
+   access log (path, status and IP stay, 14 days).
+4. **Links:** the login pages and the apps' Settings link to the privacy policy and imprint; the signed-in hub,
+   aresium.de and arestoteles.de do not yet (a footer link, before other people use them).
+5. ~~**Backups:** delete the one-off copies.~~ Done 2026-10-25. Open: there is no off-server backup at all; when one
+   exists, name its retention in the policy.

@@ -90,8 +90,11 @@ def is_brand_image(path: str) -> bool:
 # The legal pages (/datenschutz, /privacy, /impressum, /imprint) and the contact form (/kontakt, /contact) are open
 # too: they are answered before the gate (webauth/legal.py), and their font is listed here. The contact form posts
 # from the browser straight to the account server, not through this server.
+# The login page's fonts are served from here (web/fonts, no font service), so they are open as well.
+LOGIN_FONTS = frozenset({"/fonts/fonts.css", "/fonts/SpaceGrotesk-Variable.ttf", "/fonts/JetBrainsMono-Variable.ttf",
+                         "/fonts/Cinzel-Variable.ttf"})
 OPEN_PATHS = frozenset({"/login", "/login/email", "/signup", "/forgot", "/logout", "/favicon.ico",
-                        "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"}) | legal.ASSET_PATHS
+                        "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"}) | legal.ASSET_PATHS | LOGIN_FONTS
 
 
 # ── Talking to the accounts server ───────────────────────────────────────────
