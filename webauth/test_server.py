@@ -833,6 +833,18 @@ class LegalPageTests(unittest.TestCase):
         self.assertIn('<a href="/privacy">Privacy</a>', page)
         self.assertIn('<a href="/imprint">Imprint</a>', page)
 
+    def test_signed_in_hub_links_to_privacy_and_imprint(self):
+        # Both layouts (desktop app.jsx, phone mobile.jsx) show window.LegalLinks from panels.jsx; its pages are
+        # served to signed-in visitors too (test_logged_in_visitors_and_head_requests).
+        app = WEB / 'app'
+        links = (app / 'panels.jsx').read_text(encoding='utf-8')
+        self.assertIn('<a href="/privacy">Privacy</a>', links)
+        self.assertIn('<a href="/imprint">Imprint</a>', links)
+        self.assertLessEqual({'/privacy', '/imprint'}, set(legal.PAGES))
+        for layout in ('app.jsx', 'mobile.jsx'):
+            with self.subTest(layout=layout):
+                self.assertIn('<window.LegalLinks ', (app / layout).read_text(encoding='utf-8'))
+
 
 if __name__ == "__main__":
     unittest.main()

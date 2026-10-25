@@ -90,7 +90,8 @@ python3 -m http.server 8099 --directory web    # → http://localhost:8099
 - **Privacy policy and imprint** — `/datenschutz`, `/privacy`, `/impressum`, `/imprint`, open without login
   (`webauth/legal.py`, text in `web/legal/`, self-hosted font in `web/fonts/`). A page still holding `[ADDRESS]` or
   `[lead to confirm]` answers 404; `LEGAL_PREVIEW=1` shows drafts locally. What the text is based on:
-  [docs/PRIVACY.md](docs/PRIVACY.md).
+  [docs/PRIVACY.md](docs/PRIVACY.md). Linked ("Privacy · Imprint") from the login page and, signed in, from the
+  hub's bottom-right corner (phone: the end of the page), via `window.LegalLinks` in `web/app/panels.jsx`.
 - **Contact form** — `/kontakt`, `/contact`, open without login, served only while the privacy policy in its language is
   (`web/legal/kontakt.html`, `contact.html`, one inline script `contact.js`). It posts from the browser straight to the
   account server's open `contact` collection, which mails Patrik ([docs/ACCOUNTS.md](docs/ACCOUNTS.md) → Website contact

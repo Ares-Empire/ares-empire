@@ -137,6 +137,14 @@ a { color: inherit; text-decoration: none; }
 .emp-logout:hover { color: #ff8a8a; border-color: rgba(255,90,90,0.3); background: rgba(255,60,60,0.07); }
 .emp-logout svg { width: 16px; height: 16px; }
 
+/* privacy policy + imprint — one quiet line in the bottom-right corner, under the chronicle and the board, in the
+   login page's colours. It sits in the app's bottom padding (out of the flex flow), so the circle does not move; the
+   board leaves room for it (.grid-wrap). */
+.emp-legal { position: absolute; right: clamp(18px, 3vw, 44px); bottom: 6px; z-index: 2;
+  font-size: 11px; line-height: 14px; letter-spacing: 0.02em; color: var(--ink-3); white-space: nowrap; }
+.emp-legal a { color: #8a8475; transition: color .2s; }
+.emp-legal a:hover { color: var(--gold); }
+
 /* ---- the stage: holds the orbital circle OR the card grid ---- */
 .emp-stage { flex: 1; min-height: 0; position: relative; }
 
@@ -217,7 +225,7 @@ a { color: inherit; text-decoration: none; }
    count-adaptive board (2 → L/R · 3 → L/M/R · 4 → quadrants · …) with context
    under each. The SAME grid renders the EXPANSIONS (plans).
    ============================================================================ */
-.grid-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.grid-wrap { position: absolute; inset: 0 0 14px; display: flex; flex-direction: column; }   /* 14px: the legal line's room */
 .grid-bar { flex: none; display: flex; align-items: center; justify-content: center; height: 34px; }
 .grid-back { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 600;
   letter-spacing: 0.18em; text-indent: 0.18em; text-transform: uppercase; color: var(--ink-3);
@@ -536,6 +544,6 @@ button.proj-card { cursor: pointer; }
   .card-grid { grid-template-columns: 1fr !important; align-content: start; overflow-y: auto; }
   .ring-hint { display: none; }
   .pd-grid { grid-template-columns: 1fr; }
-  .emp-log { left: 3vw; right: 3vw; bottom: 10px; height: 150px; }
+  .emp-log { left: 3vw; right: 3vw; bottom: 26px; height: 150px; }   /* above the legal line */
   .emp-crest { height: 40px; }
 }
