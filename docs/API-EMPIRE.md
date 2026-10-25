@@ -15,7 +15,7 @@ interface EmpireData {
   addable: Province[];       // others: catalog provinces not yet in their ring (the "+" list); admin: []
   chronicle: ChronicleEntry[]; // admin: everything; others: entries tagged with a province in their ring ("what's new")
   ideas: Idea[];             // admin only (expansions); others: []
-  pending: number;           // admin: accounts waiting for approval; others: 0
+  pending: number;           // admin: accounts waiting for approval (sign-ups and access requests); others: 0
 }
 
 interface Province {         // version-1 project fields, unchanged …
@@ -34,8 +34,8 @@ interface Province {         // version-1 project fields, unchanged …
 | Route | Who | Does |
 |---|---|---|
 | `POST /api/empire/ring` `{add: slug}` / `{remove: slug}` | everyone | changes your own ring; `add` only for catalog provinces (`open` or `coming-soon`); returns the new `EmpireData` |
-| `GET /api/empire/approvals` | admin | `[{id, email, name, created}]`: accounts that signed up and are not approved yet |
-| `POST /api/empire/approvals/:id` `{approve: true}` / `{decline: true}` | admin | approve (sets `approved`, and `services: ["empire"]`) or decline (deletes the unapproved account) |
+| `GET /api/empire/approvals` | admin | `[{id, email, name, created, requested: [service], approved: bool}]`: accounts that signed up and are not approved yet, and approved accounts asking for more apps (`approved: true`) |
+| `POST /api/empire/approvals/:id` `{approve: true}` / `{decline: true}` | admin | approve grants what was asked (`approved = true`, `services += requested`, `requested` empties) or decline (deletes an unapproved account; clears an approved account's `requested`). [ACCOUNTS.md → Accounts in every app](ACCOUNTS.md#accounts-in-every-app) |
 
 Auth as Aresium's `/api/*` (`aresium/docs/API-DATA.md` → Auth): session cookie or `Authorization: Bearer <Empire token>`;
 401 token rejected, 403 no access (incl. a non-admin calling an admin route), 503 the account server could not be asked.

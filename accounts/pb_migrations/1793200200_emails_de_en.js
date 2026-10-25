@@ -1,7 +1,7 @@
 /// <reference path="../pb_data/types.d.ts" />
 // PocketBase's own emails to an account (confirm the email address, reset the password) in English and German in one
-// message (2026-10-25): an account can be created in any app, and the email comes before anyone knows its language.
-// The links open PocketBase's own pages, as before. Down: PocketBase's default templates again.
+// message (2026-10-25): an account can be created in any app, and these templates are fixed (they cannot follow the
+// account's `language`). The links open PocketBase's own pages, as before. Down: PocketBase's default templates again.
 
 const VERIFICATION = {
   subject: "Confirm your Ares account · Bestätige dein Ares-Konto",

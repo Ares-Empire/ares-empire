@@ -16,6 +16,7 @@ the "good structure" rule ([EMPIRE.md → How we build apps](../EMPIRE.md#how-we
 ```
 iPhone app ──POST /api/push/devices (Empire token)──▶ Caddy (www.ares-empire.de) ──▶ push service :8095 (public part)
 province service (Arestemis, Aresus, …) ──POST /send──▶ push service :8096 (127.0.0.1 only, never routed by Caddy)
+account server (PocketBase) ──DELETE /internal/accounts/<id>──▶ push service :8096
 push service ──HTTP/2, ES256 token──▶ Apple (api.push.apple.com / api.sandbox.push.apple.com)
 ```
 
@@ -102,6 +103,11 @@ and the account's `services` must contain the service of that app (table below).
   60 days are dropped daily.
 - `GET http://127.0.0.1:8096/health` → `{"ok": true, "dry_run": bool, "devices": {"<app>": n}}` (**CONTRACT ADDITION**,
   for the install script and monitoring).
+- `DELETE http://127.0.0.1:8096/internal/accounts/<id>` → `204` (2026-10-25): the account server's call after an
+  Empire account was deleted ([ACCOUNTS.md → Accounts in every app](ACCOUNTS.md#accounts-in-every-app)). That
+  account's devices of every app go, and its outbox rows with them (they hold the texts sent to it); `204` also when
+  there is nothing. `400` for an id that is not 1–64 of `A–Z a–z 0–9 _ -`. No login; internal port only. Leaving one
+  app needs nothing here: the app removes its device with `DELETE /api/push/devices` when it logs out.
 - Never logs a device token or an Empire token in full.
 
 ## iPhone side (`empire-ios/Shared/Push/`)
@@ -138,6 +144,14 @@ simulator is tested with `xcrun simctl push <udid> <bundle id> payload.apns`.
   sending.
 - **Tests** (Mac or server): `python3 -m venv .venv && .venv/bin/pip install -r push/requirements.txt`, then
   `.venv/bin/python -m unittest push/test_push.py`.
+
+### Accounts rollout (2026-10-25, lead, on the server)
+
+Install this push service (`sudo bash deploy/install-push.sh`) **before** the account server's deletion jobs: the
+account server takes a 404 as "nothing to delete", so a call to a push service without the route would close the job.
+Check with a made-up id (nothing is deleted): `curl -s -o /dev/null -w '%{http_code}\n' -X DELETE
+http://127.0.0.1:8096/internal/accounts/deploycheck0001` → `204`, and `curl -s -o /dev/null -w '%{http_code}\n' -X DELETE
+http://127.0.0.1:8095/internal/accounts/deploycheck0001` → `404` (not on the public port).
 
 ### Language rollout (lead, on the server)
 

@@ -39,21 +39,24 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
   - `approved` — set by a superuser or an admin approving another account; login needs
     `verified = true && approved = true`.
   - `services` — which provinces the account may use (`empire`, `aresium`, `arestemis`, `aresus`, `arestoteles`; add
-    more in a new migration).
+    more in a new migration, to both `services` and `requested`).
+  - `requested` and `language` — the apps the account asked for, and the language of its emails
+    ([Accounts in every app](#accounts-in-every-app)).
   - `admin` — only a superuser may set this, including at sign-up.
   - `ring` — JSON list of province slugs, editable by the account itself. Adding a province does not grant access.
-  - Normal users can rename themselves, change password and delete their account. They can't touch
-    `approved`/`services`/`verified`/`admin`, and can only see their own record.
-  - Admins can list/view all accounts, update only `approved` and `services` on other accounts, and delete
-    unapproved accounts. An admin cannot delete an approved account, including their own.
+  - Normal users can rename themselves, change password, set `requested` and `language`, and delete their account.
+    They can't touch `approved`/`services`/`verified`/`admin`, and can only see their own record. A sign-up cannot
+    choose its record id.
+  - Admins can list/view all accounts, update only `approved`, `services` and `requested` on other accounts, and
+    delete unapproved accounts. An admin cannot delete an approved account, including their own.
     The `admin-visibility.pb.js` hook exposes account emails to admins for approvals without granting
     PocketBase's broader `manageRule` privileges.
 
 Local verification (no live account data): `bash accounts/test-rules.sh` uses a disposable PocketBase 0.40.6
-from `$POCKETBASE` (default `~/.pocketbase-test/pocketbase`) and checks API rules, email visibility and migration
-rollback/reapply. It loads the visibility hook and the feedback hook (its mail goes to a local SMTP sink the
-script starts; never Resend, never the system's sendmail) but not the sign-up mail hooks. Hub contract tests use fake
-PocketBase responses: `python3 -m unittest webauth/test_server.py`.
+from `$POCKETBASE` (default `~/.pocketbase-test/pocketbase`) and checks API rules, email visibility, the emails, the
+leave route, the deletion jobs and migration rollback/reapply. It loads every hook; their mail goes to a local SMTP
+sink the script starts (never Resend, never the system's sendmail) and the deletion calls to a fake service on
+localhost. Hub contract tests use fake PocketBase responses: `python3 -m unittest webauth/test_server.py`.
 - **Email**: Resend via `smtp.resend.com:2465` (the host blocks outgoing 25/465/587), domain
   `ares-empire.de` (DNS at Hetzner), sender `noreply@ares-empire.de`. The
   SMTP key is entered only in the admin UI (Settings → Mail settings), never in git or chat.
@@ -79,12 +82,101 @@ account server, and Patrik gets it by email. Migration `1793100000_feedback.js`,
   (`feedback email failed` in the admin UI's logs) and the record stays; the create never fails because of mail.
 - App side: `empire-ios` `Shared/Support/` (`POST /api/collections/feedback/records` with the Empire token).
 
+## Accounts in every app (2026-10-25)
+
+Patrik (2026-10-25): one central Ares account, creatable and controllable from every app (the first app someone gets
+may not be the Empire app, the least useful one for most people), and every app independently controllable: in each
+app's settings you can delete that app's data and access, or your whole Ares account. **One account, one password**
+for every app (separate accounts per app were rejected: every sign-up, approval, reset and deletion would multiply,
+and the shared login on one iPhone would break). Contract: `empire-ios/docs/build-2026-10-25/briefs/F-accounts-contract.md`.
+
+### What every app can do
+
+| Action | Server |
+|---|---|
+| Create an account | `POST /api/collections/users/records` `{email, password, passwordConfirm, name?, requested: [<this app's service>], language: "en" \| "de"}`, then `POST /api/collections/users/request-verification` `{email}` |
+| Forgot password | `POST /api/collections/users/request-password-reset` `{email}` (always 204) |
+| Ask for access (logged in, the account lacks the service) | `PATCH /api/collections/users/records/<id>` `{requested: <current requested + this service>}` |
+| Change password | `PATCH /api/collections/users/records/<id>` `{oldPassword, password, passwordConfirm}`; old tokens end, the app logs in again with the new password |
+| Leave this app (its access and its data) | 1. `DELETE /api/<service>/me` where the service keeps data per account (today Arestemis); 2. `POST https://auth.ares-empire.de/api/empire/leave` `{service}` → `{services, requested}` |
+| Delete the whole account | the app checks the password (`auth-with-password`), then `DELETE /api/collections/users/records/<id>` → 204; the server deletes the account's data in every service (below) |
+
+Login still needs `verified && approved`. An app cannot tell "wrong password" from "not approved yet", so its login
+error says both.
+
+### The account record
+
+- **`requested`** (multi-select, the values of `services`): the apps the account asked for and does not have yet.
+  The account sets it (sign-up and update); admins may change it on other accounts (the hub's approve and decline).
+  Every save drops from `requested` what is already in `services` (migration `1793200000_requested_language.js`,
+  hook `pb_hooks/accounts.pb.js`).
+- **`language`** (`en`, `de`): the language of the emails the account gets later. Set by the account (sign-up,
+  settings); admins cannot change it. Empty counts as English.
+- **Approval grants what was asked:** when `approved` switches on (admin UI, the hub, any save), the account gets
+  `services ∪ requested`. For an approved account, granting a request means putting the service into `services`
+  (admin UI: add it there; it leaves `requested` by itself). Declining: an unapproved account is deleted (as before);
+  an approved account's request is removed from `requested`, the account stays.
+- Accounts waiting for approval from before 2026-10-25 (no services) were given `requested: [empire]`: they signed up
+  on the website.
+- **A sign-up cannot choose its record id** (`@request.body.id:isset = false` in the create rule): the id is the key
+  of an account's data in every service, so the id of a deleted account must never come back to a new one.
+- **`POST /api/empire/leave`** `{service}` (custom route in `pb_hooks/accounts.pb.js`): needs a users login (a
+  superuser token answers 403, none 401); removes the service from the account's `services` and `requested` and
+  answers `200 {services, requested}`; an unknown or missing service is `400`. Leaving an app the account does not
+  have changes nothing. It sends no email.
+
+### Emails
+
+| When | To | Language |
+|---|---|---|
+| Someone signs up (not a superuser in the admin UI) | Patrik: every superuser not at example.com | English: email, name, the apps asked for, the language, a link to the account in the admin UI |
+| An approved account asks for more apps | Patrik | English: the new apps, what it has, everything it asked for, its language, the link |
+| Approved for the first time, or given more apps | the account | its `language`: which apps, how to log in (and the hub's address when `empire` is among them) |
+| Confirm the email address, reset the password (PocketBase's own) | the account | English and German in one message (migration `1793200200_emails_de_en.js`) |
+| A deletion job still fails a day after the deletion | Patrik | English, once per job |
+
+The texts are in `pb_hooks/lib/mail.js`. A failed email is logged (`approval request email failed`, `access request
+email failed`, `approved email failed`, `account deletion alert email failed`) and never fails the request.
+
+### Deleting an account reaches every service
+
+- After a `users` record is deleted (by the account itself, by an admin declining it, in the admin UI),
+  `pb_hooks/deletions.pb.js` writes one job per service that keeps data per account into **`deletions`** (`account`,
+  `service`, `attempts`, `done`, `last_error`, `reported`, `created`, `updated`; superusers only; migration
+  `1793200100_deletions.js`). **CONTRACT ADDITION:** `reported` remembers that Patrik was mailed about the job.
+- The cron **`empire-deletions`** (every 5 minutes; run by hand: admin UI → Settings → Crons) calls each open job,
+  oldest first: `DELETE http://127.0.0.1:<port>/internal/accounts/<id>`. 2xx or 404 → `done`; anything else →
+  `attempts + 1`, `last_error`, tried again on the next run. A service that does not answer at all is not called
+  again in that run. A job still failing a day after the deletion is mailed to Patrik once.
+- Today's services: **Arestemis** `127.0.0.1:8097` (settings, hunts, matches with their applications, rejected
+  listings; [Arestemis API.md](https://github.com/Ares-Empire/Arestemis/blob/main/docs/API.md)) and the **push
+  service** `127.0.0.1:8096` (devices of every app and outbox rows; [PUSH.md](PUSH.md)). `ARESTEMIS_INTERNAL_URL` and
+  `PUSH_INTERNAL_URL` in PocketBase's environment override them (only the tests do). The account server's own
+  `feedback` goes by cascade.
+- Single-owner services (Aresium, Aresus, Arestoteles: only Patrik's data) have no deletion route; leaving them
+  removes the access and the data on the phone only.
+- **A new service with per-account data** needs: `DELETE /internal/accounts/<id>` on localhost, never routed by
+  Caddy, `204` also when there is nothing (the account server takes a 404 as done, so deploy the service first);
+  `DELETE /api/<service>/me` for "leave this app"; an entry in `pb_hooks/lib/deletions.js`; its value in the
+  `service` field of `deletions` (a new migration).
+- **A stuck job** (the email): fix the service, or delete the data by hand, then switch on `done` in the admin UI
+  (Collections → deletions).
+
+### The hub's approvals (website and Empire app)
+
+`GET /api/empire/approvals` lists new sign-ups and approved accounts with open requests (filter
+`approved = false || requested:length > 0`): `[{id, email, name, created, requested, approved}]`.
+`POST /api/empire/approvals/<id>` `{approve: true}` sends `{approved: true, "services+": <its requests>}`;
+`{decline: true}` deletes an unapproved account or sends `{"requested-": <its requests>}` for an approved one. The
+`+`/`-` forms add or remove only the requests the hub read, so one made meanwhile is neither lost nor granted
+unseen. [API-EMPIRE.md](API-EMPIRE.md).
+
 ## Website flow
 
 - `/login` → *Log in* button + "New account? Sign up". `/login/email` → email + password.
-- `/signup` (hub only) creates the account and sends the confirmation email. A hook
-  (`accounts/pb_hooks/accounts.pb.js`) emails the superusers an approval request with a direct link,
-  and emails the person once `approved` is switched on.
+- `/signup` (hub only) creates the account asking for `empire`, in English, and sends the confirmation email. A
+  hook (`accounts/pb_hooks/accounts.pb.js`) emails the superusers an approval request with a direct link,
+  and emails the person once `approved` is switched on ([Accounts in every app](#accounts-in-every-app)).
 - `/forgot` (hub only) sends PocketBase's reset email; its links open PocketBase's own pages
   at auth.ares-empire.de/_/#/auth/….
 - Hub → province: `/sso?to=aresium` POSTs the visitor's token to `aresium.de/sso` (never in a URL).

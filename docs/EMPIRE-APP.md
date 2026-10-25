@@ -51,8 +51,8 @@ unactivated bot). A `coming-soon` province can be added; its card then says "com
 ## How it works underneath
 
 - **PocketBase** (migration): two new user fields.
-  - `admin` (bool): only a superuser sets it. Admins may list and view all users and set `approved` and
-    `services` on other accounts (and delete unapproved sign-ups). Approvals therefore run with Patrik's own token;
+  - `admin` (bool): only a superuser sets it. Admins may list and view all users and set `approved`, `services`
+    and `requested` on other accounts (and delete unapproved sign-ups). Approvals therefore run with Patrik's own token;
     no superuser password is stored on the hub or in an app.
   - `ring` (list of province slugs): the user may edit their own.
 - **Hub server `GET /api/empire`** answers per account, so the website and the app only display:

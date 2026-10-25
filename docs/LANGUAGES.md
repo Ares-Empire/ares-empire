@@ -33,7 +33,10 @@ inside the German apps (Patrik, 2026-10-24: not worth writing every entry twice)
 
 ## How the servers know
 
-The language follows the app, so a server never stores a "user language" setting.
+The language follows the app, so a server never stores a "user language" setting. One exception: the account's
+`language` ([ACCOUNTS.md](ACCOUNTS.md#accounts-in-every-app)), which the app sends at sign-up, for the emails that
+come later without a request to take the language from (the approval email). PocketBase's own verification and
+password-reset emails are fixed templates that cannot follow a field: they carry both languages.
 
 - **Requests:** every app sends `Accept-Language: de` or `en` (the language it shows). A server that writes sentences
   for the app answers in that language; anything else means English. The hub passes the language on when it asks a

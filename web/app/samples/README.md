@@ -21,7 +21,8 @@ failure. The desktop keeps its seed fallback and rendering. `file://` is unsuppo
 
 The JSON fixtures copy the seed’s provinces and ideas, with the version-2 account
 fields. The two Aresium news entries come from the charter’s October 23 updates.
-Accounts in the approvals preview are fictional `example.com` accounts.
+Accounts in the approvals preview are fictional `example.com` accounts: a new sign-up asking for Arestemis and an
+approved account asking for two more apps.
 
 The member starts with Aresium in the ring (`coming-soon`) and an empty catalog.
 To preview adding: open Aresium, scroll to **Remove from my ring**, then tap the
