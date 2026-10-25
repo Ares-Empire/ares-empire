@@ -463,10 +463,10 @@ class HubTests(unittest.TestCase):
                                ({'service': 'unknown'}, 'This app is not open to requests.'),
                                ({'service': 'aresium'}, 'This app is coming soon and cannot be requested yet.'),
                                ({'service': 'other'}, 'This account already has this app.'),
-                               ({}, 'Send the app to ask for as service.'),
-                               ({'service': ['other']}, 'Send the app to ask for as service.'),
-                               ({'service': 'other', 'note': 'x'}, 'Send the app to ask for as service.'),
-                               ({'add': 'other'}, 'Send the app to ask for as service.')):
+                               ({}, 'Say which app to ask for.'),
+                               ({'service': ['other']}, 'Say which app to ask for.'),
+                               ({'service': 'other', 'note': 'x'}, 'Say which app to ask for.'),
+                               ({'add': 'other'}, 'Say which app to ask for.')):
             with self.subTest(body=body):
                 status, data, _ = self.request('/api/empire/request', method='POST', body=body)
                 self.assertEqual((status, data), (400, {'error': sentence, 'code': 'bad_request'}))

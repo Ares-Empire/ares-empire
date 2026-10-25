@@ -33,9 +33,9 @@ TEXTS = {
         "de": "Dafür brauchst du Administratorrechte.",
     },
     "Please log in again.": {"en": "Please log in again.", "de": "Bitte melde dich erneut an."},
-    "Send the app to ask for as service.": {
-        "en": "Send the app to ask for as service.",
-        "de": "Schick die gewünschte App als service.",
+    "Say which app to ask for.": {
+        "en": "Say which app to ask for.",
+        "de": "Gib an, welche App du anfragen möchtest.",
     },
     "This app is not open to requests.": {
         "en": "This app is not open to requests.",

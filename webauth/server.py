@@ -476,7 +476,7 @@ def request_access(record: dict, token: str, client_ip: str, body: dict, languag
     Accounts in every app); the account server then tells Patrik (pb_hooks/accounts.pb.js). Asking again for an app
     already asked for changes nothing. Answers the fresh GET /api/empire."""
     if set(body) != {"service"} or not isinstance(body["service"], str):
-        raise APIError(400, "Send the app to ask for as service.")
+        raise APIError(400, "Say which app to ask for.")
     slug = body["service"]
     state = catalog_states(load_catalog()).get(slug)
     if state is None:
