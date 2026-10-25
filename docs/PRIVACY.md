@@ -5,8 +5,9 @@
 (`empire-ios/docs/APP-STORE.md`). Keep it current: a service that starts storing or sending something new updates its
 row here, then the pages (`web/legal/`), then the app's `PrivacyInfo.xcprivacy`.
 
-Facts the code cannot show (server settings, providers) were confirmed by the lead on 2026-10-24. Two points only
-Patrik can answer stay marked **[lead to confirm]** in the pages, and the address stays `[ADDRESS]`. The pages are not
+Facts the code cannot show (server settings, providers) were confirmed by the lead on 2026-10-24. One point only
+Patrik can answer (the AVV with netcup) stays marked **[lead to confirm]** in the pages, and the address stays
+`[ADDRESS]`. The imprint's second quick way to reach him is the website's contact form (brief E7, 2026-10-25). The pages are not
 served while they still contain `[lead to confirm]` or `[ADDRESS]` (`webauth/legal.py`).
 
 ## Facts that hold everywhere
@@ -119,7 +120,7 @@ served while they still contain `[lead to confirm]` or `[ADDRESS]` (`webauth/leg
   the user pastes, under their own Claude account.
 - The website arestoteles.de keeps its own single password (Patrik only) and loads Google Fonts and unpkg like the hub.
 
-### Contact & support (brief E5, being built)
+### Contact & support in the apps (brief E5)
 
 - Collection `feedback` on the account server: account (deleted with the account), app, kind, message (≤ 5000),
   app version, system ("iOS 27.0 · iPhone"), language, created. Superusers only can read it.
@@ -127,6 +128,18 @@ served while they still contain `[lead to confirm]` or `[ADDRESS]` (`webauth/leg
   IONOS SE, Germany (MX `mx00`/`mx01.ionos.de`; lead, 2026-10-24).
 - Kept 12 months after the matter is closed (in the collection and the mailbox), earlier with the account.
 - Basis: Art. 6(1)(b) for questions about the service, otherwise 6(1)(f).
+
+### Website contact form (brief E7, `/kontakt`, `/contact`)
+
+- Anyone, no account. The page (served by the hub, `web/legal/kontakt.html`, `contact.html`) posts from the browser
+  straight to the account server's `contact` collection: name (optional, ≤ 100), email, message (≤ 5000), the page's
+  language, and the honeypot `website` (always empty from people), created. Superusers only can read it. The page
+  loads nothing from other hosts; it is served only while the privacy policy in its language is.
+- A hook mails each message through Resend to `REDACTED-EMAIL` (IONOS), Reply-To the given address.
+- IP address: in the account server's request log for 5 days (as every request), and in PocketBase's in-memory rate
+  limiter (5 per hour per address); not stored with the message.
+- Kept 12 months after the matter is closed (in the collection and the mailbox), deleted by hand in the admin UI.
+- Basis: Art. 6(1)(f) (answering enquiries).
 
 ### Resend (email)
 
@@ -145,8 +158,8 @@ Framework; its DPA also has the SCCs; stored data (sent-mail logs) is in the US 
 
 1. **Journald:** `MaxRetentionSec=14day` in `/etc/systemd/journald.conf`, then `systemctl restart systemd-journald`
    (and `journalctl --vacuum-time=14d` for what is older). The policy says 14 days.
-2. **Patrik** approves the text and answers the two marked points: the AVV with netcup, and the imprint's second quick
-   way to reach him besides email (§ 5(1) no. 2 DDG: a phone number or a contact form).
+2. **Patrik** approves the text and answers the marked point: the AVV with netcup. (The imprint's second quick way to
+   reach him besides email, § 5(1) no. 2 DDG, is the contact form since 2026-10-25.)
 3. **The address:** the lead replaces `[ADDRESS]` in `web/legal/datenschutz.html`, `privacy.html`, `impressum.html`
    and `imprint.html` (controller line and imprint only).
 4. `grep -rn "lead to confirm\|\[ADDRESS\]" web/legal` prints nothing; then the pages are served.

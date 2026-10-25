@@ -1,0 +1,38 @@
+<h1>Kontakt</h1>
+<p class="lead">Schreib mir hier eine Nachricht. Sie kommt per E-Mail bei mir an, und ich antworte an die Adresse, die
+du angibst. Was dabei mit deinen Daten passiert, steht in der <a href="/datenschutz">Datenschutzerklärung</a>.</p>
+
+<form id="contact-form" class="contact" method="post" action="https://auth.ares-empire.de/api/collections/contact/records">
+  <div class="field">
+    <label for="contact-name">Name <span class="optional">(freiwillig)</span></label>
+    <input id="contact-name" name="name" type="text" autocomplete="name" maxlength="100" />
+  </div>
+  <div class="field">
+    <label for="contact-email">E-Mail</label>
+    <input id="contact-email" name="email" type="email" autocomplete="email" required />
+  </div>
+  <div class="field">
+    <label for="contact-message">Nachricht</label>
+    <textarea id="contact-message" name="message" rows="8" maxlength="5000" required></textarea>
+  </div>
+  <div class="trap" aria-hidden="true">
+    <label for="contact-website">Website</label>
+    <input id="contact-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+  </div>
+  <div aria-live="polite">
+    <p class="problem" data-problem="empty" hidden>Schreib bitte eine Nachricht.</p>
+    <p class="problem" data-problem="email" hidden>Diese E-Mail-Adresse sieht nicht richtig aus. Prüf sie bitte.</p>
+    <p class="problem" data-problem="many" hidden>Gerade kamen zu viele Nachrichten von hier. Versuch es in einer Stunde
+      noch mal.</p>
+    <p class="problem" data-problem="failed" hidden>Das hat nicht geklappt. Versuch es noch mal oder schreib mir an
+      <a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a>.</p>
+  </div>
+  <button type="submit" data-sending="Wird gesendet…">Senden</button>
+  <noscript><p class="note">Das Formular braucht JavaScript. Du kannst mir auch direkt an
+    <a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a> schreiben.</p></noscript>
+</form>
+
+<div id="contact-sent" class="sent" tabindex="-1" hidden>
+  <h2>Danke, deine Nachricht ist angekommen.</h2>
+  <p>Ich antworte per E-Mail an die Adresse, die du angegeben hast.</p>
+</div>

@@ -4,8 +4,8 @@
 Accounts live in PocketBase (https://auth.ares-empire.de, see docs/ACCOUNTS.md). This server
 talks to it on localhost: log in, sign up, password reset. The session cookie holds the
 Empire token; every request re-checks it (approved, has the "empire" service) with a short
-cache, so un-approving someone locks them out within a minute. The privacy policy and imprint are open to
-everyone (webauth/legal.py). Stdlib only.
+cache, so un-approving someone locks them out within a minute. The privacy policy, imprint and contact form are
+open to everyone (webauth/legal.py). Stdlib only.
 
 Config (env, from .env — never committed):
   EMPIRE_AUTH_URL   PocketBase base URL (default http://127.0.0.1:8090)
@@ -87,8 +87,9 @@ def is_brand_image(path: str) -> bool:
     return clean.startswith("/brand/") and clean == path and clean.lower().endswith(BRAND_IMAGE_TYPES)
 
 
-# The legal pages (/datenschutz, /privacy, /impressum, /imprint) are open too: they are answered before the gate
-# (webauth/legal.py), and their font is listed here.
+# The legal pages (/datenschutz, /privacy, /impressum, /imprint) and the contact form (/kontakt, /contact) are open
+# too: they are answered before the gate (webauth/legal.py), and their font is listed here. The contact form posts
+# from the browser straight to the account server, not through this server.
 OPEN_PATHS = frozenset({"/login", "/login/email", "/signup", "/forgot", "/logout", "/favicon.ico",
                         "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"}) | legal.ASSET_PATHS
 
