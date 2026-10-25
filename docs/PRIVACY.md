@@ -180,11 +180,10 @@ contact form.
 
 ## To do (follow-up builds)
 
-1. **Delete your account** in every app (Apple guideline 5.1.1(v)) and on the website, and make it reach every
-   service: PocketBase account (+ its `feedback` rows by cascade), push devices, Arestemis's hunt, settings and
-   matches. Until then the policy says: write to Patrik, and he deletes the account and its data in every service
-   (including Arestemis data and push devices); today that is by hand, since a deleted account leaves its Arestemis
-   rows and its push devices (until 60 days) behind.
+1. ~~**Delete your account** in every app.~~ Done 2026-10-25 (briefs F1/F2): every app creates, leaves and deletes the
+   account (Settings → Account); deleting reaches every service with per-account data (`deletions` jobs: Arestemis,
+   push); leaving an app deletes its server data first (`DELETE /api/arestemis/me`). The website has no delete button
+   yet (the policy names the apps and email). The optional name is now also asked at sign-up in the apps.
 2. **Self-host the website fonts and scripts** (hub, aresium.de, arestoteles.de: Google Fonts, unpkg), then delete
    section 4 "Externe Inhalte" / "External content" and the Google and unpkg lines in sections 8 and 9 from both
    policies.
