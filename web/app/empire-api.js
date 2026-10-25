@@ -6,9 +6,12 @@
   let sample;
   let sampleLoading;
   let sampleChronicle;
+  // A new sign-up and an approved account asking for more apps, like GET /api/empire/approvals.
   let pending = [
-    { id: "sample-robin", email: "robin@example.com", name: "Robin Vale", created: "2026-10-24T08:40:00Z" },
-    { id: "sample-alex", email: "alex@example.com", name: "Alex Rowan", created: "2026-10-23T17:15:00Z" },
+    { id: "sample-robin", email: "robin@example.com", name: "Robin Vale", created: "2026-10-24T08:40:00Z",
+      requested: ["arestemis"], approved: false },
+    { id: "sample-alex", email: "alex@example.com", name: "Alex Rowan", created: "2026-10-23T17:15:00Z",
+      requested: ["aresium", "aresus"], approved: true },
   ];
   const clone = (value) => JSON.parse(JSON.stringify(value));
 

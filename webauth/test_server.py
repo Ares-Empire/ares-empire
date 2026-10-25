@@ -50,8 +50,13 @@ class HubTests(unittest.TestCase):
             'admin-one': {'id': 'adminone0000001', 'name': 'Admin', 'admin': True,
                           'approved': True, 'services': ['empire'], 'ring': []},
         }
+        # Waiting for Patrik: a new sign-up, and an approved account asking for two more apps.
         self.pending = [{'id': 'pending00000001', 'name': 'New', 'email': 'new@example.com',
-                         'created': '2026-10-24 12:00:00Z', 'approved': False, 'admin': False}]
+                         'created': '2026-10-24 12:00:00Z', 'approved': False, 'admin': False,
+                         'requested': ['arestemis']},
+                        {'id': 'asking000000002', 'name': 'Member', 'email': 'member@example.com',
+                         'created': '2026-10-24 13:00:00Z', 'approved': True, 'admin': False,
+                         'requested': ['aresium', 'aresus']}]
         self.calls = []
         self.state = {
             'projects': [self.province(slug) for slug in ('aresium', 'other', 'private')],
@@ -82,21 +87,30 @@ class HubTests(unittest.TestCase):
             return 200, {'record': copy.deepcopy(self.records[token])}
         if path.startswith('/api/collections/users/records?'):
             query = parse_qs(urlparse(path).query)
-            self.assertEqual(query['filter'], ['approved = false'])
-            self.assertEqual(query['fields'], ['id,email,name,created'])
+            self.assertEqual(query['filter'], ['approved = false || requested:length > 0'])
+            self.assertEqual(query['fields'], ['id,email,name,created,requested,approved'])
             return 200, {'items': copy.deepcopy(self.pending), 'totalItems': len(self.pending), 'totalPages': 1}
-        account_id = path.rsplit('/', 1)[1]
+        record_path, _, query = path.partition('?')
+        account_id = record_path.rsplit('/', 1)[1]
+        account = next((p for p in self.pending if p['id'] == account_id), None)
         if method == 'PATCH' and body is not None and set(body) == {'ring'}:
             self.assertEqual(account_id, self.records[token]['id'])
             self.records[token]['ring'] = body['ring'][:]
             return 200, copy.deepcopy(self.records[token])
+        self.assertTrue(self.records[token]['admin'])
+        if method == 'GET':
+            self.assertEqual(parse_qs(query), {'fields': ['id,approved,requested']})
+            return (200, {k: account[k] for k in ('id', 'approved', 'requested')}) if account else (404, {})
         if method == 'PATCH':
-            self.assertTrue(self.records[token]['admin'])
-            self.assertEqual(body, {'approved': True, 'services': ['empire']})
+            # Approve adds exactly the listed requests; decline (of an approved account) removes exactly them.
+            self.assertIn(body, ({'approved': True, 'services+': account['requested']},
+                                 {'requested-': account['requested']}))
+            if 'requested-' in body:
+                self.assertTrue(account['approved'])
             self.pending = [p for p in self.pending if p['id'] != account_id]
-            return 200, {'id': account_id, **body}
+            return 200, {'id': account_id}
         if method == 'DELETE':
-            self.assertTrue(self.records[token]['admin'])
+            self.assertFalse(account['approved'])
             self.pending = [p for p in self.pending if p['id'] != account_id]
             return 204, {}
         raise AssertionError((path, body, token, method))
@@ -273,7 +287,7 @@ class HubTests(unittest.TestCase):
         self.assertEqual(data['ideas'], self.state['ideas'])
         self.assertEqual(data['chronicle'], self.state['chronicle'])
         self.assertEqual(data['addable'], [])
-        self.assertEqual(data['pending'], 1)
+        self.assertEqual(data['pending'], 2)
         self.assertEqual(self.calls[-1][2:], ('admin-one', '192.0.2.10', 'GET'))
 
     def test_cookie_and_bearer_use_same_auth(self):
@@ -392,8 +406,21 @@ class HubTests(unittest.TestCase):
     def test_approvals_list_shape_and_caller_token(self):
         status, data, _ = self.request('/api/empire/approvals', token='admin-one')
         self.assertEqual(status, 200)
-        self.assertEqual(data, [{k: v for k, v in self.pending[0].items() if k in ('id', 'email', 'name', 'created')}])
+        self.assertEqual(data, [
+            {'id': 'pending00000001', 'email': 'new@example.com', 'name': 'New', 'created': '2026-10-24 12:00:00Z',
+             'requested': ['arestemis'], 'approved': False},
+            {'id': 'asking000000002', 'email': 'member@example.com', 'name': 'Member',
+             'created': '2026-10-24 13:00:00Z', 'requested': ['aresium', 'aresus'], 'approved': True}])
         self.assertEqual(self.calls[-1][2:], ('admin-one', '192.0.2.10', 'GET'))
+
+    def test_approvals_list_reads_unexpected_values_safely(self):
+        def pb(path, **kwargs):
+            return 200, {'items': [{'id': 'x', 'requested': 'arestemis', 'approved': 'yes'},
+                                   {'id': 'y', 'requested': ['aresium', 3, None], 'approved': True}],
+                         'totalItems': 2, 'totalPages': 1}
+        with patch.object(server, 'pb_call', side_effect=pb):
+            items = server.pending_accounts('admin-one', '192.0.2.10')
+        self.assertEqual([(i['requested'], i['approved']) for i in items], [([], False), (['aresium'], True)])
 
     def test_approvals_pagination(self):
         def pb(path, **kwargs):
@@ -403,15 +430,42 @@ class HubTests(unittest.TestCase):
             self.assertEqual([r['id'] for r in server.pending_accounts('admin-one', '192.0.2.10')], ['1', '2'])
 
     def test_approve_and_decline_use_caller_token(self):
-        for action, method in (('approve', 'PATCH'), ('decline', 'DELETE')):
-            with self.subTest(action=action):
-                status, data, _ = self.request('/api/empire/approvals/pending00000001', token='admin-one',
+        cases = [('pending00000001', 'approve', 'PATCH', {'approved': True, 'services+': ['arestemis']}),
+                 ('pending00000001', 'decline', 'DELETE', None),
+                 ('asking000000002', 'approve', 'PATCH', {'approved': True, 'services+': ['aresium', 'aresus']}),
+                 ('asking000000002', 'decline', 'PATCH', {'requested-': ['aresium', 'aresus']})]
+        waiting = copy.deepcopy(self.pending)
+        for account_id, action, method, sent in cases:
+            with self.subTest(account=account_id, action=action):
+                self.pending = copy.deepcopy(waiting)
+                status, data, _ = self.request('/api/empire/approvals/' + account_id, token='admin-one',
                                               method='POST', body={action: True})
                 self.assertEqual(status, 200)
                 self.assertEqual(data, {'ok': True})
+                # First the account's current state, then the one write, both with the admin's own token.
+                self.assertEqual(self.calls[-2][0], '/api/collections/users/records/' + account_id +
+                                 '?fields=id%2Capproved%2Crequested')
+                self.assertEqual(self.calls[-2][2:], ('admin-one', '192.0.2.10', 'GET'))
                 self.assertEqual(self.calls[-1][2:], ('admin-one', '192.0.2.10', method))
-                if action == 'approve':
-                    self.assertEqual(self.calls[-1][1], {'approved': True, 'services': ['empire']})
+                self.assertEqual(self.calls[-1][1], sent)
+                self.assertNotIn(account_id, [p['id'] for p in self.pending])
+
+    def test_approval_of_an_unknown_or_unreadable_account(self):
+        self.request(token='admin-one')
+        self.assertEqual(self.request('/api/empire/approvals/missing00000003', token='admin-one',
+                                      method='POST', body={'approve': True})[0], 404)
+        self.assertEqual(self.calls[-1][4], 'GET')  # nothing written
+        with patch.object(server, 'pb_call', return_value=(200, {'id': 'someoneelse0004'})):
+            self.assertEqual(self.request('/api/empire/approvals/pending00000001', token='admin-one',
+                                          method='POST', body={'approve': True})[0], 503)
+
+    def test_website_signup_asks_for_the_hub_in_english(self):
+        with patch.object(server, 'pb_call', return_value=(200, {'id': 'signup000000001'})) as pb:
+            self.assertEqual(server.signup('new@example.com', 'Fictional-pass1', 'Fictional-pass1', '192.0.2.10'), '')
+        self.assertEqual(pb.call_args_list[0].args, ('/api/collections/users/records', {
+            'email': 'new@example.com', 'password': 'Fictional-pass1', 'passwordConfirm': 'Fictional-pass1',
+            'requested': ['empire'], 'language': 'en'}))
+        self.assertEqual(pb.call_args_list[1].args[0], '/api/collections/users/request-verification')
 
     def test_approval_action_validation(self):
         for body in ({'approve': False}, {'approve': 1}, {'decline': 1}, {},

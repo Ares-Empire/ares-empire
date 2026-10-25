@@ -113,15 +113,23 @@
     </React.Fragment>;
   }
 
+  // The apps an account can ask for, by service (docs/ACCOUNTS.md → Accounts in every app).
+  const APP_NAMES = { empire: "Ares Empire", aresium: "Aresium", arestemis: "Arestemis", aresus: "Aresus", arestoteles: "Arestoteles" };
+  const appNames = (services) => (services || []).map((s) => APP_NAMES[s] || s).join(", ");
+
+  // New sign-ups (approve lets them in) and approved accounts asking for more apps (approve grants them).
   function Approvals({ accounts, loading, busy, onDecide }) {
     const [declining, setDeclining] = useState(null);
     return <React.Fragment>
       {loading ? <p className="em-empty" role="status">Loading pending accounts…</p> : !accounts ? <p className="em-empty">Pending accounts could not be loaded.</p>
         : accounts.length ? <React.Fragment><div className="em-section-heading"><h2>Pending accounts</h2><span>{String(accounts.length).padStart(2, "0")}</span></div>
           <div className="em-accounts">{accounts.map((account) => <article className="em-account" key={account.id}>
-            <div className="em-account-top"><span className="em-account-avatar">{(account.name || account.email)[0].toUpperCase()}</span><div><h2>{account.name || "New account"}</h2><p>{account.email}</p></div></div>
-            <p className="em-account-date">Signed up <time dateTime={account.created}>{account.created.slice(0, 10)}</time></p>
-            {declining === account.id ? <div className="em-decline-confirm" role="alert"><p>Decline {account.name || account.email}? This deletes their pending sign-up.</p>
+            <div className="em-account-top"><span className="em-account-avatar">{(account.name || account.email)[0].toUpperCase()}</span><div><h2>{account.name || (account.approved ? "Account" : "New account")}</h2><p>{account.email}</p></div></div>
+            <p className="em-account-date">{account.approved ? "Asks for more access" : <React.Fragment>Signed up <time dateTime={account.created}>{account.created.slice(0, 10)}</time></React.Fragment>}
+              {account.requested && account.requested.length > 0 && <span>Asks for {appNames(account.requested)}</span>}</p>
+            {declining === account.id ? <div className="em-decline-confirm" role="alert"><p>{account.approved
+              ? "Decline " + (account.name || account.email) + "’s request? The account and its other apps stay."
+              : "Decline " + (account.name || account.email) + "? This deletes their pending sign-up."}</p>
               <div className="em-actions"><button className="em-secondary" disabled={busy} onClick={() => setDeclining(null)}>Keep account</button>
                 <button className="em-danger" disabled={busy} onClick={() => onDecide(account.id, { decline: true })}>Confirm decline</button></div></div>
               : <div className="em-actions"><button className="em-primary" disabled={busy} onClick={() => onDecide(account.id, { approve: true })}><Glyph name="Check" size={16} />Approve</button>
@@ -187,12 +195,14 @@
       if (locked.current) return;
       locked.current = true; setBusy(true); setError(null);
       try {
+        const account = (accounts || []).find((a) => a.id === id);
         await API.decide(id, decision);
         // Refresh the authoritative list (and count); the action has no body contract.
         const result = await API.approvals();
         if (alive.current) {
           setAccounts(result); setData((current) => ({ ...current, pending: result.length }));
-          setNotice(decision.approve ? "Account approved." : "Sign-up declined.");
+          setNotice(account && account.approved ? (decision.approve ? "Access granted." : "Request declined.")
+            : (decision.approve ? "Account approved." : "Sign-up declined."));
         }
       } catch (err) { if (alive.current) setError(err.message); }
       finally { locked.current = false; if (alive.current) setBusy(false); }

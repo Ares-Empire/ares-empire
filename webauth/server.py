@@ -261,13 +261,23 @@ def require_pb(status: int) -> None:
     raise APIError(503, "Account service unavailable, try again in a minute.")
 
 
+# What waits for Patrik: new sign-ups, and approved accounts that asked for more apps (docs/ACCOUNTS.md → Accounts in
+# every app). `requested` holds only apps the account does not have yet (the account server keeps it so).
+WAITING = "approved = false || requested:length > 0"
+
+
+def requested_of(item: dict) -> list[str]:
+    requested = item.get("requested")
+    return [s for s in requested if isinstance(s, str)] if isinstance(requested, list) else []
+
+
 def pending_accounts(token: str, client_ip: str, count_only: bool = False):
     items = []
     page = 1
     while True:
-        query = urlencode({"filter": "approved = false", "sort": "created,id", "page": page,
+        query = urlencode({"filter": WAITING, "sort": "created,id", "page": page,
                            "perPage": 1 if count_only else 500,
-                           "fields": "id,email,name,created"})
+                           "fields": "id,email,name,created,requested,approved"})
         status, data = pb_call("/api/collections/users/records?" + query, token=token,
                                client_ip=client_ip, method="GET")
         require_pb(status)
@@ -275,7 +285,8 @@ def pending_accounts(token: str, client_ip: str, count_only: bool = False):
             raise APIError(503, "Account service returned an unreadable response.")
         if count_only:
             return data["totalItems"]
-        items.extend({k: item.get(k, "") for k in ("id", "email", "name", "created")}
+        items.extend({**{k: item.get(k, "") for k in ("id", "email", "name", "created")},
+                      "requested": requested_of(item), "approved": item.get("approved") is True}
                      for item in data["items"])
         if page >= data.get("totalPages", 1):
             return items
@@ -325,6 +336,8 @@ def change_ring(record: dict, token: str, client_ip: str, body: dict, language: 
 
 
 def decide_approval(account_id: str, token: str, client_ip: str, body: dict) -> dict:
+    """Approve grants what the account asked for (approved = true, services += requested; the account server then
+    empties requested). Decline deletes an unapproved account, or withdraws an approved account's requests."""
     if not re.fullmatch(r"[a-zA-Z0-9]{15}", account_id):
         raise APIError(400, "Invalid account id.")
     if body != {"approve": True} and body != {"decline": True}:
@@ -333,9 +346,18 @@ def decide_approval(account_id: str, token: str, client_ip: str, body: dict) -> 
     if next(iter(body.values())) is not True:
         raise APIError(400, "Send approve: true or decline: true.")
     path = "/api/collections/users/records/" + account_id
+    status, account = pb_call(path + "?" + urlencode({"fields": "id,approved,requested"}),
+                              token=token, client_ip=client_ip, method="GET")
+    require_pb(status)
+    if account.get("id") != account_id:
+        raise APIError(503, "Account service returned an unreadable response.")
+    # "+" and "-" add or remove only these values, so a request made meanwhile is neither lost nor granted unseen.
+    requested = requested_of(account)
     if "approve" in body:
-        status, _ = pb_call(path, {"approved": True, "services": [SERVICE]},
+        status, _ = pb_call(path, {"approved": True, "services+": requested},
                             token=token, client_ip=client_ip, method="PATCH")
+    elif account.get("approved") is True:
+        status, _ = pb_call(path, {"requested-": requested}, token=token, client_ip=client_ip, method="PATCH")
     else:
         # PocketBase enforces approved = false atomically on DELETE.
         status, _ = pb_call(path, token=token, client_ip=client_ip, method="DELETE")
@@ -388,8 +410,10 @@ def signup(email: str, password: str, confirm: str, client_ip: str) -> str:
         return "The passwords don't match."
     if len(password) < 8:
         return "The password needs at least 8 characters."
+    # The website asks for the hub; it is in English (docs/LANGUAGES.md → Websites).
     status, data = pb_call("/api/collections/users/records",
-                           {"email": email, "password": password, "passwordConfirm": confirm},
+                           {"email": email, "password": password, "passwordConfirm": confirm,
+                            "requested": [SERVICE], "language": "en"},
                            client_ip=client_ip)
     if status == 200:
         pb_call("/api/collections/users/request-verification", {"email": email}, client_ip=client_ip)
