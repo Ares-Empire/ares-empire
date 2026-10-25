@@ -36,8 +36,9 @@ AV-Vertrag).
   2026-10-25). Declared there: affected persons: Interessenten (contact and support messages), visitors of the
   websites, users of the websites and apps (registered accounts); data: Personenstammdaten (name, optional; email),
   Kommunikationsdaten (email, messages), access and usage data (login data, IP addresses, server logs, push device
-  ids), content data of the applications (settings, search profiles, notes), financial data (Aresium's account
-  transactions); no special categories (Art. 9). No payment data, no device location.
+  ids), content data of the applications (settings, search profiles, notes); no special categories (Art. 9). No bank,
+  payment or financial data: Aresium for other people keeps its data on their iPhone (decided 2026-10-25), and
+  Patrik's own Aresium data on the server is his private data, not processed for anyone else. No device location.
 - **DNS:** Hetzner (lead). Hetzner answers name lookups for our domains; it receives no account data.
 - **No tracking** in the apps: no analytics, ads, crash-reporting or other third-party SDKs (lead; the Xcode projects
   have no packages). The websites set one cookie, the login (`empire_session`), and nothing for analytics.
