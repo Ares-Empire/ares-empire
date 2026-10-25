@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Real API-rule checks against an isolated PocketBase 0.40.6. No live data. Every hook runs; all mail goes to a local
-# SMTP sink in the temp folder (never Resend, never the system's sendmail), and the account-deletion calls go to a
-# fake service on localhost (never Arestemis or the push service).
+# SMTP sink in the temp folder (never Resend, never the system's sendmail), and the account-deletion calls and the
+# notifications go to a fake service on localhost (never Arestemis or the push service).
 set -euo pipefail
 POCKETBASE="${POCKETBASE:-$HOME/.pocketbase-test/pocketbase}"
 RULES_ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -69,19 +69,26 @@ if [ ! -f "$RULES_TMP/mail/port" ]; then
 fi
 SINK_PORT="$(cat "$RULES_TMP/mail/port")"
 rm "$RULES_TMP/mail/port"
-# A fake of the services' internal deletion route: every request is appended to $RULES_TMP/fake/calls as
-# "METHOD /<service>/<path>"; the answer is the status in $RULES_TMP/fake/status-<service> (default 204), or no
-# answer at all for "close".
+# A fake of the services' internal routes (deletion, and the push service's /send): every request is appended to
+# $RULES_TMP/fake/calls as "METHOD /<service>/<path>", and a request with a JSON body also to $RULES_TMP/fake/bodies as
+# one line {"path", "body"}; the answer is the status in $RULES_TMP/fake/status-<service> (default 204), or no answer
+# at all for "close".
 python3 - "$RULES_TMP/fake" >"$RULES_TMP/fake.log" 2>&1 <<'PY' &
-import http.server, os, sys, threading
+import http.server, json, os, sys, threading
 folder = sys.argv[1]
 lock = threading.Lock()
 
 
 class Fake(http.server.BaseHTTPRequestHandler):
     def answer(self):
-        with lock, open(os.path.join(folder, 'calls'), 'a') as calls:
-            calls.write(f'{self.command} {self.path}\n')
+        length = int(self.headers.get('Content-Length') or 0)
+        body = self.rfile.read(length) if length else b''
+        with lock:
+            with open(os.path.join(folder, 'calls'), 'a') as calls:
+                calls.write(f'{self.command} {self.path}\n')
+            if body:
+                with open(os.path.join(folder, 'bodies'), 'a') as bodies:
+                    bodies.write(json.dumps({'path': self.path, 'body': json.loads(body)}) + '\n')
         service = self.path.strip('/').split('/')[0]
         try:
             with open(os.path.join(folder, 'status-' + service)) as f:
@@ -294,6 +301,53 @@ def fake_calls():
         return []
 
 
+def pushes():
+    """The notifications the account server sent to the (fake) push service, oldest first."""
+    try:
+        with open(os.path.join(FAKE, 'bodies')) as bodies:
+            lines = [json.loads(line) for line in bodies]
+    except OSError:
+        return []
+    return [line['body'] for line in lines if line['path'] == '/push/send']
+
+
+def new_pushes(mark, count):
+    """The notifications after the first `mark`, once `count` of them arrived (fewer if they do not come)."""
+    for attempt in range(60):
+        sent = pushes()[mark:]
+        if len(sent) >= count:
+            break
+        time.sleep(.05)
+    return sent
+
+
+def no_push(mark):
+    """No notification after the first `mark` (they go out right after the response, so wait a moment)."""
+    time.sleep(.5)
+    return len(pushes()) == mark
+
+
+def by_recipient(sent):
+    return sorted(sent, key=lambda message: message['to']['user'])
+
+
+def to_admins(account, title, de_title, body, de_body, apps):
+    """What every admin account gets about `account` waiting for approval, sorted like by_recipient()."""
+    return by_recipient([{
+        'app': 'de.ares-empire.empire', 'to': {'user': admin_id}, 'title': title, 'body': body,
+        'localized': {'de': {'title': de_title, 'body': de_body}}, 'category': 'EMPIRE_REQUEST',
+        'url': f'empire://approvals/{account}?apps={apps}', 'thread': 'approvals', 'collapse_id': 'request-' + account,
+        'sound': True} for admin_id in ADMINS])
+
+
+def ready(account, title, de_title):
+    """What an account gets when it was approved or given more apps."""
+    return [{'app': 'de.ares-empire.empire', 'to': {'user': account}, 'title': title,
+             'body': 'Open the Empire app to start.',
+             'localized': {'de': {'title': de_title, 'body': 'Öffne die Empire-App, um loszulegen.'}},
+             'url': 'empire://ring', 'thread': 'access', 'collapse_id': 'ready-' + account}]
+
+
 def jobs(account):
     """The deletion jobs of a deleted account, by service."""
     query = '/api/collections/deletions/records?perPage=100&filter=' + urllib.parse.quote(f"account = '{account}'")
@@ -346,6 +400,9 @@ try:
     must('POST', '/api/collections/_superusers/records', {
         'email': OWNER, 'password': password, 'passwordConfirm': password}, bootstrap)
     admin = create('admin@example.com', approved=True, verified=True, services=['empire'], admin=True)
+    # A second administrator: every admin account gets the notifications about accounts waiting for approval.
+    second_admin = create('admin-two@example.com', approved=True, verified=True, services=['empire'], admin=True)
+    ADMINS = sorted([admin['id'], second_admin['id']])
     normal = create('user@example.com', approved=True, verified=True, services=['empire'])
     pending = create('pending@example.com')
     declined = create('decline@example.com')
@@ -355,7 +412,8 @@ try:
 
     status, _ = call('PATCH', '/api/collections/users/records/' + normal['id'],
                      {'ring': ['aresium']}, user_token)
-    check('user can set own ring', status == 200 and user(normal['id'])['ring'] == ['aresium'])
+    check('an account has no saved ring any more (its ring is its services)', status == 200 and
+          'ring' not in user(normal['id']))
     for field, value in [('approved', False), ('services', ['empire', 'aresium']),
                          ('admin', True), ('verified', False), ('services+', 'aresium'),
                          ('services-', 'empire'), ('admin+', True), ('approved+', True)]:
@@ -397,9 +455,9 @@ try:
     status, _ = call('PATCH', '/api/collections/users/records/' + pending['id'], {'services': ['empire']}, admin_token)
     check('unknown services are still refused', refused('PATCH', pending['id'], {'services': ['nope']}, admin_token))
     for field, value in [('email', 'changed@example.com'), ('password', password + 'new'),
-                         ('admin', True), ('name', 'Changed'), ('ring', ['aresium']),
+                         ('admin', True), ('name', 'Changed'),
                          ('verified', True), ('emailVisibility', True), ('avatar', ''),
-                         ('admin+', True), ('ring+', ['aresium']), ('language', 'de')]:
+                         ('admin+', True), ('language', 'de')]:
         body = {field: value}
         if field == 'password':
             body['passwordConfirm'] = value
@@ -407,7 +465,7 @@ try:
         denied = refused('PATCH', pending['id'], body, admin_token)
         after = user(pending['id'])
         check('admin cannot change another account ' + field,
-              (denied or field in ('admin+', 'ring+')) and
+              (denied or field == 'admin+') and
               {k: v for k, v in after.items() if k != 'updated'} ==
               {k: v for k, v in before.items() if k != 'updated'})
     check('admin cannot set own admin', refused('PATCH', admin['id'], {'admin': False}, admin_token))
@@ -441,6 +499,7 @@ try:
     # One Ares account from every app (docs/ACCOUNTS.md → Accounts in every app): a sign-up asks for an app, in a
     # language; approval grants what was asked; approved accounts ask for more; an account leaves one app.
     mark = len(mails())
+    push_mark = len(pushes())
     status, signed = call('POST', '/api/collections/users/records', {
         'email': 'app-signup@example.com', 'password': password, 'passwordConfirm': password,
         'name': 'Fictional Person', 'requested': ['arestemis'], 'language': 'de'})
@@ -451,15 +510,33 @@ try:
     check('a sign-up is mailed to Patrik with the apps it asked for and its language', len(new) == 1 and
           new[0]['To'] == OWNER and subjects(new) == ['New Ares account: app-signup@example.com asks for Arestemis']
           and 'Language: German' in html(new[0]) and 'recordId=' + signed.get('id', '?') in html(new[0]))
+    check('a sign-up is pushed to every admin account, with Approve and Decline (EMPIRE_REQUEST)',
+          by_recipient(new_pushes(push_mark, 2)) == to_admins(
+              signed.get('id', '?'), 'New sign-up', 'Neue Anmeldung', 'Fictional Person asks for Arestemis',
+              'Fictional Person möchte Arestemis nutzen', 'arestemis'))
+    push_mark = len(pushes())
     for label, body in [('its record id', {'id': 'chosenaccount01'}), ('an unknown app', {'requested': ['nope']}),
                         ('an unknown language', {'language': 'fr'})]:
         status, _ = call('POST', '/api/collections/users/records', {
             'email': 'signup-' + label.replace(' ', '-') + '@example.com', 'password': password,
             'passwordConfirm': password, **body})
         check('a sign-up cannot choose ' + label, status in (400, 403))
+    check('a refused sign-up is not pushed', no_push(push_mark))
     mark = len(mails())
     by_hand = create('admin-ui@example.com', requested=['empire', 'aresium'], language='en')
     check('an account made in the admin UI is not mailed to Patrik', quiet(mark))
+    check('... nor pushed', no_push(push_mark))
+    mark = len(mails())
+    status, website = call('POST', '/api/collections/users/records', {
+        'email': 'website@example.com', 'password': password, 'passwordConfirm': password, 'requested': ['empire'],
+        'language': 'en'})
+    check('a sign-up without a name is pushed with its email address', status == 200 and
+          by_recipient(new_pushes(push_mark, 2)) == to_admins(
+              website.get('id', '?'), 'New sign-up', 'Neue Anmeldung', 'website@example.com asks for Ares Empire',
+              'website@example.com möchte Ares Empire nutzen', 'empire'))
+    new_mails(mark, 1)
+    mark = len(mails())
+    push_mark = len(pushes())
 
     status, _ = call('PATCH', '/api/collections/users/records/' + signed['id'],
                      {'approved': True, 'services+': ['arestemis']}, admin_token)
@@ -470,7 +547,10 @@ try:
     check('the approved account is mailed in its language', len(new) == 1 and
           new[0]['To'] == 'app-signup@example.com' and subjects(new) == ['Dein Ares-Konto ist bereit'] and
           'Du kannst jetzt nutzen: <b>Arestemis</b>' in html(new[0]) and 'www.ares-empire.de' not in html(new[0]))
+    check('the approved account gets a notification, and nobody else', new_pushes(push_mark, 1) == ready(
+          signed['id'], 'Arestemis is ready', 'Arestemis ist bereit') and no_push(push_mark + 1))
     mark = len(mails())
+    push_mark = len(pushes())
     must('PATCH', '/api/collections/users/records/' + by_hand['id'], {'approved': True}, supertoken)
     after = user(by_hand['id'])
     check('switching approved on in the admin UI grants what was requested',
@@ -480,8 +560,11 @@ try:
           new[0]['To'] == 'admin-ui@example.com' and subjects(new) == ['Your Ares account is ready'] and
           'You can now use: <b>Ares Empire, Aresium</b>' in html(new[0]) and
           'https://www.ares-empire.de/login' in html(new[0]))
+    check('approved in the admin UI: the notification names every app it has now', new_pushes(push_mark, 1) == ready(
+          by_hand['id'], 'Ares Empire and Aresium are ready', 'Ares Empire und Aresium sind bereit'))
 
     mark = len(mails())
+    push_mark = len(pushes())
     status, asked = call('PATCH', '/api/collections/users/records/' + normal['id'],
                          {'requested': ['empire', 'arestemis'], 'language': 'de'}, user_token)
     check('an account can ask for an app and choose its language; what it has is dropped', status == 200 and
@@ -491,10 +574,15 @@ try:
     check('an access request is mailed to Patrik', len(new) == 1 and new[0]['To'] == OWNER and
           subjects(new) == ['Ares access request: user@example.com asks for Arestemis'] and
           'Has: Ares Empire' in html(new[0]) and 'Language: German' in html(new[0]))
+    check('an access request is pushed to every admin account', by_recipient(new_pushes(push_mark, 2)) == to_admins(
+          normal['id'], 'Access request', 'Zugangsanfrage', 'Renamed asks for Arestemis', 'Renamed möchte Arestemis nutzen',
+          'arestemis'))
     mark = len(mails())
+    push_mark = len(pushes())
     status, _ = call('PATCH', '/api/collections/users/records/' + normal['id'],
                      {'requested+': ['arestemis'], 'name': 'Renamed again'}, user_token)
     check('asking again for the same app is not mailed again', status == 200 and quiet(mark))
+    check('... nor pushed', no_push(push_mark))
     check('an account cannot ask for another account', refused(
           'PATCH', pending['id'], {'requested': ['aresium']}, user_token) and user(pending['id'])['requested'] == [])
     query = '/api/collections/users/records?' + urllib.parse.urlencode({
@@ -515,15 +603,18 @@ try:
     new = new_mails(mark, 1)
     check('the granted account is mailed in its language', len(new) == 1 and new[0]['To'] == 'user@example.com' and
           subjects(new) == ['Du hast jetzt Zugang zu Arestemis'] and 'jetzt auch Zugang zu <b>Arestemis</b>' in html(new[0]))
+    check('the granted account gets a notification', new_pushes(push_mark, 1) == ready(
+          normal['id'], 'Arestemis is ready', 'Arestemis ist bereit'))
     mark = len(mails())
     must('PATCH', '/api/collections/users/records/' + normal['id'], {'requested': ['aresium']}, user_token)
     new_mails(mark, 1)
     mark = len(mails())
+    push_mark = len(pushes())
     status, _ = call('PATCH', '/api/collections/users/records/' + normal['id'], {'requested-': ['aresium']}, admin_token)
     after = user(normal['id'])
     check("the hub's decline clears an approved account's request and keeps the account", status == 200 and
           after['requested'] == [] and after['approved'] is True and after['services'] == ['empire', 'arestemis'] and
-          quiet(mark))
+          quiet(mark) and no_push(push_mark))
     must('PATCH', '/api/collections/users/records/' + normal['id'], {'requested': ['aresus']}, user_token)
     new_mails(mark, 1)
     mark = len(mails())
@@ -562,6 +653,46 @@ try:
     status, again = call('POST', LEAVE, {'service': 'aresium'}, user_token)
     check('leaving an app it does not have changes nothing', status == 200 and again == left)
     check('leaving is not mailed', quiet(mark))
+
+    # Notifications: an access request names everything the account asks for (it replaces the earlier one on Patrik's
+    # phone); a push service that refuses or does not answer never fails the request; members hear only about
+    # themselves.
+    asking = create('asking@example.com', approved=True, verified=True, services=['empire'], name='')
+    asking_token = login('users', 'asking@example.com')
+    push_mark = len(pushes())
+    must('PATCH', '/api/collections/users/records/' + asking['id'], {'requested': ['arestemis', 'aresus']}, asking_token)
+    check('an access request for two apps names both, by the email address when there is no name',
+          by_recipient(new_pushes(push_mark, 2)) == to_admins(
+              asking['id'], 'Access request', 'Zugangsanfrage', 'asking@example.com asks for Arestemis and Aresus',
+              'asking@example.com möchte Arestemis und Aresus nutzen', 'arestemis,aresus'))
+    push_mark = len(pushes())
+    must('PATCH', '/api/collections/users/records/' + asking['id'], {'requested+': ['aresium']}, asking_token)
+    check('a further request names every open one', by_recipient(new_pushes(push_mark, 2)) == to_admins(
+          asking['id'], 'Access request', 'Zugangsanfrage',
+          'asking@example.com asks for Arestemis, Aresus and Aresium',
+          'asking@example.com möchte Arestemis, Aresus und Aresium nutzen', 'arestemis,aresus,aresium'))
+    for answer in (503, 'close'):
+        fake_status('push', answer)
+        push_mark = len(pushes())
+        status, _ = call('PATCH', '/api/collections/users/records/' + asking['id'], {'name': 'Asking ' + str(answer),
+                         'requested+': ['arestoteles']}, asking_token)
+        fake_status('push', 204)
+        check(f'a push service that answers {answer} does not fail the request', status == 200 and
+              'arestoteles' in user(asking['id'])['requested'])
+        must('PATCH', '/api/collections/users/records/' + asking['id'], {'requested-': ['arestoteles']}, admin_token)
+    check('a failed push is logged', logged('push failed'))
+    push_mark = len(pushes())
+    must('PATCH', '/api/collections/users/records/' + asking['id'],
+         {'approved': True, 'services+': ['arestemis', 'aresus', 'aresium']}, admin_token)
+    check('granting three apps at once: one notification naming them', new_pushes(push_mark, 1) == ready(
+          asking['id'], 'Arestemis, Aresus and Aresium are ready', 'Arestemis, Aresus und Aresium sind bereit'))
+    sent = pushes()
+    check('only admin accounts hear about other accounts; a member only that its own apps are ready', sent and all(
+          message['to']['user'] in ADMINS if message['thread'] == 'approvals' else
+          message['thread'] == 'access' and message['collapse_id'] == 'ready-' + message['to']['user']
+          for message in sent))
+    check('every notification is for the Empire app, in English and German', all(
+          message['app'] == 'de.ares-empire.empire' and set(message['localized']) == {'de'} for message in sent))
 
     # PocketBase's own emails, in English and German in one message.
     mark = len(mails())
@@ -773,6 +904,36 @@ migrate_down() {
     exit 1
   fi
 }
+# The rules of the users collection as the migrations write them: an account may change its own record except these
+# fields; an admin may change only approved, services and requested of another account (every other field named).
+cat >"$RULES_TMP/users_rules.py" <<'PY'
+import json, os, sqlite3
+OWN = ('@request.body.approved:isset = false && @request.body.services:isset = false && '
+       '@request.body.admin:isset = false && @request.body.verified:isset = false')
+
+
+def users():
+    with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+        fields, update = db.execute('SELECT fields, updateRule FROM _collections WHERE name = ?', ('users',)).fetchone()
+    return [field['name'] for field in json.loads(fields)], update
+
+
+def update_rule(names, admin_may_change):
+    untouchable = [name for name in names if name not in admin_may_change] + ['passwordConfirm', 'oldPassword']
+    return ('(id = @request.auth.id && ' + OWN + ') || (@request.auth.admin = true && id != @request.auth.id && ' +
+            ' && '.join('@request.body.' + name + ':isset = false' for name in untouchable) + ')')
+PY
+# 0. drop_ring down: the ring field is back (empty), and the admins' rule names it again.
+migrate_down 'ring'
+python3 - <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['RULES_TMP'])
+from users_rules import update_rule, users
+names, update = users()
+ok = 'ring' in names and update == update_rule(names, ('approved', 'services', 'requested'))
+print(('PASS' if ok else 'FAIL') + ' migration down brings the ring field back and names it in the admins\' rule')
+sys.exit(0 if ok else 1)
+PY
 # a. emails_de_en down: PocketBase's own templates again.
 migrate_down 'emails'
 python3 - <<'PY'
@@ -926,5 +1087,14 @@ again = ('deletions' in collections and {'requested', 'language'} <= {field['nam
          options['verificationTemplate']['subject'] == 'Confirm your Ares account · Bestätige dein Ares-Konto')
 print(('PASS' if again else 'FAIL') + ' migration up adds requested, language, deletions and the two-language emails again')
 ok = ok and again
+sys.exit(0 if ok else 1)
+PY
+python3 - <<'PY'
+import os, sys
+sys.path.insert(0, os.environ['RULES_TMP'])
+from users_rules import update_rule, users
+names, update = users()
+ok = 'ring' not in names and 'ring' not in update and update == update_rule(names, ('approved', 'services', 'requested'))
+print(('PASS' if ok else 'FAIL') + ' migration up drops the ring field and its place in the admins\' rule again')
 sys.exit(0 if ok else 1)
 PY

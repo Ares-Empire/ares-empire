@@ -16,7 +16,7 @@ the "good structure" rule ([EMPIRE.md → How we build apps](../EMPIRE.md#how-we
 ```
 iPhone app ──POST /api/push/devices (Empire token)──▶ Caddy (www.ares-empire.de) ──▶ push service :8095 (public part)
 province service (Arestemis, Aresus, …) ──POST /send──▶ push service :8096 (127.0.0.1 only, never routed by Caddy)
-account server (PocketBase) ──DELETE /internal/accounts/<id>──▶ push service :8096
+account server (PocketBase) ──POST /send, DELETE /internal/accounts/<id>──▶ push service :8096
 push service ──HTTP/2, ES256 token──▶ Apple (api.push.apple.com / api.sandbox.push.apple.com)
 ```
 
@@ -110,6 +110,53 @@ and the account's `services` must contain the service of that app (table below).
   there is nothing. `400` for an id that is not 1–64 of `A–Z a–z 0–9 _ -`. No login; internal port only. Leaving one
   app needs nothing here: the app removes its device with `DELETE /api/push/devices` when it logs out.
 - Never logs a device token or an Empire token in full.
+
+## Who sends what
+
+| Sender | App | To | When |
+|---|---|---|---|
+| Arestemis | `de.ares-empire.arestemis` | the account whose hunt found it | a new match ([ARESTEMIS-APP.md](ARESTEMIS-APP.md)) |
+| Aresus | `de.ares-empire.aresus` | each owner (`EMPIRE_ALLOWED_USERS`) | an issue opens or is fixed, an Aresync run fails |
+| Account server (2026-10-25) | `de.ares-empire.empire` | every admin account | a new sign-up; an approved account asks for more apps |
+| Account server (2026-10-25) | `de.ares-empire.empire` | the account itself | it was approved, or given more apps |
+
+**The account server's notifications** (Patrik, 2026-10-25; `accounts/pb_hooks/lib/push.js`, sent from
+`accounts.pb.js` next to the emails, [ACCOUNTS.md → Notifications](ACCOUNTS.md#notifications-2026-10-25)). The admins
+are the users with `admin = true`; each gets its own `/send` with `to: {"user": <admin id>}`. A member never hears
+about another account.
+
+```json
+{"app": "de.ares-empire.empire", "to": {"user": "<admin id>"},
+ "title": "New sign-up", "body": "Robin Vale asks for Arestemis",
+ "localized": {"de": {"title": "Neue Anmeldung", "body": "Robin Vale möchte Arestemis nutzen"}},
+ "category": "EMPIRE_REQUEST", "url": "empire://approvals/<account id>?apps=arestemis",
+ "thread": "approvals", "collapse_id": "request-<account id>", "sound": true}
+```
+
+- An approved account asking for more apps: the same with `"title": "Access request"` (German "Zugangsanfrage").
+  `body` and `apps` name **every app it asks for now**, not only the newest: the notification replaces the account's
+  earlier one (`collapse_id`), and Approve on it decides exactly those (the decision's `requested`,
+  [API-EMPIRE.md](API-EMPIRE.md)).
+- The name, else the email address; several apps "Arestemis and Aresus" / "Arestemis und Aresus" (the names of
+  `NAMES` in `accounts/pb_hooks/lib/accounts.js`); `apps` the service ids joined with commas (empty for a sign-up that
+  asked for nothing, whose body is "<who> created an account").
+- `EMPIRE_REQUEST` is the Empire app's category with the Approve and Decline actions.
+
+```json
+{"app": "de.ares-empire.empire", "to": {"user": "<account id>"},
+ "title": "Arestemis is ready", "body": "Open the Empire app to start.",
+ "localized": {"de": {"title": "Arestemis ist bereit", "body": "Öffne die Empire-App, um loszulegen."}},
+ "url": "empire://ring", "thread": "access", "collapse_id": "ready-<account id>"}
+```
+
+- Approved for the first time: every app the account has now; given more apps: the new ones. Several: "Ares Empire
+  and Arestemis are ready" / "… sind bereit". No category, no sound.
+- An account can register its Empire-app device only once it is approved (login needs approval), so the first approval
+  usually reaches no device yet (the email tells it); "more apps" reaches the phone.
+
+Timeout 3 s; a failure (the push service down or refusing) is logged by the account server as `push failed` and never
+fails the request that caused it. The address is the push service's in `accounts/pb_hooks/lib/deletions.js`
+(`PUSH_INTERNAL_URL` overrides it, only in the tests).
 
 ## iPhone side (`empire-ios/Shared/Push/`)
 

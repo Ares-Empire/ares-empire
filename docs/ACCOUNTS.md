@@ -43,7 +43,8 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
   - `requested` and `language` — the apps the account asked for, and the language of its emails
     ([Accounts in every app](#accounts-in-every-app)).
   - `admin` — only a superuser may set this, including at sign-up.
-  - `ring` — JSON list of province slugs, editable by the account itself. Adding a province does not grant access.
+  - (`ring`, the saved hub ring of 2026-10-24, was dropped on 2026-10-25 with what it held, migration
+    `1793400000_drop_ring.js`: the hub's ring is the account's `services`.)
   - Normal users can rename themselves, change password, set `requested` and `language`, and delete their account.
     They can't touch `approved`/`services`/`verified`/`admin`, and can only see their own record. A sign-up cannot
     choose its record id.
@@ -55,9 +56,9 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
 
 Local verification (no live account data): `bash accounts/test-rules.sh` uses a disposable PocketBase 0.40.6
 from `$POCKETBASE` (default `~/.pocketbase-test/pocketbase`) and checks API rules, email visibility, feedback, the
-contact form, the account emails, the leave route, the deletion jobs and migration rollback/reapply. It loads every hook; their mail goes to a local SMTP
-sink the script starts (never Resend, never the system's sendmail) and the deletion calls to a fake service on
-localhost. Hub contract tests use fake PocketBase responses: `python3 -m unittest webauth/test_server.py`.
+contact form, the account emails and notifications, the leave route, the deletion jobs and migration rollback/reapply. It loads every hook; their mail goes to a local SMTP
+sink the script starts (never Resend, never the system's sendmail) and the deletion calls and notifications to a fake
+service on localhost, which records each notification's body for the checks. Hub contract tests use fake PocketBase responses: `python3 -m unittest webauth/test_server.py`.
 - **Email**: Resend via `smtp.resend.com:2465` (the host blocks outgoing 25/465/587), domain
   `ares-empire.de` (DNS at Hetzner), sender `noreply@ares-empire.de`. The
   SMTP key is entered only in the admin UI (Settings → Mail settings), never in git or chat.
@@ -173,6 +174,24 @@ The texts are in `pb_hooks/lib/mail.js`, the one mail module of every hook. "Pat
 (feedback, the contact form). A failed email is logged (`approval request email failed`, `access request
 email failed`, `approved email failed`, `account deletion alert email failed`) and never fails the request.
 
+### Notifications (2026-10-25)
+
+Next to three of the emails, `pb_hooks/accounts.pb.js` sends a notification to the Empire app through the push service
+(`pb_hooks/lib/push.js`, `POST http://127.0.0.1:8096/send`, 3 s timeout; the texts and fields:
+[PUSH.md → Who sends what](PUSH.md#who-sends-what)):
+
+| When | To | Says |
+|---|---|---|
+| Someone signs up (not a superuser in the admin UI) | every admin account (`admin = true`) | "New sign-up", "<name or email> asks for <apps>", with Approve and Decline |
+| An approved account asks for more apps | every admin account | "Access request", "<name or email> asks for <every app it asks for now>", with Approve and Decline |
+| Approved for the first time, or given more apps | the account | "<apps> is/are ready", "Open the Empire app to start." |
+
+English with German in `localized.de` (the push service picks per device). The admins are the accounts with
+`admin = true`, not the superusers who get the emails: a notification goes to an account's devices. A member never
+learns anything about another account. A notification that fails (the push service down, refusing, slow) is logged
+(`push failed`, with the thread and the account id, never the texts) and never fails or undoes the request. Until
+Apple's push key exists the push service runs as a dry run and only keeps them in its outbox.
+
 ### Deleting an account reaches every service
 
 - After a `users` record is deleted (by the account itself, by an admin declining it, in the admin UI),
@@ -209,6 +228,10 @@ showed, 2026-10-25), only those of them. So a request made after Patrik looked s
 keep one made between the hub's read and its write as well. A first approval grants everything left in `requested`
 (the hook above), so for a sign-up the hub also sends `"requested-"` with the requests Patrik did not see. The answer
 carries the fresh list, `{ok, approvals, pending}`. [API-EMPIRE.md](API-EMPIRE.md).
+
+The hub's "+" (`POST /api/empire/request` `{service}`, 2026-10-25) asks for an app the same way an app does, with the
+account's own token: it reads the account (`fields=id,services,requested`) and sends `{"requested+": [service]}`; only
+apps `open` in the hub's catalog. The hooks above then mail and notify Patrik.
 
 ## Website flow
 

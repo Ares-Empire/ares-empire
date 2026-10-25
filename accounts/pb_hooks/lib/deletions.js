@@ -14,6 +14,7 @@ const ALERT_AFTER = 24 * 60 * 60; // seconds after the deletion
 const TIMEOUT = 10; // seconds per call
 const BATCH = 200; // open jobs per run, oldest first
 
+/** Where a service listens on this host (also the push service's /send, lib/push.js). */
 function base(service) {
   const entry = SERVICES[service];
   return ($os.getenv(entry.env) || entry.url).replace(/\/+$/, "");
@@ -98,4 +99,4 @@ function run(app) {
   }
 }
 
-module.exports = { SERVICES, plan, run };
+module.exports = { SERVICES, base, plan, run };

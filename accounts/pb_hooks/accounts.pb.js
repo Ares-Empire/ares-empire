@@ -1,8 +1,8 @@
 /// <reference path="../pb_data/types.d.ts" />
 // Accounts run from every app (docs/ACCOUNTS.md → Accounts in every app): the two rules of a users record, the
-// emails around sign-up, access requests and approval, the route that leaves one app, and the administrator's refusal
-// to leave or delete himself. The logic is in lib/accounts.js and lib/mail.js; PocketBase runs each handler in its own
-// scope, so every handler loads them itself.
+// emails and notifications around sign-up, access requests and approval, the route that leaves one app, and the
+// administrator's refusal to leave or delete himself. The logic is in lib/accounts.js, lib/mail.js and lib/push.js;
+// PocketBase runs each handler in its own scope, so every handler loads them itself.
 
 // Every save of a users record (sign-up, the account itself, an admin, the admin UI, a hook): approval grants what
 // was requested, and `requested` drops what the account already has.
@@ -16,29 +16,35 @@ onRecordUpdate((e) => {
   e.next();
 }, "users");
 
-// Someone signed up (on the website or in an app) → ask the superusers (Patrik) to approve, with the apps it asked for.
+// Someone signed up (on the website or in an app) → ask Patrik to approve, with the apps it asked for: an email to the
+// superusers and a notification to every admin account.
 onRecordCreateRequest((e) => {
   e.next(); // saves the record; throws on validation errors, so nothing below runs then
   if (e.hasSuperuserAuth()) return; // created by hand in the admin UI
 
   const accounts = require(`${__hooks}/lib/accounts.js`);
   const mail = require(`${__hooks}/lib/mail.js`);
+  const push = require(`${__hooks}/lib/push.js`);
   const record = e.record;
+  const requested = accounts.values(record, "requested");
   try {
     mail.sendToSuperusers(e.app, mail.signUp({
       email: record.email(),
       name: record.getString("name"),
-      requested: accounts.names(accounts.values(record, "requested")),
+      requested: accounts.names(requested),
       language: accounts.language(record),
       link: mail.adminLink(e.app, "users", record.id),
     }));
   } catch (err) {
     e.app.logger().error("approval request email failed", "error", String(err));
   }
+  push.toAdmins(e.app, push.approvalRequest(
+    { id: record.id, name: record.getString("name"), email: record.email(), requested: requested }, true));
 }, "users");
 
-// After an update: an approved account asked for more apps → tell the superusers; an account was approved or given more
-// apps → tell the person, in its language. A failed email is logged; it never fails the update.
+// After an update: an approved account asked for more apps → tell Patrik (an email to the superusers, a notification
+// to every admin account); an account was approved or given more apps → tell the person (an email in its language, a
+// notification in the Empire app). A failed email or notification is logged; it never fails the update.
 onRecordUpdateRequest((e) => {
   const accounts = require(`${__hooks}/lib/accounts.js`);
   const before = e.record.original();
@@ -50,6 +56,7 @@ onRecordUpdateRequest((e) => {
   e.next();
 
   const mail = require(`${__hooks}/lib/mail.js`);
+  const push = require(`${__hooks}/lib/push.js`);
   const record = e.record;
   const services = accounts.values(record, "services");
   const requested = accounts.values(record, "requested");
@@ -68,6 +75,9 @@ onRecordUpdateRequest((e) => {
     } catch (err) {
       e.app.logger().error("access request email failed", "error", String(err));
     }
+    // Everything it asks for now: the notification replaces the account's earlier one on Patrik's phone.
+    push.toAdmins(e.app, push.approvalRequest(
+      { id: record.id, name: record.getString("name"), email: record.email(), requested: requested }, false));
   }
 
   const first = record.getBool("approved") && !was.approved;
@@ -80,6 +90,7 @@ onRecordUpdateRequest((e) => {
     } catch (err) {
       e.app.logger().error("approved email failed", "error", String(err));
     }
+    push.toAccount(e.app, record.id, push.ready(record.id, apps));
   }
 }, "users");
 
