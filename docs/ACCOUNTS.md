@@ -51,8 +51,8 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
 
 Local verification (no live account data): `bash accounts/test-rules.sh` uses a disposable PocketBase 0.40.6
 from `$POCKETBASE` (default `~/.pocketbase-test/pocketbase`) and checks API rules, email visibility and migration
-rollback/reapply. It loads the visibility hook and the feedback hook (its mail goes to a local SMTP sink the
-script starts; never Resend, never the system's sendmail) but not the sign-up mail hooks. Hub contract tests use fake
+rollback/reapply. It loads the visibility hook and the feedback and contact hooks (their mail goes to a local SMTP
+sink the script starts; never Resend, never the system's sendmail) but not the sign-up mail hooks. Hub contract tests use fake
 PocketBase responses: `python3 -m unittest webauth/test_server.py`.
 - **Email**: Resend via `smtp.resend.com:2465` (the host blocks outgoing 25/465/587), domain
   `ares-empire.de` (DNS at Hetzner), sender `noreply@ares-empire.de`. The
@@ -73,11 +73,34 @@ account server, and Patrik gets it by email. Migration `1793100000_feedback.js`,
   admin UI (Collections → feedback).
 - **Rate limit:** at most 10 creates per hour per client IP (rule `feedback:create`, 3600 s, in Settings → Rate limits,
   added by the migration). The app shows "too many messages, try later" on the 429.
-- **Email:** after each create the hook mails it to `REDACTED-EMAIL` (the constant `TO` in the hook) from the
+- **Email:** after each create the hook mails it to `REDACTED-EMAIL` (the constant `TO` in `pb_hooks/mail.js`,
+  shared with the contact hook) from the
   server's sender, `Reply-To` the account's email, subject `[Arestoteles] Idea: <first words>`, a plain body (kind,
   app, version, system, language, account email, the message, a link to the record). A failed email is logged
   (`feedback email failed` in the admin UI's logs) and the record stays; the create never fails because of mail.
 - App side: `empire-ios` `Shared/Support/` (`POST /api/collections/feedback/records` with the Empire token).
+
+## Website contact form (`contact`, 2026-10-25)
+
+Anyone can write to Patrik without an account at www.ares-empire.de/kontakt (German) or /contact (English); the imprint
+names it as the second quick way to reach him besides email. The page posts straight to the account server
+(`POST /api/collections/contact/records`, no login; PocketBase allows cross-origin requests). Migration
+`1793200000_contact.js`, hook `pb_hooks/contact.pb.js`.
+
+- **Collection `contact`:** `name` (optional, ≤ 100), `email` (required, checked as an email address), `message`
+  (1–5000 characters, not only blanks), `language` (`en`, `de`), `website` (the honeypot: the form hides it from
+  people, any text in it is refused), `created`.
+- **Rules:** create open to everyone; list, view, update and delete for superusers only. Patrik reads them in the admin
+  UI (Collections → contact).
+- **Rate limit:** at most 5 creates per hour per visitor address (rule `contact:create`, 3600 s). The address is the
+  visitor's: Caddy's `X-Forwarded-For`, trusted since the first migration (`trustedProxy`, rightmost entry).
+- **Email:** after each create the hook mails it to Patrik (`pb_hooks/mail.js`) from the server's sender, `Reply-To`
+  the given address, subject `[Website] Kontakt: <first words>` (German page) or `[Website] Contact: …`, a plain body
+  (name, email, language, the message, a link to the record). A failed email is logged (`contact email failed`) and
+  the record stays.
+- **Kept** 12 months after the matter is closed, then deleted by hand in the admin UI (privacy policy, docs/PRIVACY.md).
+- The hub serves the pages (`webauth/legal.py`, `web/legal/kontakt.html`, `contact.html`, `contact.js`), only while
+  the privacy policy in the same language is published.
 
 ## Website flow
 
