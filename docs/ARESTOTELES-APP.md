@@ -43,7 +43,8 @@ Weltbild`, repo `carlsenares/opinions`, rules in its own `CLAUDE.md`). The websi
 - **The trading code is deleted** (Patrik: no use for it; git keeps the history). Kept: the website (`web/`,
   `webauth/`, its container and quote refresher).
 - Accounts: the `arestoteles` Empire service (migration `1793000000_service_arestoteles.js`), given to Patrik and the
-  test account. API: `Arestoteles/docs/API.md` (version 1), samples made up, never Patrik's notes.
+  test account; the server also needs the account's id in its `EMPIRE_ALLOWED_USERS`, its owner (2026-10-25; empty =
+  nobody). API: `Arestoteles/docs/API.md` (version 1), samples made up, never Patrik's notes.
 - iPhone features (IPHONE-APPS.md checklist): a widget with a position to revisit, the notes in iPhone search
   (Spotlight), links `arestoteles://note/<id>`. Not now: Siri, Live Activities, on-device AI.
 - Languages: the app in English and German; the vault's content as written (English with German terms).

@@ -85,8 +85,9 @@ and the account's `services` must contain the service of that app (table below).
 }
 ```
 
-- `to` is `{"user": id}` (that account's devices of this app) or `{"all": true}` (every device registered for this app;
-  Aresus uses it, since only accounts with the `aresus` service can register).
+- `to` is `{"user": id}` (that account's devices of this app) or `{"all": true}` (every device registered for this app).
+  No app sends to `all` since 2026-10-25: Aresus sends each push once per owner (its `EMPIRE_ALLOWED_USERS`), since any
+  account with the `aresus` service could register a device.
 - **CONTRACT ADDITION (2026-10-24, languages):** optional `localized: {"de": {"title"?, "subtitle"?, "body"?}}` supplies
   German strings as in the example. A `de` device gets each supplied field; omitted fields fall back independently
   to the top-level English text. An empty string clears that field. English devices always get top-level text.

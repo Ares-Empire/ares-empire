@@ -231,7 +231,9 @@ approved and verified (the auth rule runs again), and the returned record's `ser
 the service's name. Cache the answer for a few minutes per token.
 The hub's `GET /api/empire` (provinces, ideas, chronicle) takes the same Bearer token, for an Empire app.
 Reference implementation: `aresium/src/web/empire-auth.ts` (also limits access to the user ids in
-`EMPIRE_ALLOWED_USERS` while Aresium holds only one person's data).
+`EMPIRE_ALLOWED_USERS` while Aresium holds only one person's data). Aresus and Arestoteles do the same since
+2026-10-25: they hold only Patrik's data and are never opened to others, while any account can ask for their service
+and an approval grants it. Empty or unset means nobody gets in; others get the same 403 as "no access".
 
 ## Open questions (decide when building)
 
