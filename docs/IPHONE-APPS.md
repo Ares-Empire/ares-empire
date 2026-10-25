@@ -75,6 +75,28 @@ worth trying once the app is shared with a real group of users.
   new app built from it has both from its first screen. Widgets follow the home screen. Rules and details:
   `empire-ios/CLAUDE.md` → Light mode.
 
+## A new app touches (checklist)
+
+An app's identity is still written by hand in several places across the repos, and nothing checks that they agree
+(council 2026-10-25: the Empire app could not open Arestoteles because one of them was missed). Go through this list
+for every new app:
+
+- **empire-ios:** the project from `scripts/new-app-project.py` (bundle id `de.ares-empire.<slug>`, the shared
+  Keychain group and App Group); `EmpireAppIdentity.all` and `AppAccent` in `Shared/`; its URL scheme
+  (`CFBundleURLTypes`); the screenshot launch arguments in `Shared/AppRoot.swift`; its String Catalog and privacy
+  manifest; its entry in `docs/APP-STORE.md`.
+- **Hub (`ares-empire`):** `APP_SCHEMES` in `webauth/server.py`; the province in `web/app/empire-data.js` and in the
+  server's `data/state.json` (and a chronicle line in both); `webauth/catalog.json` if other accounts may add it.
+- **Accounts:** the service name in the account server's `services`/`requested` options and `NAMES`
+  (`accounts/pb_hooks/lib/accounts.js` and a migration). An app that holds only Patrik's data also gets the owner list
+  `EMPIRE_ALLOWED_USERS` in its server (like Aresium, Arestoteles, Aresus), so approving a request cannot open it.
+- **Push:** the app-to-service map ([PUSH.md](PUSH.md)), if it sends notifications.
+- **Its server:** `DELETE /api/<service>/me` and the internal deletion route if it keeps data per account; its data
+  in the nightly backup if it cannot be rebuilt ([BACKUP.md](BACKUP.md) → New data); its province in Aresus
+  (`aresus/checks.yaml`); the server's Aresync `REPOS` and a deploy hook.
+- **Privacy:** its row in [PRIVACY.md](PRIVACY.md), and its section in the public policy before anyone but Patrik gets
+  it.
+
 
 - A new build stays installable for 90 days. We ship updates far more often than that while
   building, so it does not run out. Uploads can be automated later (Xcode Cloud is included

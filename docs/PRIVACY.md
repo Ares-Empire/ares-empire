@@ -52,15 +52,15 @@ AV-Vertrag).
 
 | | |
 |---|---|
-| **Data** | Email, password (PocketBase stores only a hash), `name` (empty unless set through the API; sign-up does not ask for it), `verified`, `approved`, `services`, `admin`, `ring` (the provinces in the hub's ring), created/updated. |
+| **Data** | Email, password (PocketBase stores only a hash), `name` (optional; the apps' sign-up asks for it, the website's does not), `verified`, `approved`, `services`, `requested` (the apps an account asked for and does not have yet), `language` (`en`/`de`, for later emails), `admin`, `ring` (the provinces in the hub's ring), created/updated. |
 | **Where** | `/var/lib/empire-accounts/pb_data` (SQLite). |
 | **How long** | Until the account is deleted. Unapproved sign-ups stay until Patrik approves or deletes them (no automatic clean-up). |
 | **Emails** (Resend) | Confirmation link, password reset, "login from a new location" alert (PocketBase built-in), "approved" mail to the person; to the superusers an approval request naming the new account's email (`pb_hooks/accounts.pb.js`). |
 | **Logs** | PocketBase's request log, with the visitor's IP (Caddy's `X-Forwarded-For`, `trustedProxy` in the first migration). Settings → Logs on the server (lead, 2026-10-24): `maxDays` 5, `logIP` true, `logAuthId` false, so 5 days, with IP, without the account. |
 | **New-location alerts** | `_authOrigins` rows: `collectionRef`, `recordRef` (the account), `fingerprint`, `created`, `updated`. PocketBase 0.40.6 (`apis/record_helpers.go`, `authAlert`): `fingerprint = MD5(ip + userAgent)`, the user agent cut to 200 characters; no plain IP is stored. Made or refreshed at each login (password, OTP, OAuth2; not at a token refresh); at most 5 per account (`maxAuthOrigins`, the oldest go); deleted when the password changes or the account is deleted (`core/auth_origin_model.go`). A login with a new fingerprint (not the first login) emails the person the time, IP and user agent. |
-| **Admins** | See pending accounts' email, name and creation time to approve them (`admin-visibility.pb.js`, hub `GET /api/empire/approvals`). |
+| **Admins** | See the email, name, creation time and requested apps of accounts waiting for approval and of approved accounts that asked for another app, to decide them (`admin-visibility.pb.js`, hub `GET /api/empire/approvals`). |
 | **Basis** | Account and login: Art. 6(1)(b) GDPR. Logs, rate limits, alerts: Art. 6(1)(f) (security). |
-| **Deleting** | The API lets a non-admin delete their own account (`deleteRule`), but no website page or app offers it yet: open (below). |
+| **Deleting** | Every app: Settings → Account → Delete Ares account (since 2026-10-25); it reaches every service with per-account data (`deletions` jobs). An admin account cannot be deleted this way. |
 
 ### Hub (`www.ares-empire.de`, `webauth/server.py`)
 
