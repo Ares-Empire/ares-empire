@@ -58,9 +58,15 @@ worth trying once the app is shared with a real group of users.
 
 ## Every app has (the standard, 2026-10-24)
 
-- **Settings** behind a gear icon in the header: the app's own settings, language, notifications (apps that send
-  them), contact & support (a form that reaches Patrik by email), privacy policy, imprint, font licences, version,
-  the account and Log out. Built once in `empire-ios/Shared/`; a new app only adds its own section.
+- **Settings** behind a gear icon in the header: the app's own settings, language (asks, then the app restarts
+  inside itself in the new one), notifications (apps that send them), contact & support (a form that reaches Patrik by
+  email), privacy policy, imprint, font licences, version, and the account: change password, log out, leave this app
+  (its access and its data), delete the Ares account. Built once in `empire-ios/Shared/`; a new app only adds its own
+  section.
+- **The one Ares account, run from the app itself** ([ACCOUNTS.md](ACCOUNTS.md) → Accounts in every app, 2026-10-25):
+  its login creates an account and resets a password, an account without this app can ask for access, so nobody
+  needs the Empire app. A new app whose server keeps data per account adds `DELETE /api/<service>/me` and its
+  internal deletion route, so leaving the app and deleting the account reach it.
 - **Its name at the end of the main screen**, seen only when scrolling down (`WordmarkBand`, shared).
 - **English and German** ([LANGUAGES.md](LANGUAGES.md)).
 - **Light mode: decided, not built yet** (Patrik, 2026-10-24: "we will add it and its best to do it before making
