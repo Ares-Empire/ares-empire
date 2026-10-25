@@ -683,7 +683,8 @@ class LegalPageTests(unittest.TestCase):
                 with self.subTest(path=path):
                     self.assertIn('Patrik Breeck', page)
                     self.assertIn('REDACTED-EMAIL', page)
-                    self.assertIn('[ADDRESS]', page)  # stays a placeholder until Patrik decides
+                    self.assertNotIn('[ADDRESS]', page)
+                    self.assertIn('85748 Garching', page)
             for path in ('/datenschutz', '/privacy'):
                 self.assertIn('Promenade 18, 91522 Ansbach', send(path)[1].decode().replace('\n', ' '))
 
