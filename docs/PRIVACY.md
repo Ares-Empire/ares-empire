@@ -195,6 +195,6 @@ contact form.
    access log (path, status and IP stay, 14 days).
 4. **Links:** the login pages and the apps' Settings link to the privacy policy and imprint; the signed-in hub,
    aresium.de and arestoteles.de do not yet (a footer link, before other people use them).
-5. ~~**Backups:** delete the one-off copies.~~ Done 2026-10-25. The nightly backup runs since 2026-10-25
-   ([BACKUP.md](BACKUP.md)). Open: its sentence in the policy's section 9 (Speicherdauer / Storage period), proposed
-   to Patrik 2026-10-25, goes live once he has read it.
+5. ~~**Backups.**~~ Done 2026-10-25: the one-off copies are deleted, the nightly backup runs ([BACKUP.md](BACKUP.md)),
+   and the policy's section 9 (Speicherdauer / Storage period) names it and its periods (Patrik approved the text
+   2026-10-25).
