@@ -6,11 +6,17 @@ in `empire-ios`, TestFlight) and [ACCOUNTS.md](ACCOUNTS.md) (Empire accounts in 
 
 ## What the Empire is on a phone
 
-1. **A launcher:** tap a province to open it: its iPhone app if installed (Aresium), else its website, already logged in.
+1. **A launcher:** tap a province to open it: its iPhone app if installed, else its website (with that website's own
+   login; Safari has no Empire login from the app), else the province's page (council 2026-10-25).
 2. **Live status:** each province card says something live (e.g. Aresium: this month's spending; others: up or down).
 3. **Approvals (Patrik only):** new sign-ups waiting for approval, approve or decline on the phone.
 4. **One login for all:** log in once in the Empire app; the province apps (Aresium) use the same login
    (shared Keychain between the apps).
+
+**iPhone features** ([IPHONE-APPS.md](IPHONE-APPS.md) → check for every app): open, for Patrik (council 2026-10-25:
+since every app now logs in and asks for access itself, the Empire app is the launcher, the chronicle and approvals).
+Candidates: a notification for a new sign-up with Approve/Decline on the lock screen (the push service already knows
+the app), and the last hub kept on the phone so the app opens offline.
 
 As for Aresium, the hub gets a **mobile website version first**: it is what phone browsers see and the template the
 SwiftUI app follows (compared side by side on the simulator).
@@ -56,7 +62,7 @@ unactivated bot). A `coming-soon` province can be added; its card then says "com
     no superuser password is stored on the hub or in an app.
   - `ring` (list of province slugs): the user may edit their own.
 - **Hub server `GET /api/empire`** answers per account, so the website and the app only display:
-  `me {id, name, admin}`, `provinces` (the ring as this account sees it: admin → all; others → their `ring` ∩
+  `me {id, name, admin}`, `projects` (the ring as this account sees it: admin → all; others → their `ring` ∩
   catalog, each with `state: "open" | "coming-soon"`), `addable` (catalog minus their ring), `chronicle` (admin: all;
   others: entries tagged with their ring's provinces), `ideas` (admin only), `pending` (admin only: number waiting,
   `null` when the account server could not say).
