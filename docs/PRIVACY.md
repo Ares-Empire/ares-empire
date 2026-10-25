@@ -6,13 +6,12 @@
 row here, then the pages (`web/legal/`), then the app's `PrivacyInfo.xcprivacy`.
 
 Facts the code cannot show (server settings, providers) were confirmed by the lead on 2026-10-24. One point only
-Patrik can answer (the AVV with netcup) stays marked **[lead to confirm]** in the pages, and the address stays
-`[ADDRESS]`. The imprint's second quick way to reach him is the website's contact form (brief E7, 2026-10-25). The pages are not
+Patrik can answer (the AVV with netcup) stays marked **[lead to confirm]** in the pages, and the address is filled in. The imprint's second quick way to reach him is the website's contact form (brief E7, 2026-10-25). The pages are not
 served while they still contain `[lead to confirm]` or `[ADDRESS]` (`webauth/legal.py`).
 
 ## Facts that hold everywhere
 
-- **Controller:** Patrik Breeck, `[ADDRESS]`, `REDACTED-EMAIL`. A private project, no company; no data
+- **Controller:** Patrik Breeck, REDACTED-ADDRESS, 85748 Garching, `REDACTED-EMAIL`. A private project, no company; no data
   protection officer needed (§ 38 BDSG: fewer than 20 people process data). Patrik has chosen the address (lead,
   2026-10-24); it is not written into the repo (no real address in files) and goes into the policy's controller line
   and the imprint only, when the lead publishes.
@@ -81,7 +80,7 @@ served while they still contain `[lead to confirm]` or `[ADDRESS]` (`webauth/leg
 | **Groq** (Groq, Inc., USA) | Each listing that passes the exact checks: the search, `about_me`, the listing (`llm/provider.py` `verify_messages`). AI applications: the listing, `own_text`, `about_me`, the contact name. "Describe it": the sentence typed (not stored by Arestemis). Groq is not certified under the DPF; the safeguard is the Standard Contractual Clauses in Groq's customer data processing addendum, part of its terms (lead, 2026-10-24). The policy names no Groq retention period: Groq processes the data only to give the answer, under that addendum. |
 | **Telegram** | Only for the account in `TELEGRAM_FALLBACK_USER` (Patrik): a copy of each new match to his own chat, until push works. No other account's data. |
 | **Portals** | The server reads WG-Gesucht, Kleinanzeigen, Immowelt (no user data sent). On the phone, listing photos load straight from the portal's image server (`AsyncImage(image_url)`), so the portal sees the phone's IP; "Open listing" opens the portal page. |
-| **Logs** | uvicorn's access log (journald) with the visitor's IP (uvicorn trusts `X-Forwarded-For` from 127.0.0.1 by default) and the full path incl. query, e.g. `GET /places?q=garch`. Journald keeps everything today (default, since June); the policy says 14 days, so `MaxRetentionSec=14day` must be set before publishing (below). |
+| **Logs** | uvicorn's access log (journald) with the visitor's IP (uvicorn trusts `X-Forwarded-For` from 127.0.0.1 by default) and the full path incl. query, e.g. `GET /places?q=garch`. Journald keeps 14 days since 2026-10-25 (`deploy/journald/retention.conf`). |
 | **Basis** | Art. 6(1)(b) (the AI check and applications are the service asked for). |
 
 ### Aresus (`aresus.service`, `~/aresus`) and Aresync
@@ -156,12 +155,10 @@ Framework; its DPA also has the SCCs; stored data (sent-mail logs) is in the US 
 
 ## Before publishing the pages
 
-1. **Journald:** `MaxRetentionSec=14day` in `/etc/systemd/journald.conf`, then `systemctl restart systemd-journald`
-   (and `journalctl --vacuum-time=14d` for what is older). The policy says 14 days.
+1. ~~**Journald:** 14 days.~~ Done 2026-10-25 (`deploy/journald/retention.conf`, older logs removed).
 2. **Patrik** approves the text and answers the marked point: the AVV with netcup. (The imprint's second quick way to
    reach him besides email, § 5(1) no. 2 DDG, is the contact form since 2026-10-25.)
-3. **The address:** the lead replaces `[ADDRESS]` in `web/legal/datenschutz.html`, `privacy.html`, `impressum.html`
-   and `imprint.html` (controller line and imprint only).
+3. ~~**The address.**~~ Filled 2026-10-25 (Patrik's choice: his home address, no paid address service).
 4. `grep -rn "lead to confirm\|\[ADDRESS\]" web/legal` prints nothing; then the pages are served.
 
 ## To do (follow-up builds)
