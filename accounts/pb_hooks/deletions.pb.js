@@ -1,5 +1,5 @@
 /// <reference path="../pb_data/types.d.ts" />
-// Deleting an account reaches every service that keeps data per account (migration 1793200100_deletions.js,
+// Deleting an account reaches every service that keeps data per account (migration 1793300100_deletions.js,
 // docs/ACCOUNTS.md → Accounts in every app). The logic is in lib/deletions.js; PocketBase runs each handler in its own
 // scope, so every handler loads it itself.
 

@@ -131,7 +131,7 @@ error says both.
 
 - **`requested`** (multi-select, the values of `services`): the apps the account asked for and does not have yet.
   The account sets it (sign-up and update); admins may change it on other accounts (the hub's approve and decline).
-  Every save drops from `requested` what is already in `services` (migration `1793200000_requested_language.js`,
+  Every save drops from `requested` what is already in `services` (migration `1793300000_requested_language.js`,
   hook `pb_hooks/accounts.pb.js`).
 - **`language`** (`en`, `de`): the language of the emails the account gets later. Set by the account (sign-up,
   settings); admins cannot change it. Empty counts as English.
@@ -155,7 +155,7 @@ error says both.
 | Someone signs up (not a superuser in the admin UI) | Patrik: every superuser not at example.com | English: email, name, the apps asked for, the language, a link to the account in the admin UI |
 | An approved account asks for more apps | Patrik | English: the new apps, what it has, everything it asked for, its language, the link |
 | Approved for the first time, or given more apps | the account | its `language`: which apps, how to log in (and the hub's address when `empire` is among them) |
-| Confirm the email address, reset the password (PocketBase's own) | the account | English and German in one message (migration `1793200200_emails_de_en.js`) |
+| Confirm the email address, reset the password (PocketBase's own) | the account | English and German in one message (migration `1793300200_emails_de_en.js`) |
 | A deletion job still fails a day after the deletion | Patrik | English, once per job |
 
 The texts are in `pb_hooks/lib/mail.js`, the one mail module of every hook. "Patrik" here means the superusers
@@ -168,7 +168,7 @@ email failed`, `approved email failed`, `account deletion alert email failed`) a
 - After a `users` record is deleted (by the account itself, by an admin declining it, in the admin UI),
   `pb_hooks/deletions.pb.js` writes one job per service that keeps data per account into **`deletions`** (`account`,
   `service`, `attempts`, `done`, `last_error`, `reported`, `created`, `updated`; superusers only; migration
-  `1793200100_deletions.js`). **CONTRACT ADDITION:** `reported` remembers that Patrik was mailed about the job.
+  `1793300100_deletions.js`). **CONTRACT ADDITION:** `reported` remembers that Patrik was mailed about the job.
 - The cron **`empire-deletions`** (every 5 minutes; run by hand: admin UI → Settings → Crons) calls each open job,
   oldest first: `DELETE http://127.0.0.1:<port>/internal/accounts/<id>`. 2xx or 404 → `done`; anything else →
   `attempts + 1`, `last_error`, tried again on the next run. A service that does not answer at all is not called

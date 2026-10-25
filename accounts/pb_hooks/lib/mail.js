@@ -11,7 +11,7 @@
 //   lib/deletions.js). Every superuser's address except placeholders (example.com): whoever can approve in the admin
 //   UI. sendToSuperusers().
 // A person's own email (approved, in the account's `language`) goes to the account's address: sendToAccount().
-// PocketBase's own verification and password-reset emails are templates (migration 1793200200_emails_de_en.js).
+// PocketBase's own verification and password-reset emails are templates (migration 1793300200_emails_de_en.js).
 
 // Where messages people write to Patrik go: the one place to change it.
 const SUPPORT_TO = "REDACTED-EMAIL";
