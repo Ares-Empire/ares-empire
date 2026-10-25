@@ -1,7 +1,8 @@
 /// <reference path="../pb_data/types.d.ts" />
 // Accounts run from every app (docs/ACCOUNTS.md → Accounts in every app): the two rules of a users record, the
-// emails around sign-up, access requests and approval, and the route that leaves one app. The logic is in
-// lib/accounts.js and lib/mail.js; PocketBase runs each handler in its own scope, so every handler loads them itself.
+// emails around sign-up, access requests and approval, the route that leaves one app, and the administrator's refusal
+// to leave or delete himself. The logic is in lib/accounts.js and lib/mail.js; PocketBase runs each handler in its own
+// scope, so every handler loads them itself.
 
 // Every save of a users record (sign-up, the account itself, an admin, the admin UI, a hook): approval grants what
 // was requested, and `requested` drops what the account already has.
@@ -84,12 +85,17 @@ onRecordUpdateRequest((e) => {
 
 // POST /api/empire/leave {service} → {services, requested}: the logged-in account leaves one app (its access and
 // any open request for it). The app deletes its data in that service first, where there is any.
+// The administrator cannot leave (403): only an admin gives access, and an admin cannot change his own services, so
+// he could not get back in.
 routerAdd("POST", "/api/empire/leave", (e) => {
   const accounts = require(`${__hooks}/lib/accounts.js`);
+  if (e.auth.getBool("admin")) {
+    throw new ForbiddenError(accounts.answer(e, "adminAccount"));
+  }
   const body = e.requestInfo().body || {};
   const service = body.service;
   if (typeof service !== "string" || !accounts.services(e.app).includes(service)) {
-    throw new BadRequestError("Unknown service.");
+    throw new BadRequestError(accounts.answer(e, "unknownService"));
   }
   const record = e.app.findRecordById("users", e.auth.id);
   record.set("services", accounts.without(accounts.values(record, "services"), [service]));
@@ -97,3 +103,18 @@ routerAdd("POST", "/api/empire/leave", (e) => {
   e.app.save(record);
   return e.json(200, { services: accounts.values(record, "services"), requested: accounts.values(record, "requested") });
 }, $apis.requireAuth("users"));
+
+// DELETE /api/collections/users/records/<own id> by an administrator → 403 with a sentence that says why. The delete
+// rule refuses it anyway (migration 1792800000_admin_ring.js), but a rule only filters, so PocketBase would answer its
+// generic 404 and the app could not tell the person why. This runs before the rule; the rule stays the protection.
+routerUse((e) => {
+  if (e.request.method !== "DELETE" || !e.auth || e.auth.collection().name !== "users" || !e.auth.getBool("admin")) {
+    return e.next();
+  }
+  const target = /^\/api\/collections\/([^/]+)\/records\/([^/]+)$/.exec(e.request.url.path);
+  const users = e.app.findCachedCollectionByNameOrId("users");
+  if (target && target[2] === e.auth.id && (target[1] === users.name || target[1] === users.id)) {
+    throw new ForbiddenError(require(`${__hooks}/lib/accounts.js`).answer(e, "adminAccount"));
+  }
+  return e.next();
+});

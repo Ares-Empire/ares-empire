@@ -59,4 +59,45 @@ function names(list) {
   return list.length ? list.map((value) => NAMES[value] || value).join(", ") : "–";
 }
 
-module.exports = { NAMES, values, without, union, services, settle, language, names };
+// What the account routes answer the apps, in the request's language (docs/LANGUAGES.md). PocketBase sends it as
+// `message` in its error shape {status, message, data}; it starts every message with a capital and ends it with a
+// period, so each sentence here already does.
+const ANSWERS = {
+  adminAccount: {
+    en: "This is the administrator account; it cannot leave an app or be deleted here.",
+    de: "Das ist das Administratorkonto. Es kann hier keine App verlassen und nicht gelöscht werden.",
+  },
+  unknownService: { en: "Unknown service.", de: "Unbekannter Dienst." },
+};
+
+/**
+ * The language of an Accept-Language header, "de" or "en": among the tags whose primary language is de or en, the one
+ * with the highest quality, the first on a tie; English when there is none. The same rule as the hub's
+ * empire_language.py.
+ */
+function requestLanguage(header) {
+  let best = "en";
+  let quality = 0;
+  for (const item of String(header || "").split(",")) {
+    const parts = item.trim().toLowerCase().split(";");
+    const tag = parts[0].trim();
+    if (!/^(?:de|en)(?:-[a-z0-9]{1,8})*$/.test(tag)) continue;
+    let q = 1;
+    if (parts.length > 1) {
+      if (parts.length !== 2 || !/^\s*q\s*=\s*(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)\s*$/.test(parts[1])) continue;
+      q = parseFloat(parts[1].split("=")[1]);
+    }
+    if (q > quality) {
+      best = tag.split("-")[0];
+      quality = q;
+    }
+  }
+  return best;
+}
+
+/** A sentence of ANSWERS in the language of the request event `e`. */
+function answer(e, key) {
+  return ANSWERS[key][requestLanguage(e.request.header.get("Accept-Language"))];
+}
+
+module.exports = { NAMES, values, without, union, services, settle, language, names, requestLanguage, answer };

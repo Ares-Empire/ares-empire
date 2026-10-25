@@ -248,6 +248,14 @@ def logged(message):
     return False
 
 
+# The administrator's refusal to leave an app or delete himself, by Accept-Language (the hub's language rule).
+ADMIN_REFUSAL = [
+    ('', 'This is the administrator account; it cannot leave an app or be deleted here.'),
+    ('de-DE,de;q=0.9,en;q=0.8', 'Das ist das Administratorkonto. Es kann hier keine App verlassen und nicht gelöscht werden.'),
+    ('en;q=0.8,de;q=0.9', 'Das ist das Administratorkonto. Es kann hier keine App verlassen und nicht gelöscht werden.'),
+    ('fr, de;q=0', 'This is the administrator account; it cannot leave an app or be deleted here.'),
+]
+
 # Patrik in these checks: a made-up superuser address (superusers at example.com get no account emails).
 OWNER = 'owner@ares-empire.test'
 LEAVE = '/api/empire/leave'
@@ -410,6 +418,15 @@ try:
     check('admin cannot delete approved account', refused('DELETE', pending['id'], None, admin_token)
           and user(pending['id'])['approved'] is True)
     check('admin cannot delete own approved account', refused('DELETE', admin['id'], None, admin_token))
+    # ...and is told why, in the request's language (a rule alone would only answer PocketBase's generic 404).
+    for header, sentence in ADMIN_REFUSAL:
+        status, refusal = call('DELETE', '/api/collections/users/records/' + admin['id'], token=admin_token,
+                               headers=['Accept-Language: ' + header])
+        check(f'deleting the admin account itself is a 403 that says why ({header})',
+              status == 403 and refusal.get('message') == sentence)
+    status, refusal = call('DELETE', '/api/collections/_pb_users_auth_/records/' + admin['id'], token=admin_token)
+    check('also when the collection is named by its id', status == 403 and refusal.get('message') == ADMIN_REFUSAL[0][1])
+    check('the admin account is still there', user(admin['id'])['admin'] is True)
     status, listed = call('GET', '/api/collections/users/records', token=user_token)
     check('non-admin cannot list others', status == 200 and [r['id'] for r in listed['items']] == [normal['id']])
     check('non-admin cannot view others', call('GET', '/api/collections/users/records/' + pending['id'], token=user_token)[0] == 404)
@@ -520,6 +537,17 @@ try:
     new_mails(mark, 1)
     check('leaving needs a login', call('POST', LEAVE, {'service': 'arestemis'})[0] == 401)
     check('a superuser cannot leave', call('POST', LEAVE, {'service': 'arestemis'}, supertoken)[0] == 403)
+    before = user(admin['id'])
+    for header, sentence in ADMIN_REFUSAL:
+        status, refusal = call('POST', LEAVE, {'service': 'empire'}, admin_token, headers=['Accept-Language: ' + header])
+        check(f'the admin cannot leave an app: a 403 that says why ({header})',
+              status == 403 and refusal.get('message') == sentence)
+    after = user(admin['id'])
+    check('the admin keeps its services and requests', (after['services'], after['requested']) ==
+          (before['services'], before['requested']))
+    status, refusal = call('POST', LEAVE, {'service': 'nope'}, user_token, headers=['Accept-Language: de'])
+    check('an unknown service is refused in the request language', status == 400 and
+          refusal.get('message') == 'Unbekannter Dienst.')
     for label, body in [('an unknown service', {'service': 'nope'}), ('no service', {}),
                         ('a service that is not text', {'service': 1}), ('a list', {'service': ['arestemis']})]:
         check('leaving ' + label + ' is refused (400)', call('POST', LEAVE, body, user_token)[0] == 400)
