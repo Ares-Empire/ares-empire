@@ -12,6 +12,32 @@ province is added or its state changes, update *both* this file and the manifest
 > On the name: "Ares" is Patrik's long-standing handle. The war-god association is
 > treated as *aesthetic* — marble, gold, command, gravitas — never devotional.
 
+## Now and next (updated 2026-10-25)
+
+**Where things stand:** five iPhone apps (Empire, Aresium, Arestemis, Aresus, Arestoteles) run on the simulator, all
+on the shared standard (Settings, English/German with an in-app switch, one Ares account run from every app). The
+privacy policy and imprint are live, and the websites load nothing from other hosts. Nothing is on a phone yet: Apple's
+developer enrollment has been pending since 2026-10-23.
+
+**The big steps, in this order** (Patrik, 2026-10-25):
+
+1. **Light mode** for the iPhone apps, as part of the standard, before any new app
+   ([IPHONE-APPS.md](docs/IPHONE-APPS.md) → Every app has; `empire-ios/CLAUDE.md` → Open). Start from Aresium's light
+   theme.
+2. **TestFlight** as soon as Apple approves: the signing team, App Store Connect records, upload, then push
+   notifications (APNs key) and retiring Telegram (`empire-ios/CLAUDE.md` → Open 1–3 and 6;
+   `empire-ios/docs/APP-STORE.md` for the forms). Open questions for Patrik there: the demo account's mailbox, and
+   whether reviewers may see Aresus's real server state.
+3. **Aresium for other people:** their data stays on their iPhone (imports, categories, storage); no bank data on the
+   server. Its section goes into the privacy policy before it opens ([PRIVACY.md](docs/PRIVACY.md) → the rule).
+4. **Aresync file sharing from the phone:** Patrik's idea (2026-10-25), not specified yet. Ask him what it should
+   do before planning it.
+5. **New apps**, each built on the standard from its first screen.
+
+**Smaller open items:** no off-server backup exists for any data (accounts, Arestemis, push); a privacy/imprint link
+on the signed-in hub, aresium.de and arestoteles.de; the rest is in `empire-ios/CLAUDE.md` → Open and
+[PRIVACY.md](docs/PRIVACY.md) → To do.
+
 ---
 
 ## The crown language (design system)
