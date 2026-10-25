@@ -15,15 +15,15 @@ province is added or its state changes, update *both* this file and the manifest
 ## Now and next (updated 2026-10-25)
 
 **Where things stand:** five iPhone apps (Empire, Aresium, Arestemis, Aresus, Arestoteles) run on the simulator, all
-on the shared standard (Settings, English/German with an in-app switch, one Ares account run from every app). The
+on the shared standard (Settings, English/German with an in-app switch, light and dark, one Ares account run from every
+app). The
 privacy policy and imprint are live, and the websites load nothing from other hosts. Nothing is on a phone yet: Apple's
 developer enrollment has been pending since 2026-10-23.
 
 **The big steps, in this order** (Patrik, 2026-10-25):
 
-1. **Light mode** for the iPhone apps, as part of the standard, before any new app
-   ([IPHONE-APPS.md](docs/IPHONE-APPS.md) → Every app has; `empire-ios/CLAUDE.md` → Open). Start from Aresium's light
-   theme.
+1. ~~**Light mode**~~ done 2026-10-25 for all five apps ([IPHONE-APPS.md](docs/IPHONE-APPS.md) → Every app has;
+   `empire-ios/CLAUDE.md` → Light mode). Left for the phone: both looks checked once TestFlight runs.
 2. **TestFlight** as soon as Apple approves: the signing team, App Store Connect records, upload, then push
    notifications (APNs key) and retiring Telegram (`empire-ios/CLAUDE.md` → Open 1–3 and 6;
    `empire-ios/docs/APP-STORE.md` for the forms). Open questions for Patrik there: the demo account's mailbox, and
@@ -175,6 +175,7 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y").
 
+- **2026-10-25 · empire** — Every Empire app got light mode: Settings → Appearance (like the iPhone, light or dark) in each app, with every colour shared as a light and a dark value, so each future app has both from its first screen. Aresium keeps its red mode on top of either; the Empire app becomes a marble hall by day (ivory wall, antique gold, the bust as a faint relief); the widgets follow the home screen.
 - **2026-10-25 · empire** — Every app now creates and runs the one Ares account itself: sign up, reset a password, ask for access to an app, change the password, leave an app (its data goes with it) or delete the account, which removes its data in every service; the privacy policy and imprint went live with a contact form.
 - **2026-10-25 · empire** — Every Empire app got a Settings screen behind a gear: language (chosen in the app), notifications, a contact form that reaches Patrik by email, privacy policy, imprint, font licences, version and the account; and each app's name now ends its main screen, seen only when scrolling down.
 - **2026-10-25 · arestoteles** — Arestoteles became quick to look things up in: search by meaning on the server (a German question finds the English passage that answers it, with a small open model on the empire's own server), a search field in every tab, short position cards, and notes, edits and "discuss later" marks instead of changing positions on the phone.

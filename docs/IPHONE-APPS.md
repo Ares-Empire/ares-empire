@@ -69,10 +69,11 @@ worth trying once the app is shared with a real group of users.
   internal deletion route, so leaving the app and deleting the account reach it.
 - **Its name at the end of the main screen**, seen only when scrolling down (`WordmarkBand`, shared).
 - **English and German** ([LANGUAGES.md](LANGUAGES.md)).
-- **Light mode: decided, not built yet** (Patrik, 2026-10-24: "we will add it and its best to do it before making
-  more apps so it can become a part of standard design"). The apps are dark only today. Light mode is designed once
-  in the shared design (`Shared/Design`: colours as light/dark pairs, a Settings row "Appearance": like the iPhone,
-  light, dark), then every app is moved onto it and checked in both. It comes **before the next new app**.
+- **Light and dark** (Patrik, 2026-10-24: "we will add it and its best to do it before making more apps so it can
+  become a part of standard design"; built 2026-10-25 for all five apps and both widgets). Settings → Appearance: like
+  the iPhone, light, dark. Every colour is a light/dark pair in the shared design (`empire-ios/Shared/Design`), so a
+  new app built from it has both from its first screen. Widgets follow the home screen. Rules and details:
+  `empire-ios/CLAUDE.md` → Light mode.
 
 
 - A new build stays installable for 90 days. We ship updates far more often than that while
