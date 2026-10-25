@@ -40,8 +40,7 @@ developer enrollment has been pending since 2026-10-23.
    it comes up; not needed for the current work.
 5. **New apps**, each built on the standard from its first screen.
 
-**Smaller open items:** a privacy/imprint link on the signed-in hub, aresium.de and arestoteles.de (being
-built 2026-10-25); the rest is in `empire-ios/CLAUDE.md` → Open and
+**Smaller open items:** the rest is in `empire-ios/CLAUDE.md` → Open and
 [PRIVACY.md](docs/PRIVACY.md) → To do.
 
 ---

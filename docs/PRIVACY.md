@@ -193,8 +193,8 @@ contact form.
    sections after it moved up by one).
 3. ~~**Search terms in logs.**~~ Done 2026-10-25: Arestemis and Arestoteles drop the query string from uvicorn's
    access log (path, status and IP stay, 14 days).
-4. **Links:** the login pages and the apps' Settings link to the privacy policy and imprint; the signed-in hub,
-   aresium.de and arestoteles.de do not yet (a footer link, before other people use them).
+4. ~~**Links.**~~ Done 2026-10-25: the login pages, the apps' Settings, and the signed-in hub, aresium.de and
+   arestoteles.de (a quiet "Privacy · Imprint" line, desktop and phone) link the privacy policy and imprint.
 5. ~~**Backups.**~~ Done 2026-10-25: the one-off copies are deleted, the nightly backup runs ([BACKUP.md](BACKUP.md)),
    and the policy's section 9 (Speicherdauer / Storage period) names it and its periods (Patrik approved the text
    2026-10-25).
