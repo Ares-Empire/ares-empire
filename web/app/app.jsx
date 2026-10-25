@@ -118,6 +118,7 @@
           </section>
 
           {!expanded && !spread && <window.Chronicle log={chronicle} projects={projects} />}
+          <window.LegalLinks className="emp-legal" />
         </main>
 
         {forge && forge.open && (

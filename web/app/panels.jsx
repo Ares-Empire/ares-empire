@@ -1,4 +1,4 @@
-/* Ares Empire — the views (window.CardGrid, window.Timeline, window.Forge).
+/* Ares Empire — the views (window.CardGrid, window.Timeline, window.Forge, window.LegalLinks).
 
    CardGrid  — "project mode": the provinces (or the expansion plans) laid out on a clean,
                count-adaptive board (2 → L/R · 3 → L/M/R · 4 → quadrants · …) with context
@@ -6,7 +6,8 @@
    Timeline  — the chronicle, as a horizontal ribbon below the circle.
    Forge     — CONQUER. Name a province; it generates the seed CLAUDE.md, the manifest entry
                and the Claude Code handoff, then crowns it onto the ring. (A browser can't
-               touch the filesystem, so Claude Code does the actual scaffold.) */
+               touch the filesystem, so Claude Code does the actual scaffold.)
+   LegalLinks — the privacy policy and imprint, one quiet line, used by the desktop and the phone layout. */
 (function () {
   const { useState, useEffect, useRef } = React;
   const E = () => window.EMPIRE || {};
@@ -497,9 +498,20 @@ TODO — stack, deploy, domain.
     );
   }
 
+  // The privacy policy and imprint (webauth/legal.py, open to signed-in visitors too). English like the rest of the
+  // hub and the login page; the pages themselves link to their German versions.
+  function LegalLinks({ className }) {
+    return (
+      <nav className={className} aria-label="Legal">
+        <a href="/privacy">Privacy</a> · <a href="/imprint">Imprint</a>
+      </nav>
+    );
+  }
+
   window.CardGrid = CardGrid;
   window.Chronicle = Chronicle;
   window.EmpireGoldDust = GoldDust;
   window.ProjectDetail = ProjectDetail;
   window.Forge = Forge;
+  window.LegalLinks = LegalLinks;
 })();

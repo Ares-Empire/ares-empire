@@ -237,7 +237,10 @@
           onAdd={admin ? null : () => open({ type: "add" })} />
           : <p className="em-empty">No expansions yet.</p>}
         {!expanded && <Timeline title={admin ? "Chronicle" : "What's new"} entries={data.chronicle} projects={data.projects} />}
-        {API.sampleMode && <footer className="em-home-footer">{admin ? "Admin sample" : "Member sample"}</footer>}
+        <footer className="em-home-footer">
+          <window.LegalLinks className="em-legal" />
+          {API.sampleMode && <span>{admin ? "Admin sample" : "Member sample"}</span>}
+        </footer>
       </main>
       <span className="em-sr" role="status">{notice}</span>
       {modal && <Dialog title={({ province: "Provinces", idea: "Expansions", add: "Add a province", approvals: "Approvals" })[modal.type]}

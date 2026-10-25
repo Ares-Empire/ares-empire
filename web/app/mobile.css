@@ -60,7 +60,13 @@
 .em-timeline .log-text { display: block; overflow: visible; margin: 3px 0 0; font-size: 11.5px; line-height: 1.6; color: #aaaeaa; overflow-wrap: anywhere; }
 .em-empty { font-size: 12px; color: #9b9f9d; line-height: 1.8; padding: 12px 0; }
 .em-home > .em-empty { margin: 0 26px; }
-.em-home-footer { margin: 0 26px; padding: 20px 0 25px; border-top: 1px solid #ffffff09; color: #626768; font-size: 10px; }
+/* The end of the page: the privacy policy and imprint, and on a localhost preview which sample is shown. The links'
+   padding gives them a taller tap area; the footer's own padding is smaller by the same amount. */
+.em-home-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 26px;
+  padding: 10px 0 15px; border-top: 1px solid #ffffff09; color: #626768; font-size: 10px; }
+.em-legal { font-size: 11px; letter-spacing: .02em; }
+.em-legal a { display: inline-block; padding: 10px 2px; color: #8f9390; transition: opacity .15s; }
+.em-legal a:active { opacity: .6; }
 .em-overlay { position: absolute; inset: 0; z-index: 20; display: flex; align-items: flex-end; background: #0009; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
 .em-dialog { width: 100%; height: 100%; display: flex; flex-direction: column; outline: none; background: #0a0c0e; animation: em-enter .25s ease-out; }
 .em-dialog-header { padding: calc(12px + env(safe-area-inset-top)) 18px 12px 26px; display: flex; align-items: center; justify-content: space-between; flex: none; border-bottom: 1px solid #ffffff0c; }
