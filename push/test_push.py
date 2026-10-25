@@ -131,7 +131,8 @@ class PushTestCase(unittest.TestCase):
 
     def request(self, path="/api/push/devices", method="POST", body=None, token="member-one", handler=None,
                 headers=None, raw=None):
-        handler = handler or (server.InternalHandler if path in ("/send", "/health") else server.PublicHandler)
+        internal = path in ("/send", "/health") or path.startswith("/internal/")
+        handler = handler or (server.InternalHandler if internal else server.PublicHandler)
         request_headers = {"Host": "push.example.com", "X-Forwarded-For": "192.0.2.5, 192.0.2.10"}
         if token is not None:
             request_headers["Authorization"] = "Bearer " + token
@@ -463,6 +464,55 @@ class SendTests(PushTestCase):
             self.assertNotIn(device, rows)
 
 
+class DeleteAccountTests(PushTestCase):
+    """DELETE /internal/accounts/<id>: the account server's call after an account was deleted (docs/ACCOUNTS.md)."""
+
+    EMPIRE = "de.ares-empire.empire"
+
+    def setUp(self):
+        super().setUp()
+        self.register(DEVICE_A)
+        self.register(DEVICE_B, app=self.EMPIRE)
+        self.register(DEVICE_C, token="member-two")
+        self.send(url="arestemis://match/1")
+        self.send(to={"user": "membertwo000002"})
+        self.send(to={"all": True})
+
+    def delete(self, account="memberone000001", **kwargs):
+        return self.request("/internal/accounts/" + account, method="DELETE", token=None, **kwargs)
+
+    def test_the_accounts_devices_of_every_app_and_its_outbox_rows_go(self):
+        self.pb_calls.clear()
+        status, data, _ = self.delete()
+        self.assertEqual((status, data), (204, None))
+        self.assertEqual((self.user_of(DEVICE_A), self.user_of(DEVICE_B, self.EMPIRE)), (None, None))
+        self.assertEqual(self.user_of(DEVICE_C), "membertwo000002")
+        self.assertEqual(sorted(row["user_or_all"] for row in self.store.outbox()), ["all", "membertwo000002"])
+        self.assertEqual(self.pb_calls, [])  # an internal call: no Empire token, no login check
+        self.assertIn("deleted account: 2 device(s), 1 outbox row(s)", self.logs.lines)
+
+    def test_an_account_with_nothing_here_is_fine_and_a_repeat_too(self):
+        self.assertEqual(self.delete("nobody000000009")[0], 204)
+        self.assertEqual(self.delete()[0], 204)
+        self.assertEqual(self.delete()[0], 204)
+        self.assertEqual(self.store.counts(), {APP: 1})
+
+    def test_an_invalid_account_id_is_400(self):
+        for account in ("bad%20id", "z" * 65, "x%2Fy"):
+            with self.subTest(account=account):
+                status, data, _ = self.delete(account)
+                self.assertEqual((status, data), (400, {"error": "Invalid account id."}))
+        self.assertEqual(self.store.counts(), {APP: 2, self.EMPIRE: 1})
+
+    def test_only_delete_on_the_internal_port(self):
+        self.assertEqual(self.delete(handler=server.PublicHandler)[0], 404)
+        self.assertEqual(self.request("/api/push/internal/accounts/memberone000001", method="DELETE")[0], 404)
+        self.assertEqual(self.request("/internal/accounts/memberone000001", method="GET", token=None)[0], 405)
+        self.assertEqual(self.request("/internal/accounts/", method="DELETE", token=None)[0], 404)
+        self.assertEqual(self.request("/internal/accounts/a/b", method="DELETE", token=None)[0], 404)
+        self.assertEqual(self.user_of(DEVICE_A), "memberone000001")
+
+
 class DryRunTests(PushTestCase):
     dry_run = True
 
@@ -660,7 +710,7 @@ class RouteTests(PushTestCase):
         public = {path for _, path in server.PublicHandler.routes}
         internal = {path for _, path in server.InternalHandler.routes}
         self.assertEqual(public, {"/api/push/devices"})
-        self.assertEqual(internal, {"/send", "/health"})
+        self.assertEqual(internal, {"/send", "/health", "/internal/accounts/{account}"})
         self.assertEqual(public & internal, set())
         self.assertTrue(all(path.startswith("/api/push/") for path in public))  # all Caddy forwards
 
@@ -668,6 +718,7 @@ class RouteTests(PushTestCase):
         self.register()
         body = {"app": APP, "to": {"all": True}, "title": "x"}
         for method, path in [*server.InternalHandler.routes, ("POST", "/api/push/send"), ("GET", "/api/push/health"),
+                             ("DELETE", "/internal/accounts/memberone000001"),
                              ("POST", "/api/push/../send"), ("POST", "/api/push/devices/../../send"),
                              ("POST", "//send"), ("POST", "/send/"), ("POST", "/send?x=1")]:
             with self.subTest(method=method, path=path):

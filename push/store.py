@@ -115,6 +115,13 @@ class Store:
                                    (app, token)).fetchone()
         return Device(*row) if row else None
 
+    def delete_account(self, user: str) -> tuple[int, int]:
+        """Everything kept about one account: its devices of every app and its outbox rows. Returns both counts."""
+        with self._lock, self._db:
+            devices = self._db.execute("DELETE FROM devices WHERE user = ?", (user,)).rowcount
+            outbox = self._db.execute("DELETE FROM outbox WHERE user_or_all = ?", (user,)).rowcount
+        return devices, outbox
+
     def counts(self) -> dict[str, int]:
         with self._lock:
             return dict(self._db.execute("SELECT app, COUNT(*) FROM devices GROUP BY app ORDER BY app"))

@@ -166,6 +166,14 @@ class PushService:
                  "all" if user is None else "one account", answer["sent"], answer["failed"])
         return answer
 
+    def delete_account(self, user: str) -> None:
+        """The account was deleted (the account server calls this, docs/ACCOUNTS.md): its devices of every app and
+        its outbox rows go. An account with nothing here is fine too."""
+        if not USER_ID.fullmatch(user):
+            raise APIError(400, "Invalid account id.")
+        devices, outbox = self.store.delete_account(user)
+        log.info("deleted account: %d device(s), %d outbox row(s)", devices, outbox)
+
     def health(self) -> dict:
         return {"ok": True, "dry_run": self.dry_run, "devices": self.store.counts()}
 

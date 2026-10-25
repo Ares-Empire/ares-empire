@@ -2,7 +2,8 @@
 """Empire push service: one process, two listeners (docs/PUSH.md).
 
   public    127.0.0.1:8095  POST/DELETE /api/push/devices   the apps, via Caddy (www.ares-empire.de/api/push/*)
-  internal  127.0.0.1:8096  POST /send, GET /health          province services on this host; Caddy never routes here
+  internal  127.0.0.1:8096  POST /send, GET /health,         province services and the account server on this host;
+                            DELETE /internal/accounts/<id>   Caddy never routes here
 
 Each listener only knows its own route table, so no path on the public port reaches /send.
 Without the APNs key settings it runs as a dry run: messages are kept in the outbox, nothing is sent.
@@ -20,7 +21,7 @@ import threading
 from collections.abc import Callable
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from empire_language import request_language
 from push.accounts import Accounts
@@ -36,10 +37,29 @@ MAX_BODY_BYTES = 10_000
 CLEAN_UP_EVERY = 24 * 60 * 60
 
 
+def match(template: str, path: str) -> dict[str, str] | None:
+    """The `{name}` parts of `path` when it has the template's shape ("/internal/accounts/{account}" matches
+    "/internal/accounts/abc"), else None. A `{name}` part is one non-empty path segment."""
+    want, got = template.split("/"), path.split("/")
+    if len(want) != len(got):
+        return None
+    params = {}
+    for part, value in zip(want, got):
+        if part.startswith("{") and part.endswith("}"):
+            if not value:
+                return None
+            params[part[1:-1]] = unquote(value)
+        elif part != value:
+            return None
+    return params
+
+
 class Handler(BaseHTTPRequestHandler):
-    """JSON in, JSON out. `self.server.service` is the PushService; `routes` is set per listener below."""
+    """JSON in, JSON out. `self.server.service` is the PushService; `routes` is set per listener below (paths may
+    have `{name}` parts, handed to the route as `self.params`)."""
 
     routes: dict[tuple[str, str], Callable[[Handler], None]] = {}
+    params: dict[str, str] = {}
     server_version = "EmpirePush"
     sys_version = ""
 
@@ -52,12 +72,19 @@ class Handler(BaseHTTPRequestHandler):
 
     def _dispatch(self) -> None:
         path = urlparse(self.path).path
-        route = self.routes.get((self.command, path))
         try:
+            route, other_method = None, False
+            for (method, template), handler in self.routes.items():
+                params = match(template, path)
+                if params is None:
+                    continue
+                if method != self.command:
+                    other_method = True
+                    continue
+                route, self.params = handler, params
+                break
             if route is None:
-                if any(path == known for _, known in self.routes):
-                    raise APIError(405, "Method not allowed.")
-                raise APIError(404, "Unknown route.")
+                raise APIError(405 if other_method else 404, "Method not allowed." if other_method else "Unknown route.")
             route(self)
         except APIError as e:
             self.send_json({"error": text(e.message, self.language)}, e.status)
@@ -134,6 +161,11 @@ def health(h: Handler) -> None:
     h.send_json(h.service.health())
 
 
+def delete_account(h: Handler) -> None:
+    h.service.delete_account(h.params["account"])
+    h.send_no_content()
+
+
 class PublicHandler(Handler):
     routes = {("POST", "/api/push/devices"): register_device,
               ("DELETE", "/api/push/devices"): unregister_device}
@@ -141,7 +173,8 @@ class PublicHandler(Handler):
 
 class InternalHandler(Handler):
     routes = {("POST", "/send"): send,
-              ("GET", "/health"): health}
+              ("GET", "/health"): health,
+              ("DELETE", "/internal/accounts/{account}"): delete_account}
 
 
 # ── Running ──────────────────────────────────────────────────────────────────
