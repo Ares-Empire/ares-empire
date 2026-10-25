@@ -15,7 +15,7 @@ onRecordUpdate((e) => {
   e.next();
 }, "users");
 
-// Someone signed up (on the website or in an app) → ask Patrik to approve, with the apps it asked for.
+// Someone signed up (on the website or in an app) → ask the superusers (Patrik) to approve, with the apps it asked for.
 onRecordCreateRequest((e) => {
   e.next(); // saves the record; throws on validation errors, so nothing below runs then
   if (e.hasSuperuserAuth()) return; // created by hand in the admin UI
@@ -24,19 +24,19 @@ onRecordCreateRequest((e) => {
   const mail = require(`${__hooks}/lib/mail.js`);
   const record = e.record;
   try {
-    mail.send(e.app, mail.owners(e.app), mail.signUp({
+    mail.sendToSuperusers(e.app, mail.signUp({
       email: record.email(),
       name: record.getString("name"),
       requested: accounts.names(accounts.values(record, "requested")),
       language: accounts.language(record),
-      link: mail.accountLink(e.app, record.id),
+      link: mail.adminLink(e.app, "users", record.id),
     }));
   } catch (err) {
     e.app.logger().error("approval request email failed", "error", String(err));
   }
 }, "users");
 
-// After an update: an approved account asked for more apps → tell Patrik; an account was approved or given more
+// After an update: an approved account asked for more apps → tell the superusers; an account was approved or given more
 // apps → tell the person, in its language. A failed email is logged; it never fails the update.
 onRecordUpdateRequest((e) => {
   const accounts = require(`${__hooks}/lib/accounts.js`);
@@ -55,14 +55,14 @@ onRecordUpdateRequest((e) => {
   const asked = accounts.without(requested, was.requested);
   if (asked.length && record.getBool("approved") && !e.hasSuperuserAuth()) {
     try {
-      mail.send(e.app, mail.owners(e.app), mail.accessRequest({
+      mail.sendToSuperusers(e.app, mail.accessRequest({
         email: record.email(),
         name: record.getString("name"),
         asked: accounts.names(asked),
         requested: accounts.names(requested),
         services: accounts.names(services),
         language: accounts.language(record),
-        link: mail.accountLink(e.app, record.id),
+        link: mail.adminLink(e.app, "users", record.id),
       }));
     } catch (err) {
       e.app.logger().error("access request email failed", "error", String(err));
@@ -74,7 +74,7 @@ onRecordUpdateRequest((e) => {
   if (first || (record.getBool("approved") && granted.length)) {
     const apps = first ? services : granted;
     try {
-      mail.send(e.app, [{ address: record.email() }],
+      mail.sendToAccount(e.app, record.email(),
         mail.approved(accounts.language(record), first, accounts.names(apps), apps.includes("empire")));
     } catch (err) {
       e.app.logger().error("approved email failed", "error", String(err));

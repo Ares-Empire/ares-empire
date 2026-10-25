@@ -1,17 +1,41 @@
-// The emails the account hooks write: to Patrik (sign-ups, access requests, a stuck deletion; English, like the
-// support emails) and to a person once approved (in the account's `language`). PocketBase's own verification and
-// password-reset emails are templates (migration 1793200200_emails_de_en.js). Loaded by the handlers with
-// `require(`${__hooks}/lib/mail.js`)`.
+/// <reference path="../../pb_data/types.d.ts" />
+// Everything the mail hooks share: who gets which email, how it is sent, and the texts of the account emails.
+// PocketBase runs every handler in its own scope, so a handler loads this inside itself:
+//   const mail = require(`${__hooks}/lib/mail.js`);
+// Not a hook itself: only files ending in .pb.js are loaded as hooks.
+//
+// Patrik is reached two ways, on purpose:
+// - SUPPORT_TO, for what people write to him: the apps' contact & support (feedback.pb.js) and the website's contact
+//   form (contact.pb.js). Plain text, Reply-To the writer: sendSupport().
+// - superusers(), for account administration: sign-ups, access requests, a stuck deletion (accounts.pb.js,
+//   lib/deletions.js). Every superuser's address except placeholders (example.com): whoever can approve in the admin
+//   UI. sendToSuperusers().
+// A person's own email (approved, in the account's `language`) goes to the account's address: sendToAccount().
+// PocketBase's own verification and password-reset emails are templates (migration 1793200200_emails_de_en.js).
+
+// Where messages people write to Patrik go: the one place to change it.
+const SUPPORT_TO = "REDACTED-EMAIL";
 
 const LANGUAGES = { en: "English", de: "German" };
 const HUB = "https://www.ares-empire.de/login";
 
-function escape(text) {
-  return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]);
+// ── Sending ──────────────────────────────────────────────────────────────────
+
+function sender(app) {
+  const meta = app.settings().meta;
+  return { address: meta.senderAddress, name: meta.senderName };
 }
 
-/** Patrik: every superuser's address except placeholders (example.com). */
-function owners(app) {
+// Mails a plain text to SUPPORT_TO from the server's sender, with Reply-To when given. Throws when sending fails, so
+// the hook can log it; the hooks call it after the record is saved, so a failure never undoes the record.
+function sendSupport(app, subject, text, replyTo) {
+  const message = { from: sender(app), to: [{ address: SUPPORT_TO }], subject: subject, text: text };
+  if (replyTo) message.headers = { "Reply-To": replyTo };
+  app.newMailClient().send(new MailerMessage(message));
+}
+
+// The superusers' addresses, except placeholders (example.com).
+function superusers(app) {
   const to = [];
   for (const record of app.findAllRecords("_superusers")) {
     const address = String(record.email() || "");
@@ -20,29 +44,60 @@ function owners(app) {
   return to;
 }
 
-/** Sends `{subject, html}` from the server's sender; false when there is nobody to send it to. Throws on failure. */
-function send(app, to, message) {
+function sendHtml(app, to, message) {
+  app.newMailClient().send(new MailerMessage({ from: sender(app), to: to, subject: message.subject, html: message.html }));
+}
+
+// Mails `{subject, html}` to the superusers; false when there is none to send to. Throws when sending fails.
+function sendToSuperusers(app, message) {
+  const to = superusers(app);
   if (!to.length) return false;
-  const meta = app.settings().meta;
-  app.newMailClient().send(new MailerMessage({
-    from: { address: meta.senderAddress, name: meta.senderName },
-    to: to,
-    subject: message.subject,
-    html: message.html,
-  }));
+  sendHtml(app, to, message);
   return true;
 }
 
-/** The account in the admin UI (approve, decline, grant there). */
-function accountLink(app, id) {
-  return app.settings().meta.appURL + "/_/#/collections?collection=users&recordId=" + encodeURIComponent(id);
+// Mails `{subject, html}` to one account's address. Throws when sending fails.
+function sendToAccount(app, address, message) {
+  sendHtml(app, [{ address: address }], message);
+}
+
+// ── Pieces of a message ──────────────────────────────────────────────────────
+
+// The first words of a message on one line, for a subject: whole words, at most `max` characters, "…" when cut.
+function summary(message, max) {
+  const limit = max || 60;
+  const flat = String(message).replace(/\s+/g, " ").trim();
+  let result = "";
+  for (const word of flat.split(" ")) {
+    const longer = result ? result + " " + word : word;
+    if (longer.length > limit) break;
+    result = longer;
+  }
+  if (!result) result = flat.slice(0, limit);          // one very long word
+  return result.length < flat.length ? result + "…" : result;
+}
+
+// One line of a plain mail body: "Label:    value", "–" when the value is empty.
+function line(label, value) {
+  return (label + ":").padEnd(10) + (value || "–");
+}
+
+// The record in the admin UI, for the end of a mail.
+function adminLink(app, collection, id) {
+  return app.settings().meta.appURL + "/_/#/collections?collection=" + collection + "&recordId=" + id;
+}
+
+function escape(text) {
+  return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]);
 }
 
 function who(account) {
   return "<b>" + escape(account.email) + "</b>" + (account.name ? " (" + escape(account.name) + ")" : "");
 }
 
-/** To Patrik: someone created an account. account = {email, name, requested: "Arestemis" or "–", language, link}. */
+// ── The account emails ───────────────────────────────────────────────────────
+
+// To the superusers: someone created an account. account = {email, name, requested: "Arestemis" or "–", language, link}.
 function signUp(account) {
   return {
     subject: "New Ares account: " + account.email + (account.requested !== "–" ? " asks for " + account.requested : ""),
@@ -55,7 +110,8 @@ function signUp(account) {
   };
 }
 
-/** To Patrik: an approved account asks for more apps. account = {email, name, asked, requested, services, language, link}. */
+// To the superusers: an approved account asks for more apps. account = {email, name, asked, requested, services,
+// language, link}.
 function accessRequest(account) {
   return {
     subject: "Ares access request: " + account.email + " asks for " + account.asked,
@@ -89,11 +145,9 @@ const APPROVED = {
   },
 };
 
-/**
- * To the person, in its language: approved for the first time (`first`), or given more apps. `apps` are the
- * services it can use now (first time) or the new ones, as names ("Arestemis, Ares Empire"); `hub` adds the
- * website's address (when the hub is among them).
- */
+// To the person, in its language: approved for the first time (`first`), or given more apps. `apps` are the services
+// it can use now (first time) or the new ones, as names ("Arestemis, Ares Empire"); `hub` adds the website's address
+// (when the hub is among them).
 function approved(language, first, apps, hub) {
   const t = APPROVED[language] || APPROVED.en;
   const shown = apps === "–" ? "" : escape(apps);
@@ -107,7 +161,8 @@ function approved(language, first, apps, hub) {
   };
 }
 
-/** To Patrik: deleting a deleted account's data in a service keeps failing. job = {account, service, since, attempts, error, link}. */
+// To the superusers: deleting a deleted account's data in a service keeps failing. job = {account, service, since,
+// attempts, error, link}.
 function deletionStuck(job) {
   return {
     subject: "Ares account deletion stuck: " + job.service,
@@ -119,4 +174,8 @@ function deletionStuck(job) {
   };
 }
 
-module.exports = { owners, send, accountLink, signUp, accessRequest, approved, deletionStuck };
+module.exports = {
+  SUPPORT_TO, sendSupport, superusers, sendToSuperusers, sendToAccount,
+  summary, line, adminLink,
+  signUp, accessRequest, approved, deletionStuck,
+};

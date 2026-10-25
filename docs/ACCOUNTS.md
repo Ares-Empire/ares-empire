@@ -76,10 +76,10 @@ account server, and Patrik gets it by email. Migration `1793100000_feedback.js`,
   admin UI (Collections → feedback).
 - **Rate limit:** at most 10 creates per hour per client IP (rule `feedback:create`, 3600 s, in Settings → Rate limits,
   added by the migration). The app shows "too many messages, try later" on the 429.
-- **Email:** after each create the hook mails it to `REDACTED-EMAIL` (the constant `TO` in `pb_hooks/mail.js`,
-  shared with the contact hook) from the
-  server's sender, `Reply-To` the account's email, subject `[Arestoteles] Idea: <first words>`, a plain body (kind,
-  app, version, system, language, account email, the message, a link to the record). A failed email is logged
+- **Email:** after each create the hook mails it to `REDACTED-EMAIL` (`SUPPORT_TO` in `pb_hooks/lib/mail.js`,
+  shared with the contact hook) from the server's sender, `Reply-To` the account's email, subject
+  `[Arestoteles] Idea: <first words>`, a plain body (kind, app, version, system, language, account email, the
+  message, a link to the record). A failed email is logged
   (`feedback email failed` in the admin UI's logs) and the record stays; the create never fails because of mail.
 - App side: `empire-ios` `Shared/Support/` (`POST /api/collections/feedback/records` with the Empire token).
 
@@ -97,7 +97,7 @@ names it as the second quick way to reach him besides email. The page posts stra
   UI (Collections → contact).
 - **Rate limit:** at most 5 creates per hour per visitor address (rule `contact:create`, 3600 s). The address is the
   visitor's: Caddy's `X-Forwarded-For`, trusted since the first migration (`trustedProxy`, rightmost entry).
-- **Email:** after each create the hook mails it to Patrik (`pb_hooks/mail.js`) from the server's sender, `Reply-To`
+- **Email:** after each create the hook mails it to Patrik (`SUPPORT_TO`, `pb_hooks/lib/mail.js`) from the server's sender, `Reply-To`
   the given address, subject `[Website] Kontakt: <first words>` (German page) or `[Website] Contact: …`, a plain body
   (name, email, language, the message, a link to the record). A failed email is logged (`contact email failed`) and
   the record stays.
@@ -158,7 +158,9 @@ error says both.
 | Confirm the email address, reset the password (PocketBase's own) | the account | English and German in one message (migration `1793200200_emails_de_en.js`) |
 | A deletion job still fails a day after the deletion | Patrik | English, once per job |
 
-The texts are in `pb_hooks/lib/mail.js`. A failed email is logged (`approval request email failed`, `access request
+The texts are in `pb_hooks/lib/mail.js`, the one mail module of every hook. "Patrik" here means the superusers
+(`superusers()`: whoever can approve in the admin UI), not `SUPPORT_TO`, the address for what people write to him
+(feedback, the contact form). A failed email is logged (`approval request email failed`, `access request
 email failed`, `approved email failed`, `account deletion alert email failed`) and never fails the request.
 
 ### Deleting an account reaches every service

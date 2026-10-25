@@ -1,6 +1,6 @@
 /// <reference path="../pb_data/types.d.ts" />
 // Contact & support from the apps (migration 1793100000_feedback.js): every new feedback record is mailed to Patrik
-// (mail.js), with Reply-To the account's email so he can answer straight from his inbox. A failed email is logged and
+// (lib/mail.js), with Reply-To the account's email so he can answer straight from his inbox. A failed email is logged and
 // the record stays (he still finds it in the admin UI); it never fails the create.
 
 onRecordAfterCreateSuccess((e) => {
@@ -14,7 +14,7 @@ onRecordAfterCreateSuccess((e) => {
   const app = e.app;
   const record = e.record;
   try {
-    const mail = require(`${__hooks}/mail.js`);
+    const mail = require(`${__hooks}/lib/mail.js`);
     const account = app.findRecordById("users", record.getString("user"));
     const email = String(account.email() || "");
     const appName = APPS[record.getString("app")] || record.getString("app");
@@ -38,7 +38,7 @@ onRecordAfterCreateSuccess((e) => {
       "In the admin UI: " + mail.adminLink(app, "feedback", record.id),
     ].join("\n");
 
-    mail.sendToPatrik(app, "[" + appName + "] " + kind + ": " + mail.summary(message), text, email);
+    mail.sendSupport(app, "[" + appName + "] " + kind + ": " + mail.summary(message), text, email);
   } catch (err) {
     app.logger().error("feedback email failed", "feedback", record.id, "error", String(err));
   }

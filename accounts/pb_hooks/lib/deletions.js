@@ -51,17 +51,17 @@ function call(service, account) {
   }
 }
 
-/** Mails Patrik about a stuck job; true once sent. */
+/** Mails the superusers (Patrik) about a stuck job; true once sent. */
 function alert(app, job) {
   const mail = require(`${__hooks}/lib/mail.js`);
   try {
-    return mail.send(app, mail.owners(app), mail.deletionStuck({
+    return mail.sendToSuperusers(app, mail.deletionStuck({
       account: job.getString("account"),
       service: SERVICES[job.getString("service")].name,
       since: job.getDateTime("created").string(),
       attempts: job.getInt("attempts"),
       error: job.getString("last_error"),
-      link: app.settings().meta.appURL + "/_/#/collections?collection=deletions&recordId=" + job.id,
+      link: mail.adminLink(app, "deletions", job.id),
     }));
   } catch (err) {
     app.logger().error("account deletion alert email failed", "job", job.id, "error", String(err));
