@@ -1,54 +1,99 @@
 /// <reference path="../pb_data/types.d.ts" />
-// Emails around sign-up. PocketBase runs each handler in its own scope, so every handler
-// is self-contained (no shared helpers at file level).
+// Accounts run from every app (docs/ACCOUNTS.md → Accounts in every app): the two rules of a users record, the
+// emails around sign-up, access requests and approval, and the route that leaves one app. The logic is in
+// lib/accounts.js and lib/mail.js; PocketBase runs each handler in its own scope, so every handler loads them itself.
 
-// Someone signed up through the website → ask the superusers (Patrik) to approve.
+// Every save of a users record (sign-up, the account itself, an admin, the admin UI, a hook): approval grants what
+// was requested, and `requested` drops what the account already has.
+onRecordCreate((e) => {
+  require(`${__hooks}/lib/accounts.js`).settle(e.record, false);
+  e.next();
+}, "users");
+
+onRecordUpdate((e) => {
+  require(`${__hooks}/lib/accounts.js`).settle(e.record, e.record.original().getBool("approved"));
+  e.next();
+}, "users");
+
+// Someone signed up (on the website or in an app) → ask Patrik to approve, with the apps it asked for.
 onRecordCreateRequest((e) => {
   e.next(); // saves the record; throws on validation errors, so nothing below runs then
   if (e.hasSuperuserAuth()) return; // created by hand in the admin UI
 
-  const app = e.app;
-  const meta = app.settings().meta;
-  const to = app.findAllRecords("_superusers")
-    .map((r) => r.email())
-    .filter((m) => m && !m.endsWith("@example.com"))
-    .map((m) => ({ address: m }));
-  if (to.length === 0) return;
-
-  const email = String(e.record.email()).replace(/[<>&"]/g, "");
-  const link = meta.appURL + "/_/#/collections?collection=users&recordId=" + e.record.id;
+  const accounts = require(`${__hooks}/lib/accounts.js`);
+  const mail = require(`${__hooks}/lib/mail.js`);
+  const record = e.record;
   try {
-    app.newMailClient().send(new MailerMessage({
-      from: { address: meta.senderAddress, name: meta.senderName },
-      to: to,
-      subject: "Approve new Ares Empire account: " + email,
-      html: "<p><b>" + email + "</b> created an Ares Empire account.</p>" +
-        "<p>To let them in, open <a href=\"" + link + "\">their account</a>, switch on <b>approved</b>, " +
-        "pick the <b>services</b> they may use and save. They get an email when you do.</p>" +
-        "<p>To decline, delete the account there.</p>",
+    mail.send(e.app, mail.owners(e.app), mail.signUp({
+      email: record.email(),
+      name: record.getString("name"),
+      requested: accounts.names(accounts.values(record, "requested")),
+      language: accounts.language(record),
+      link: mail.accountLink(e.app, record.id),
     }));
   } catch (err) {
-    app.logger().error("approval request email failed", "error", String(err));
+    e.app.logger().error("approval request email failed", "error", String(err));
   }
 }, "users");
 
-// A superuser switched `approved` on → tell the person they can log in now.
+// After an update: an approved account asked for more apps → tell Patrik; an account was approved or given more
+// apps → tell the person, in its language. A failed email is logged; it never fails the update.
 onRecordUpdateRequest((e) => {
-  const wasApproved = e.record.original().getBool("approved");
+  const accounts = require(`${__hooks}/lib/accounts.js`);
+  const before = e.record.original();
+  const was = {
+    approved: before.getBool("approved"),
+    services: accounts.values(before, "services"),
+    requested: accounts.values(before, "requested"),
+  };
   e.next();
-  if (wasApproved || !e.record.getBool("approved")) return;
 
-  const app = e.app;
-  const meta = app.settings().meta;
-  try {
-    app.newMailClient().send(new MailerMessage({
-      from: { address: meta.senderAddress, name: meta.senderName },
-      to: [{ address: e.record.email() }],
-      subject: "Your Ares Empire account is ready",
-      html: "<p>Your Ares Empire account was approved. You can log in now:</p>" +
-        "<p><a href=\"https://www.ares-empire.de/login\">www.ares-empire.de</a></p>",
-    }));
-  } catch (err) {
-    app.logger().error("approved email failed", "error", String(err));
+  const mail = require(`${__hooks}/lib/mail.js`);
+  const record = e.record;
+  const services = accounts.values(record, "services");
+  const requested = accounts.values(record, "requested");
+  const asked = accounts.without(requested, was.requested);
+  if (asked.length && record.getBool("approved") && !e.hasSuperuserAuth()) {
+    try {
+      mail.send(e.app, mail.owners(e.app), mail.accessRequest({
+        email: record.email(),
+        name: record.getString("name"),
+        asked: accounts.names(asked),
+        requested: accounts.names(requested),
+        services: accounts.names(services),
+        language: accounts.language(record),
+        link: mail.accountLink(e.app, record.id),
+      }));
+    } catch (err) {
+      e.app.logger().error("access request email failed", "error", String(err));
+    }
+  }
+
+  const first = record.getBool("approved") && !was.approved;
+  const granted = accounts.without(services, was.services);
+  if (first || (record.getBool("approved") && granted.length)) {
+    const apps = first ? services : granted;
+    try {
+      mail.send(e.app, [{ address: record.email() }],
+        mail.approved(accounts.language(record), first, accounts.names(apps), apps.includes("empire")));
+    } catch (err) {
+      e.app.logger().error("approved email failed", "error", String(err));
+    }
   }
 }, "users");
+
+// POST /api/empire/leave {service} → {services, requested}: the logged-in account leaves one app (its access and
+// any open request for it). The app deletes its data in that service first, where there is any.
+routerAdd("POST", "/api/empire/leave", (e) => {
+  const accounts = require(`${__hooks}/lib/accounts.js`);
+  const body = e.requestInfo().body || {};
+  const service = body.service;
+  if (typeof service !== "string" || !accounts.services(e.app).includes(service)) {
+    throw new BadRequestError("Unknown service.");
+  }
+  const record = e.app.findRecordById("users", e.auth.id);
+  record.set("services", accounts.without(accounts.values(record, "services"), [service]));
+  record.set("requested", accounts.without(accounts.values(record, "requested"), [service]));
+  e.app.save(record);
+  return e.json(200, { services: accounts.values(record, "services"), requested: accounts.values(record, "requested") });
+}, $apis.requireAuth("users"));
