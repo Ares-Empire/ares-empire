@@ -173,7 +173,8 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 ## The Chronicle (what was done to conquer what)
 
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
-("did X to conquer Y").
+("did X to conquer Y"). The hub and the Empire app show the server's copy, `/root/ares-empire/data/state.json` →
+`chronicle` on aresis, which a push does not update: add each new entry there too (at the top, same text).
 
 - **2026-10-25 · empire** — Every Empire app got light mode: Settings → Appearance (like the iPhone, light or dark) in each app, with every colour shared as a light and a dark value, so each future app has both from its first screen. Aresium keeps its red mode on top of either; the Empire app becomes a marble hall by day (ivory wall, antique gold, the bust as a faint relief); the widgets follow the home screen.
 - **2026-10-25 · empire** — Every app now creates and runs the one Ares account itself: sign up, reset a password, ask for access to an app, change the password, leave an app (its data goes with it) or delete the account, which removes its data in every service; the privacy policy and imprint went live with a contact form.
