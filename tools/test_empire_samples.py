@@ -5,7 +5,7 @@ import json
 import re
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 
@@ -30,17 +30,21 @@ class GeneratorTests(unittest.TestCase):
 
     def test_writes_every_fixture(self):
         self.assertEqual(set(self.files), {
-            "empire.admin.json", "empire.member.json", "empire.new-member.json", "approvals.json",
-            "approval-decision.json", *(f"error.{code}.json" for code in server.ERROR_CODES)})
+            "empire.admin.json", "empire.member.json", "empire.new-member.json", "empire.requested.json",
+            "access-request.json", "approvals.json", "approval-decision.json",
+            *(f"error.{code}.json" for code in server.ERROR_CODES)})
 
     def test_each_file_is_the_servers_answer(self):
         accounts = samples.ACCOUNTS
         with samples.fake_world():
             for name, token in (("empire.admin.json", "sample-admin-token"),
                                 ("empire.member.json", "sample-member-token"),
-                                ("empire.new-member.json", "sample-new-member-token")):
+                                ("empire.new-member.json", "sample-new-member-token"),
+                                ("empire.requested.json", "sample-requested-token")):
                 with self.subTest(name=name):
                     self.assertEqual(self.files[name], server.empire_data(accounts[token], token, IP, "en"))
+            self.assertEqual(self.files["access-request.json"], server.request_access(
+                accounts["sample-new-member-token"], "sample-new-member-token", IP, {"service": "arestemis"}, "en"))
             approvals = server.pending_accounts("sample-admin-token", IP)
             self.assertEqual(self.files["approvals.json"], approvals)
             card = approvals[1]
@@ -50,7 +54,7 @@ class GeneratorTests(unittest.TestCase):
 
     def test_each_file_has_the_contracts_shape(self):
         for name, data in self.files.items():
-            check = (samples.check_empire if name.startswith("empire.") else
+            check = (samples.check_empire if name.startswith("empire.") or name == "access-request.json" else
                      samples.check_approvals if name == "approvals.json" else
                      samples.check_decision if name == "approval-decision.json" else samples.check_error)
             with self.subTest(name=name):
@@ -58,18 +62,45 @@ class GeneratorTests(unittest.TestCase):
         for code in server.ERROR_CODES:
             self.assertEqual(self.files[f"error.{code}.json"]["code"], code)
 
-    def test_the_three_accounts_see_what_the_contract_says(self):
-        admin, member, new = (self.files[f"empire.{who}.json"] for who in ("admin", "member", "new-member"))
+    def test_the_accounts_see_what_the_contract_says(self):
+        admin, member, new, asked = (self.files[f"empire.{who}.json"]
+                                     for who in ("admin", "member", "new-member", "requested"))
         seed = samples.read_seed()
         self.assertEqual([p["slug"] for p in admin["projects"]], [p["slug"] for p in seed["projects"]])
         self.assertEqual((len(admin["chronicle"]), len(admin["ideas"])), (len(seed["chronicle"]), len(seed["ideas"])))
         self.assertEqual(admin["pending"], len(self.files["approvals.json"]))
-        self.assertTrue(all(p["state"] == "open" for p in admin["projects"]))
-        self.assertEqual([p["slug"] for p in member["projects"]], ["aresium"])
-        self.assertTrue(member["chronicle"] and all(e["project"] == "aresium" for e in member["chronicle"]))
+        self.assertTrue(all((p["state"], p["access"]) == ("open", "granted") for p in admin["projects"]))
+        self.assertEqual(admin["addable"], [])
+        # The member's ring is its one app, with the install link; the "+" holds the rest of the catalog.
+        self.assertEqual([(p["slug"], p["access"], p["install"]) for p in member["projects"]],
+                         [("arestemis", "granted", samples.SAMPLE_INSTALL["arestemis"])])
+        self.assertTrue(member["chronicle"] and all(e["project"] == "arestemis" for e in member["chronicle"]))
+        self.assertEqual([(p["slug"], p["state"], p["access"]) for p in member["addable"]],
+                         [("aresium", "coming-soon", "none")])
         self.assertEqual((new["projects"], new["chronicle"], new["ideas"], new["pending"]), ([], [], [], 0))
-        self.assertEqual([p["slug"] for p in new["addable"]], list(server.load_catalog()))
+        self.assertEqual([(p["slug"], p["state"], p["access"], p["install"]) for p in new["addable"]],
+                         [("aresium", "coming-soon", "none", None), ("arestemis", "open", "none", None)])
+        self.assertEqual([(p["slug"], p["access"]) for p in asked["addable"]],
+                         [("aresium", "none"), ("arestemis", "requested")])
+        # The request answer: the new member's hub data, Arestemis now asked for.
+        answer = self.files["access-request.json"]
+        self.assertEqual(answer["me"], new["me"])
+        self.assertEqual(answer["addable"], asked["addable"])
         self.assertEqual(sorted({a["verified"] for a in self.files["approvals.json"]}), [False, True])
+
+    def test_the_websites_previews_are_current(self):
+        # The localhost preview (web/app/empire-api.js) loads these; they are the generator's output, not hand-made.
+        for name in samples.WEB_PREVIEWS:
+            with self.subTest(name=name):
+                self.assertEqual((samples.WEB_SAMPLES / name).read_text(encoding="utf-8"), samples.dump(self.files[name]),
+                                 "run python3 tools/empire_samples.py --web")
+        self.assertEqual(sorted(path.name for path in samples.WEB_SAMPLES.glob("*.json")), sorted(samples.WEB_PREVIEWS))
+
+    def test_outdir_or_web(self):
+        for argv in ([], ["--web", "somewhere"]):
+            with self.subTest(argv=argv), self.assertRaises(SystemExit), redirect_stdout(StringIO()), \
+                    redirect_stderr(StringIO()):
+                samples.main(argv)
 
 
 class SeedReaderTests(unittest.TestCase):
@@ -143,10 +174,28 @@ class ContractCheckTests(unittest.TestCase):
                 ("pending as text", lambda d: d.update(pending="2")),
                 ("a duplicate slug", lambda d: d["projects"].append(copy.deepcopy(d["projects"][0]))),
                 ("a chronicle entry without text", lambda d: d["chronicle"][0].pop("text")),
-                ("an unknown state", lambda d: d["projects"][0].update(state="private"))]:
+                ("an unknown state", lambda d: d["projects"][0].update(state="private")),
+                ("an unknown access", lambda d: d["projects"][0].update(access="maybe")),
+                ("a ring province not granted", lambda d: d["projects"][0].update(access="requested")),
+                ("a ring province coming soon", lambda d: d["projects"][0].update(state="coming-soon")),
+                ("an install link that is not https", lambda d: d["projects"][0].update(install="itms://x")),
+                ("an admin with addable", lambda d: d["addable"].append(copy.deepcopy(d["projects"][0])))]:
             with self.subTest(label):
                 self.assertNotEqual(self.broken(change), [])
         self.assertEqual(self.broken(lambda d: d.update(pending=None)), [])
+
+    def test_catches_a_wrong_addable(self):
+        with samples.fake_world():
+            new = server.empire_data(samples.ACCOUNTS["sample-new-member-token"], "sample-new-member-token", IP)
+        self.assertEqual(samples.check_empire(new), [])
+        for label, change in [
+                ("an install link in addable", lambda d: d["addable"][1].update(install="https://example.com/x")),
+                ("granted in addable", lambda d: d["addable"][1].update(access="granted")),
+                ("a coming-soon app requested", lambda d: d["addable"][0].update(access="requested"))]:
+            with self.subTest(label):
+                data = copy.deepcopy(new)
+                change(data)
+                self.assertNotEqual(samples.check_empire(data), [])
 
     def test_error_and_decision_checks(self):
         self.assertEqual(samples.check_error({"error": "Please log in again.", "code": "unauthorized"}), [])

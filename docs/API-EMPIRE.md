@@ -7,13 +7,20 @@ Version 1 sent the same `projects` / `ideas` / `chronicle` to everyone. Version 
 decides what this account sees; clients only display it. The three version-1 fields keep their names and shapes, so
 the desktop hub keeps working; everything new is added.
 
+**CONTRACT CHANGE (2026-10-25, Patrik: the ring shows every app the account has):** the ring is the account's
+`services`, no longer a saved ring. Every province gets `install` and `access`; `POST /api/empire/request` asks for an
+app of the "+"; `POST /api/empire/ring` and the account's `ring` field are gone. Still version 2: the rest is
+additive.
+
 ```ts
 interface EmpireData {
   version: 2;
   me: { id: string; name: string; admin: boolean };
-  projects: Province[];      // the ring as THIS account sees it (admin: every province; others: own ring ∩ catalog)
-  addable: Province[];       // others: catalog provinces not yet in their ring (the "+" list); admin: []
-  chronicle: ChronicleEntry[]; // admin: everything; others: entries tagged with a province in their ring ("what's new")
+  projects: Province[];      // the ring: every province THIS account has, in hub order (admin: every province; others:
+                             // the provinces whose slug is in the account's `services`, which Patrik grants)
+  addable: Province[];       // others: the catalog provinces (open or coming soon) the account does not have (the "+");
+                             // admin: []
+  chronicle: ChronicleEntry[]; // admin: everything; others: entries about the provinces in `projects` ("what's new")
   ideas: Idea[];             // admin only (expansions); others: []
   pending: number | null;    // admin: accounts waiting for approval (sign-ups and access requests), null when the
                              // account server could not say (the rest of the answer is complete); others: 0
@@ -24,9 +31,15 @@ interface Province {         // version-1 project fields, unchanged …
   detail: { about: string; features: string[]; setup: string; wip: string[]; ideas: string[];
             changelog: { at: string; text: string }[] };
   // … plus:
-  state: "open" | "coming-soon"; // admin: always "open"; others: from the catalog
-  live: string | null;          // one line from the province, e.g. "€1,339 spent in October"; null if none
+  state: "open" | "coming-soon"; // projects: always "open"; addable: from the catalog
+  live: string | null;          // one line from the province, e.g. "€1,339 spent in October"; null if none. Always
+                                // null in addable: the account has no access there, so the province is not asked
   app: string | null;           // iPhone app URL scheme if the province has one (e.g. "aresium://"); else null
+  install: string | null;       // (2026-10-25) the app's install link (https: TestFlight public link while testing,
+                                // the App Store later): only in projects, only when one is set (webauth/apps.json);
+                                // always null in addable
+  access: "granted" | "requested" | "none"; // (2026-10-25) projects: always "granted"; addable: "requested" when
+                                // the slug is in the account's `requested` (waiting for Patrik), else "none"
 }
 interface ChronicleEntry { at: string; project: string | null; text: string } // version 1; project null: the empire
 interface Idea { title: string; note: string }                                // version 1
@@ -53,7 +66,7 @@ edits by hand (EMPIRE.md → The Chronicle). The server brings it to the shape a
 
 | Route | Who | Does |
 |---|---|---|
-| `POST /api/empire/ring` `{add: slug}` / `{remove: slug}` | everyone | changes your own ring; `add` only for catalog provinces (`open` or `coming-soon`); returns the new `EmpireData` |
+| `POST /api/empire/request` `{service: slug}` | everyone | asks for access to an app of the "+" (below); returns the fresh `EmpireData` |
 | `GET /api/empire/approvals` | admin | `Approval[]` (below): accounts that signed up and are not approved yet, and approved accounts asking for more apps (`approved: true`), oldest first |
 | `POST /api/empire/approvals/:id` `{approve: true}` / `{decline: true}`, optionally with `requested: [service]` | admin | approve grants the account's requests (`approved = true`, `services += requested`, they leave `requested`) or decline (deletes an unapproved account; withdraws an approved account's requests); answers `Decision` (below). [ACCOUNTS.md → Accounts in every app](ACCOUNTS.md#accounts-in-every-app) |
 
@@ -73,6 +86,23 @@ interface Decision {         // CONTRACT ADDITION (2026-10-25): the app needs no
   pending: number | null;       // approvals.length, null together with approvals
 }
 ```
+
+### Asking for an app (`POST /api/empire/request`, 2026-10-25)
+
+`{"service": "<slug>"}` puts the app into the account's own `requested`, with the account's own token, as the apps'
+"Ask for access" does ([ACCOUNTS.md → Accounts in every app](ACCOUNTS.md#accounts-in-every-app)). The hub reads the
+account first (`services`, `requested`; the login check's copy may be a minute old), then sends
+`{"requested+": [slug]}`, so every other request stays, also one made meanwhile. The account server then tells Patrik
+(an email and a notification with Approve and Decline, [PUSH.md → Who sends what](PUSH.md#who-sends-what)); his
+approval grants it, the person gets a notification and an email, and the app joins their ring.
+
+- `200`: the fresh `EmpireData`; the app is now in `addable` with `access: "requested"`.
+- Asking again for an app already asked for writes nothing and answers `200` the same way.
+- `400 bad_request`: the body is not exactly `{"service": <text>}`; the slug is not in the catalog as `open` (unknown,
+  private, or `coming-soon`: each with its own sentence); or the account already has it (an admin has every province).
+- The account server's refusals and outages as in [Errors](#errors).
+
+`POST /api/empire/ring` is gone (`404 not_found`), and with it the saved ring.
 
 **`requested` in the decision** (CONTRACT ADDITION, 2026-10-25): the apps the card showed when Patrik decided. With
 it, the decision acts only on requests that are on the card and still asked for: approve grants those, decline
@@ -100,7 +130,7 @@ type ErrorCode = "unauthorized" | "no_access" | "admin_only" | "bad_request" | "
 | 401 | `unauthorized` | no token, or the token is rejected (expired, revoked by a password change, malformed) |
 | 403 | `no_access` | the account is not approved or lacks the `empire` service: no access to this app |
 | 403 | `admin_only` | an admin route (`/api/empire/approvals…`) called by an account that is not an admin, or the account server refused an admin's approval write |
-| 400 | `bad_request` | a body that is not the route's JSON object, an unknown catalog province, a bad account id or decision |
+| 400 | `bad_request` | a body that is not the route's JSON object, an app that cannot be requested (not `open` in the catalog, or the account has it), a bad account id or decision |
 | 413 | `bad_request` | a body over 10 KB |
 | 404 | `not_found` | an unknown API route, or an account that is gone (approvals) |
 | 503 | `unavailable` | the account server could not be asked or answered something unreadable, or the hub data is missing; try again in a minute |
@@ -122,11 +152,26 @@ English.
 ## Catalog
 
 `webauth/catalog.json` (committed; not in `data/state.json`, which the empire sync rewrites) lists, per province slug,
-`users: "open" | "coming-soon"`. A province not listed is private: only admins see it. Only listed provinces can be in
-a non-admin ring. Today: `{"aresium": {"users": "coming-soon"}}`.
+`users: "open" | "coming-soon"`: the apps other accounts see in the "+" (`open` ones can be asked for, `coming-soon`
+ones are shown and cannot). A province not listed (or with any other value) is private: nobody can ask for it. It can
+still be in an account's ring when Patrik gives the account its service. Today: `{"aresium": {"users": "coming-soon"}}`.
+Opening a province to others needs its privacy-policy section first ([PRIVACY.md](PRIVACY.md) → the rule).
 
-A province's iPhone app (`app`, its URL scheme) does not depend on who may see it, so it is not in the catalog but in
-`APP_SCHEMES` in `webauth/server.py` (2026-10-25: `aresium://`, `arestemis://`, `aresus://`, `arestoteles://`).
+## Apps
+
+A province's iPhone app does not depend on who may see it, so it is not in the catalog but in **`webauth/apps.json`**
+(committed), one entry per province with an app (2026-10-25: Aresium, Arestemis, Aresus, Arestoteles):
+
+```json
+{"arestemis": {"scheme": "arestemis://", "install": null}}
+```
+
+- `scheme` → `app`: the URL scheme the Empire app opens when the app is installed.
+- `install` → `install`: the link that installs the app, sent only to accounts that have the province. `null` until
+  there is one. **Setting one:** App Store Connect → the app → TestFlight → External Testing → the group → Public Link
+  (`https://testflight.apple.com/join/<code>`); later the App Store page (`https://apps.apple.com/…`). Put it into
+  `install`, commit and push; the hub reads the file at every request, so the next answer carries it. A link that is
+  not `https://` counts as `null` (`webauth/test_server.py` checks the file).
 
 ## Live lines
 
@@ -140,8 +185,10 @@ from it: Aresium and Aresus need their service and the account's id in their `EM
 ## Fixtures for the apps
 
 `python3 tools/empire_samples.py OUTDIR` writes the hub's exact answers for made-up accounts (an admin, a member with
-one province, a member approved just now, the approvals list, a decision, one answer per error code), made by the
-server's own handler over the committed seed with a fake account server: no network, no real data. Its checks
+one app and its install link, a member approved just now with an empty ring, a member waiting for an app, the answer to
+asking for an app, the approvals list, a decision, one answer per error code), made by the server's own handler over
+the committed seed with a fake account server, a made-up catalog (Arestemis open, Aresium coming soon) and one made-up
+install link: no network, no real data. `--web` writes the website's localhost previews (`web/app/samples`). Its checks
 (`check_empire` and the others) are the contract above in code; `tools/test_empire_samples.py` and
 `webauth/test_server.py` use them. Run it again when this contract or the seed changes, and copy the files into
 `empire-ios`.

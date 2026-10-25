@@ -69,11 +69,11 @@ class HubTests(unittest.TestCase):
         server._live_cache.clear()
         self.records = {
             'user-one': {'id': 'userone00000001', 'name': 'First', 'admin': False,
-                         'approved': True, 'services': ['empire'], 'ring': ['aresium', 'private', 'unknown']},
+                         'approved': True, 'services': ['empire', 'aresium'], 'requested': []},
             'user-two': {'id': 'usertwo00000002', 'name': 'Second', 'admin': False,
-                         'approved': True, 'services': ['empire'], 'ring': []},
+                         'approved': True, 'services': ['empire'], 'requested': []},
             'admin-one': {'id': 'adminone0000001', 'name': 'Admin', 'admin': True,
-                          'approved': True, 'services': ['empire'], 'ring': []},
+                          'approved': True, 'services': ['empire'], 'requested': []},
         }
         # Waiting for Patrik: a new sign-up (email not confirmed yet), and an approved account asking for two more apps.
         self.pending = [{'id': 'pending00000001', 'name': 'New', 'email': 'new@example.com',
@@ -90,10 +90,14 @@ class HubTests(unittest.TestCase):
                           for p in ('aresium', 'other', 'private', 'unknown', 'empire')],
         }
         self.catalog = {'aresium': {'users': 'coming-soon'}, 'other': {'users': 'open'}}
+        # Install links for two provinces: an account gets one only for a province it has.
+        self.apps = {'aresium': {'scheme': 'aresium://', 'install': 'https://example.com/install/aresium'},
+                     'other': {'scheme': 'other://', 'install': 'https://example.com/install/other'}}
         self.enterContext(patch.object(server, 'pb_call', side_effect=self.pb))
         self.real_read_state = server.read_state
         self.enterContext(patch.object(server, 'read_state', side_effect=lambda: copy.deepcopy(self.state)))
         self.enterContext(patch.object(server, 'load_catalog', side_effect=lambda: copy.deepcopy(self.catalog)))
+        self.enterContext(patch.object(server, 'load_apps', side_effect=lambda: copy.deepcopy(self.apps)))
         self.pulse = self.enterContext(patch.object(server.urllib.request, 'urlopen', side_effect=OSError('no pulse')))
         self.enterContext(patch.object(server.Handler, 'log_message'))
         self.log = self.enterContext(patch.object(server, 'log'))
@@ -121,10 +125,16 @@ class HubTests(unittest.TestCase):
         record_path, _, query = path.partition('?')
         account_id = record_path.rsplit('/', 1)[1]
         account = next((p for p in self.pending if p['id'] == account_id), None)
-        if method == 'PATCH' and body is not None and set(body) == {'ring'}:
-            self.assertEqual(account_id, self.records[token]['id'])
-            self.records[token]['ring'] = body['ring'][:]
-            return 200, copy.deepcopy(self.records[token])
+        me = self.records.get(token)
+        if me and account_id == me['id']:
+            # An account reads and writes its own record (the hub's "+" request), with its own token.
+            if method == 'GET':
+                self.assertEqual(parse_qs(query), {'fields': ['id,services,requested']})
+                return 200, {k: copy.deepcopy(me[k]) for k in ('id', 'services', 'requested')}
+            self.assertEqual((method, set(body)), ('PATCH', {'requested+'}))
+            me['requested'] += [s for s in body['requested+'] if s not in me['requested']]
+            me['requested'] = [s for s in me['requested'] if s not in me['services']]  # accounts.pb.js → settle
+            return 200, copy.deepcopy(me)
         self.assertTrue(self.records[token]['admin'])
         if method == 'GET':
             self.assertEqual(parse_qs(query), {'fields': ['id,approved,requested']})
@@ -162,11 +172,14 @@ class HubTests(unittest.TestCase):
         self.assertEqual([e['project'] for e in data['chronicle']], ['aresium'])
         self.assertEqual(data['ideas'], [])
         self.assertEqual(data['pending'], 0)
-        self.assertEqual(data['projects'][0]['state'], 'coming-soon')
-        self.assertEqual(data['projects'][0]['app'], 'aresium://')
+        # Aresium is coming soon in the catalog, but this account has it: open, granted, with its install link.
+        self.assertEqual({k: data['projects'][0][k] for k in ('state', 'access', 'app', 'install')},
+                         {'state': 'open', 'access': 'granted', 'app': 'aresium://',
+                          'install': 'https://example.com/install/aresium'})
         self.assertEqual(data['projects'][0]['detail'], self.state['projects'][0]['detail'])
-        self.assertIsNone(data['addable'][0]['app'])
-        self.assertEqual(data['addable'][0]['state'], 'open')
+        self.assertEqual({k: data['addable'][0][k] for k in ('state', 'access', 'app', 'install', 'live')},
+                         {'state': 'open', 'access': 'none', 'app': 'other://', 'install': None, 'live': None})
+        self.assertEqual(samples.check_empire(data), [])
         self.assertEqual(headers['Cache-Control'], 'no-store')
         self.assertEqual(self.calls[0][2:4], ('user-one', '192.0.2.10'))
         self.assertEqual(len(self.calls), 1)  # Users never ask PocketBase for approval metadata.
@@ -211,14 +224,16 @@ class HubTests(unittest.TestCase):
                 self.assertEqual(data['projects'][0]['detail'], self.state['projects'][0]['detail'])
         self.assertEqual(self.pulse.call_count, 4)  # One pulse and overview per language, shared across provinces.
         self.request(headers={'Accept-Language': 'de'})
-        self.assertEqual(self.pulse.call_count, 6)  # A second account cannot reuse the admin's lines.
+        # A second account cannot reuse the admin's lines: its own pulse for the one province it has (Aresium); the
+        # province in its "+" is not asked.
+        self.assertEqual(self.pulse.call_count, 5)
         with patch.object(server, 'time', return_value=server.time() + 61):
             self.request(token='admin-one', headers={'Accept-Language': 'de'})
-        self.assertEqual(self.pulse.call_count, 8)
+        self.assertEqual(self.pulse.call_count, 7)
 
-    def test_ring_response_uses_request_language(self):
+    def test_request_answer_uses_request_language(self):
         self.pulse.side_effect = lambda request, **kw: Pulse({'line': request.get_header('Accept-language')})
-        status, data, headers = self.request('/api/empire/ring', method='POST', body={'add': 'aresium'},
+        status, data, headers = self.request('/api/empire/request', method='POST', body={'service': 'other'},
                                              headers={'Accept-Language': 'de'})
         self.assertEqual(status, 200)
         self.assertEqual(data['projects'][0]['live'], 'de')
@@ -253,7 +268,8 @@ class HubTests(unittest.TestCase):
             with patch.object(server, 'pb_call', return_value=(upstream, {})):
                 for language, expected in (('en', english), ('de', german)):
                     with self.subTest(upstream=upstream, language=language):
-                        result, data, headers = self.request('/api/empire/ring', method='POST', body={'add': 'other'},
+                        result, data, headers = self.request('/api/empire/request', method='POST',
+                                                             body={'service': 'other'},
                                                              headers={'Accept-Language': language})
                         self.assertEqual((result, data), (status, {'error': expected,
                                                                    'code': server.CODES[status]}))
@@ -303,11 +319,15 @@ class HubTests(unittest.TestCase):
         status, data, _ = self.request(token='admin-one')
         self.assertEqual(status, 200)
         self.assertEqual([p['slug'] for p in data['projects']], ['aresium', 'other', 'private'])
-        self.assertTrue(all(p['state'] == 'open' for p in data['projects']))
+        self.assertTrue(all(p['state'] == 'open' and p['access'] == 'granted' for p in data['projects']))
+        # Every install link as configured: an admin has every province.
+        self.assertEqual([p['install'] for p in data['projects']],
+                         ['https://example.com/install/aresium', 'https://example.com/install/other', None])
         self.assertEqual(data['ideas'], self.state['ideas'])
         self.assertEqual(data['chronicle'], self.state['chronicle'])
         self.assertEqual(data['addable'], [])
         self.assertEqual(data['pending'], 2)
+        self.assertEqual(samples.check_empire(data), [])
         self.assertEqual(self.calls[-1][2:], ('admin-one', '192.0.2.10', 'GET'))
 
     def test_cookie_and_bearer_use_same_auth(self):
@@ -381,37 +401,111 @@ class HubTests(unittest.TestCase):
             with self.subTest(data=data), patch.object(server, 'pb_call', return_value=(200, data)):
                 self.assertEqual(server.login('fixture@example.com', 'password', '192.0.2.10')[2], 503)
 
-    def test_ring_add_remove_and_cache_invalidation(self):
-        self.request()  # Prime the cached refresh with the old ring.
-        status, data, _ = self.request('/api/empire/ring', method='POST', body={'add': 'other'})
+    def test_the_ring_is_every_app_the_account_has(self):
+        # Patrik gave this account two provinces; one of them is not in the catalog at all.
+        self.records['user-two']['services'] = ['empire', 'private', 'other']
+        status, data, _ = self.request(token='user-two')
         self.assertEqual(status, 200)
-        self.assertEqual([p['slug'] for p in data['projects']], ['aresium', 'other'])
-        self.assertEqual(data['addable'], [])
-        self.assertEqual(self.calls[-1][1:], ({'ring': ['aresium', 'private', 'unknown', 'other']},
-                         'user-one', '192.0.2.10', 'PATCH'))
-        self.assertEqual([p['slug'] for p in self.request()[1]['projects']], ['aresium', 'other'])
-        self.assertEqual(self.request('/api/empire/ring', method='POST', body={'add': 'other'})[0], 200)
-        self.assertEqual(self.records['user-one']['ring'].count('other'), 1)
-        status, data, _ = self.request('/api/empire/ring', method='POST', body={'remove': 'aresium'})
-        self.assertEqual(status, 200)
-        self.assertEqual([p['slug'] for p in data['projects']], ['other'])
-        self.assertEqual([e['project'] for e in data['chronicle']], ['other'])
-        self.assertEqual([p['slug'] for p in self.request()[1]['projects']], ['other'])
-        self.assertEqual(self.request('/api/empire/ring', method='POST', body={'remove': 'aresium'})[0], 200)
+        self.assertEqual([p['slug'] for p in data['projects']], ['other', 'private'])  # in hub order
+        self.assertTrue(all((p['state'], p['access']) == ('open', 'granted') for p in data['projects']))
+        self.assertEqual([(p['slug'], p['state'], p['access']) for p in data['addable']],
+                         [('aresium', 'coming-soon', 'none')])
+        self.assertEqual([e['project'] for e in data['chronicle']], ['other', 'private'])
+        self.assertEqual(samples.check_empire(data), [])
 
-    def test_ring_refuses_invalid_actions_without_writing(self):
-        for body in ({'add': 'private'}, {'add': 'unknown'}, {'remove': 'private'}, {'add': []},
-                     {'add': 'aresium', 'remove': 'other'}, {}, {'approve': True}):
-            with self.subTest(body=body):
-                self.assertEqual(self.request('/api/empire/ring', method='POST', body=body)[0], 400)
-        self.assertTrue(all(call[-1] == 'POST' and call[0].endswith('/auth-refresh') for call in self.calls))
+    def test_addable_says_what_the_account_asked_for_and_never_carries_an_install_link(self):
+        self.records['user-two']['requested'] = ['other', 'aresus']
+        data = self.request(token='user-two')[1]
+        self.assertEqual([(p['slug'], p['state'], p['access'], p['install'], p['live']) for p in data['addable']],
+                         [('aresium', 'coming-soon', 'none', None, None), ('other', 'open', 'requested', None, None)])
+        self.assertEqual(data['projects'], [])
+        self.assertEqual(self.aresium_pulses(), 0)  # a province the account does not have is not asked for a line
+        # A catalog entry that is neither open nor coming soon counts as private.
+        self.catalog['private'] = {'users': 'private'}
+        self.catalog['other'] = 'open'
+        server._cache.clear()
+        self.assertEqual([p['slug'] for p in self.request(token='user-two')[1]['addable']], ['aresium'])
 
-    def test_ring_accepts_cookie_and_uses_that_token(self):
-        status, data, _ = self.request('/api/empire/ring', token=None, method='POST',
-                                      body={'add': 'aresium'}, headers={'Cookie': server.COOKIE_NAME + '=user-two'})
+    def test_request_puts_the_app_into_the_accounts_own_requested(self):
+        self.request()  # Prime the cached refresh, which still says nothing was asked for.
+        status, data, _ = self.request('/api/empire/request', method='POST', body={'service': 'other'})
         self.assertEqual(status, 200)
+        self.assertEqual(samples.check_empire(data), [])
+        self.assertEqual([(p['slug'], p['access']) for p in data['addable']], [('other', 'requested')])
         self.assertEqual([p['slug'] for p in data['projects']], ['aresium'])
+        # Read first, then one write with "+", both as the account itself.
+        writes = self.calls[-2:]
+        self.assertEqual(writes[0][0], '/api/collections/users/records/userone00000001?fields=id%2Cservices%2Crequested')
+        self.assertEqual(writes[1][:2], ('/api/collections/users/records/userone00000001', {'requested+': ['other']}))
+        self.assertEqual([c[2:] for c in writes], [('user-one', '192.0.2.10', 'GET'), ('user-one', '192.0.2.10', 'PATCH')])
+        self.assertEqual(self.records['user-one']['requested'], ['other'])
+        # The next GET does not reuse the old record from the cache.
+        self.assertEqual(self.request()[1]['addable'][0]['access'], 'requested')
+
+    def test_asking_again_changes_nothing(self):
+        self.records['user-one']['requested'] = ['other']
+        status, data, _ = self.request('/api/empire/request', method='POST', body={'service': 'other'})
+        self.assertEqual(status, 200)
+        self.assertEqual(data['addable'][0]['access'], 'requested')
+        self.assertEqual([c[4] for c in self.calls if not c[0].endswith('/auth-refresh')], ['GET'])  # no write
+
+    def test_request_keeps_the_accounts_other_requests(self):
+        self.records['user-one']['requested'] = ['aresus']  # asked for in the Aresus app; not in the catalog
+        self.request()
+        self.records['user-one']['requested'] = ['aresus', 'arestemis']  # and one more since the hub's last look
+        data = self.request('/api/empire/request', method='POST', body={'service': 'other'})[1]
+        self.assertEqual(self.records['user-one']['requested'], ['aresus', 'arestemis', 'other'])
+        self.assertEqual(data['addable'][0]['access'], 'requested')
+
+    def test_request_refusals_write_nothing(self):
+        self.records['user-one']['services'].append('other')
+        for body, sentence in (({'service': 'private'}, 'This app is not open to requests.'),
+                               ({'service': 'unknown'}, 'This app is not open to requests.'),
+                               ({'service': 'aresium'}, 'This app is coming soon and cannot be requested yet.'),
+                               ({'service': 'other'}, 'This account already has this app.'),
+                               ({}, 'Send the app to ask for as service.'),
+                               ({'service': ['other']}, 'Send the app to ask for as service.'),
+                               ({'service': 'other', 'note': 'x'}, 'Send the app to ask for as service.'),
+                               ({'add': 'other'}, 'Send the app to ask for as service.')):
+            with self.subTest(body=body):
+                status, data, _ = self.request('/api/empire/request', method='POST', body=body)
+                self.assertEqual((status, data), (400, {'error': sentence, 'code': 'bad_request'}))
+        self.assertFalse([c for c in self.calls if c[4] == 'PATCH'])
+        # Granted since the hub's cached look: the fresh read says so.
+        self.records['user-two']['services'] = ['empire']
+        self.request(token='user-two')
+        self.records['user-two']['services'] = ['empire', 'other']
+        self.assertEqual(self.request('/api/empire/request', token='user-two', method='POST',
+                                      body={'service': 'other'})[1]['error'], 'This account already has this app.')
+        # An admin has every province.
+        self.assertEqual(self.request('/api/empire/request', token='admin-one', method='POST',
+                                      body={'service': 'other'})[:2],
+                         (400, {'error': 'This account already has this app.', 'code': 'bad_request'}))
+        self.assertFalse([c for c in self.calls if c[4] == 'PATCH'])
+
+    def test_request_accepts_cookie_and_uses_that_token(self):
+        status, data, _ = self.request('/api/empire/request', token=None, method='POST',
+                                      body={'service': 'other'}, headers={'Cookie': server.COOKIE_NAME + '=user-two'})
+        self.assertEqual(status, 200)
+        self.assertEqual(data['addable'][1]['access'], 'requested')
         self.assertEqual(self.calls[-1][2], 'user-two')
+
+    def test_an_unreadable_write_answer_is_unavailable(self):
+        real = self.pb
+
+        def pb(path, body=None, token=None, client_ip=None, method='POST'):
+            if method == 'PATCH':
+                return 200, {'id': 'userone00000001', 'requested': []}  # the app is missing
+            return real(path, body, token, client_ip, method)
+        with patch.object(server, 'pb_call', side_effect=pb):
+            self.assertEqual(self.request('/api/empire/request', method='POST', body={'service': 'other'})[:2],
+                             (503, {'error': 'Account service returned an unreadable response.', 'code': 'unavailable'}))
+
+    def test_the_ring_route_is_gone(self):
+        for body in ({'add': 'other'}, {'remove': 'aresium'}):
+            self.assertEqual(self.request('/api/empire/ring', method='POST', body=body)[:2],
+                             (404, {'error': 'Unknown API route.', 'code': 'not_found'}))
+        self.assertFalse([c for c in self.calls if c[4] == 'PATCH'])
 
     def test_approvals_are_admin_only(self):
         for method, path, body in [('GET', '/api/empire/approvals', None),
@@ -583,7 +677,8 @@ class HubTests(unittest.TestCase):
         self.request()  # Use cached auth; only the mutation is faked below.
         for upstream, expected in ((0, 503), (429, 503), (500, 503), (401, 401), (403, 403), (404, 404)):
             with self.subTest(upstream=upstream), patch.object(server, 'pb_call', return_value=(upstream, {})):
-                self.assertEqual(self.request('/api/empire/ring', method='POST', body={'add': 'other'})[0], expected)
+                self.assertEqual(self.request('/api/empire/request', method='POST',
+                                              body={'service': 'other'})[0], expected)
 
     def aresium_pulse_calls(self):
         return [c for c in self.pulse.call_args_list if c.args[0].full_url == server.PULSE_URLS['aresium']]
@@ -595,7 +690,11 @@ class HubTests(unittest.TestCase):
         self.assertIsNone(self.request()[1]['projects'][0]['live'])
         self.request()
         self.assertEqual(self.aresium_pulses(), 1)
-        self.request(token='user-two')  # Aresium in addable also has a live field.
+        self.request(token='user-two')  # Aresium in addable: no access, so no line is asked for.
+        self.assertEqual(self.aresium_pulses(), 1)
+        self.records['user-two']['services'].append('aresium')
+        server._cache.clear()
+        self.request(token='user-two')  # A second account with Aresium: its own pulse, with its own token.
         self.assertEqual(self.aresium_pulses(), 2)
         request = self.aresium_pulse_calls()[-1].args[0]
         self.assertEqual(request.full_url, 'https://aresium.de/api/pulse')
@@ -652,18 +751,20 @@ class HubTests(unittest.TestCase):
     def test_invalid_json_and_oversize_body(self):
         for raw, status in ((b'broken', 400), (b'[]', 400), (b'null', 400), (b'x' * 10001, 413)):
             with self.subTest(raw=raw[:10]):
-                self.assertEqual(self.request('/api/empire/ring', method='POST', raw=raw)[0], status)
+                self.assertEqual(self.request('/api/empire/request', method='POST', raw=raw)[0], status)
 
     def test_every_error_carries_its_code(self):
         self.records['outsider'] = {'id': 'outsider0000001', 'name': 'Out', 'admin': False, 'approved': True,
-                                    'services': ['arestemis'], 'ring': []}
+                                    'services': ['arestemis'], 'requested': []}
         cases = [('no token', dict(token=None), 401, 'unauthorized'),
                  ('a rejected token', dict(token='nobody'), 401, 'unauthorized'),
                  ('no empire service', dict(token='outsider'), 403, 'no_access'),
                  ('a member on an admin route', dict(path='/api/empire/approvals'), 403, 'admin_only'),
-                 ('a bad body', dict(path='/api/empire/ring', method='POST', body={}), 400, 'bad_request'),
+                 ('a bad body', dict(path='/api/empire/request', method='POST', body={}), 400, 'bad_request'),
+                 ('a coming-soon app', dict(path='/api/empire/request', method='POST', body={'service': 'aresium'}),
+                  400, 'bad_request'),
                  ('an unknown route', dict(path='/api/empire/nowhere'), 404, 'not_found'),
-                 ('a body over 10 KB', dict(path='/api/empire/ring', method='POST', raw=b'x' * 10001), 413,
+                 ('a body over 10 KB', dict(path='/api/empire/request', method='POST', raw=b'x' * 10001), 413,
                   'bad_request'),
                  ('an unknown account', dict(path='/api/empire/approvals/missing00000003', token='admin-one',
                                              method='POST', body={'approve': True}), 404, 'not_found')]
@@ -681,14 +782,18 @@ class HubTests(unittest.TestCase):
         for upstream, path, body, status, code in (
                 (403, '/api/empire/approvals/pending00000001', {'approve': True}, 403, 'admin_only'),
                 (403, '/api/empire/approvals', None, 403, 'admin_only'),
-                (403, '/api/empire/ring', {'add': 'other'}, 403, 'no_access'),
-                (401, '/api/empire/ring', {'add': 'other'}, 401, 'unauthorized'),
-                (400, '/api/empire/ring', {'add': 'other'}, 400, 'bad_request'),
-                (0, '/api/empire/approvals', None, 503, 'unavailable'),
-                (429, '/api/empire/ring', {'add': 'other'}, 503, 'unavailable')):
+                (403, '/api/empire/request', {'service': 'other'}, 400, 'bad_request'),  # admins have every app
+                (0, '/api/empire/approvals', None, 503, 'unavailable')):
             with self.subTest(upstream=upstream, path=path), \
                     patch.object(server, 'pb_call', return_value=(upstream, {})):
                 result, data, _ = self.request(path, token='admin-one', method='POST' if body else 'GET', body=body)
+                self.assertEqual((result, data['code']), (status, code))
+        self.request()  # a member's authentication cached too
+        for upstream, status, code in ((403, 403, 'no_access'), (401, 401, 'unauthorized'), (400, 400, 'bad_request'),
+                                       (429, 503, 'unavailable')):
+            with self.subTest(upstream=upstream, route='request'), \
+                    patch.object(server, 'pb_call', return_value=(upstream, {})):
+                result, data, _ = self.request('/api/empire/request', method='POST', body={'service': 'other'})
                 self.assertEqual((result, data['code']), (status, code))
         with patch.object(server, 'pb_call', return_value=(0, {})):
             server._cache.clear()
@@ -696,7 +801,7 @@ class HubTests(unittest.TestCase):
 
     def test_an_unexpected_failure_is_a_500_with_its_traceback_logged(self):
         for path, method, body, failing in (('/api/empire', 'GET', None, 'empire_data'),
-                                            ('/api/empire/ring', 'POST', {'add': 'other'}, 'change_ring'),
+                                            ('/api/empire/request', 'POST', {'service': 'other'}, 'request_access'),
                                             ('/api/empire/approvals', 'GET', None, 'pending_accounts')):
             for language, sentence in (('en', 'Something went wrong on the server. Try again later.'),
                                        ('de', 'Auf dem Server ist etwas schiefgegangen. Versuch es später noch einmal.')):
@@ -754,13 +859,15 @@ class HubTests(unittest.TestCase):
         self.assertEqual(samples.check_empire(data), [])
         empty = {'about': '', 'features': [], 'setup': '', 'wip': [], 'ideas': [], 'changelog': []}
         base = {'url': '', 'logo': 'brand/ares-bust.webp', 'status': '', 'domain': '', 'blurb': '', 'state': 'open',
-                'live': None}
+                'live': None, 'access': 'granted'}
         self.assertEqual(data['projects'], [
-            {'slug': 'aresium', 'name': 'Aresium', **base, 'detail': empty, 'app': 'aresium://'},
-            {'slug': 'other', 'name': 'Other', **base, 'domain': 'd', 'blurb': 'b', 'app': None,
+            {'slug': 'aresium', 'name': 'Aresium', **base, 'detail': empty, 'app': 'aresium://',
+             'install': 'https://example.com/install/aresium'},
+            {'slug': 'other', 'name': 'Other', **base, 'domain': 'd', 'blurb': 'b', 'app': 'other://',
+             'install': 'https://example.com/install/other',
              'detail': {**empty, 'features': ['One'], 'ideas': ['i'],
                         'changelog': [{'at': '2026-10-01', 'text': 'Shipped'}]}},
-            {'slug': 'private', 'name': 'Private', **base, 'detail': empty, 'app': None}])
+            {'slug': 'private', 'name': 'Private', **base, 'detail': empty, 'app': None, 'install': None}])
         self.assertEqual(data['ideas'], [{'title': 'Plan', 'note': ''}])
         self.assertEqual(data['chronicle'], [{'at': '2026-10-24', 'project': None, 'text': 'Empire'},
                                              {'at': '2026-10-24', 'project': 'other', 'text': 'O'},
@@ -817,13 +924,42 @@ class DataAndTransportTests(unittest.TestCase):
 
     def test_catalog_is_separate_and_matches_current_contract(self):
         self.assertEqual(server.load_catalog(), {'aresium': {'users': 'coming-soon'}})
-        self.assertEqual(server.APP_SCHEMES, {'aresium': 'aresium://', 'arestemis': 'arestemis://', 'aresus': 'aresus://',
-                                              'arestoteles': 'arestoteles://'})
+        self.assertEqual(server.catalog_states(server.load_catalog()), {'aresium': 'coming-soon'})
+        self.assertEqual(server.catalog_states({'a': {'users': 'open'}, 'b': {'users': 'private'}, 'c': 'open', 'd': {}}),
+                         {'a': 'open'})
+        self.assertEqual(server.catalog_states([]), {})
+
+    def test_apps_json_is_the_one_list_of_app_schemes_and_install_links(self):
+        apps = json.loads((Path(server.APPS_PATH)).read_text(encoding='utf-8'))
+        self.assertEqual({slug: app['scheme'] for slug, app in apps.items()},
+                         {'aresium': 'aresium://', 'arestemis': 'arestemis://', 'aresus': 'aresus://',
+                          'arestoteles': 'arestoteles://'})
+        for slug, app in apps.items():
+            with self.subTest(slug=slug):
+                self.assertEqual(set(app), {'scheme', 'install'})
+                self.assertTrue(server.SLUG.fullmatch(slug))
+                self.assertEqual(app['scheme'], slug + '://')
+                # null until Patrik has the app's TestFlight link (later its App Store link)
+                self.assertTrue(app['install'] is None or app['install'].startswith('https://'), app['install'])
+        self.assertEqual(server.load_apps(), {slug: dict(app) for slug, app in apps.items()})
+
+    def test_apps_json_values_that_are_not_links_count_as_none(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            path = Path(directory) / 'apps.json'
+            path.write_text(json.dumps({
+                'one': {'scheme': 'one://', 'install': 'http://example.com/plain'},
+                'two': {'scheme': '', 'install': 'javascript:alert(1)'},
+                'three': {'install': 'https://testflight.apple.com/join/Example'},
+                'four': 'not an object'}), encoding='utf-8')
+            with patch.object(server, 'APPS_PATH', str(path)):
+                self.assertEqual(server.load_apps(), {
+                    'one': {'scheme': 'one://', 'install': None}, 'two': {'scheme': None, 'install': None},
+                    'three': {'scheme': None, 'install': 'https://testflight.apple.com/join/Example'}})
 
     def test_pb_transport_methods_and_forwarded_ip(self):
         for method in ('POST', 'PATCH', 'GET', 'DELETE'):
             with self.subTest(method=method), patch.object(server.urllib.request, 'urlopen', return_value=Pulse({'id': 'fixture'})) as urlopen:
-                status, data = server.pb_call('/api/collections/users/records', {'ring': ['aresium']},
+                status, data = server.pb_call('/api/collections/users/records', {'requested+': ['aresium']},
                                               'caller-token', '192.0.2.10', method=method)
                 self.assertEqual(status, 200)
                 self.assertEqual(data, {'id': 'fixture'})

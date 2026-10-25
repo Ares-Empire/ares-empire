@@ -50,12 +50,12 @@
     const tabs = expanded ? items.map((idea) => ({ slug: idea.title, name: idea.title, status: "SCOUTED", idea }))
       : items.map((p) => (!admin && p.state === "coming-soon") ? { ...p, statusLabel: "COMING SOON" } : p);
     // Under the ring: the front province's live line, else what it is; nothing for ideas.
-    const line = !front ? (onAdd ? "Add a province to your ring" : "") : expanded ? "" : (front.live || front.blurb || "");
+    const line = !front ? (onAdd ? "Ask for access to more apps" : "") : expanded ? "" : (front.live || front.blurb || "");
     return <section className="em-ring" aria-label={expanded ? "Expansions" : "Provinces"}>
       <div className="em-ring-stage">
         <window.Ring key={expanded ? "ideas" : "provinces"} projects={tabs} onFront={setFront}
           onOpen={(tab) => onOpen(expanded ? tab.idea : tab)} onHold={(tab) => onHold(expanded ? tab.idea : tab)}
-          addSlot={onAdd ? { label: "Add a province", onAdd } : undefined} />
+          addSlot={onAdd ? { label: "More apps", onAdd } : undefined} />
       </div>
       <p className={"em-ring-line" + (front && front.live && !expanded ? " is-live" : "")} aria-live="polite">{line}</p>
     </section>;
@@ -89,9 +89,8 @@
     </div>;
   }
 
-  function Province({ province, data, onRemove, busy }) {
+  function Province({ province, data }) {
     const detail = province.detail || {};
-    const comingSoon = !data.me.admin && province.state === "coming-soon";
     const destination = API.destination(province);
     // The mark and the name are the link (a small arrow says so); no separate Open button.
     const title = <React.Fragment><div className="em-detail-mark"><Mark province={province} /></div>
@@ -103,14 +102,35 @@
         <p className="em-detail-blurb">{province.blurb}</p>
         {province.live && <p className="em-detail-live">{province.live}</p>}
       </div>
-      {comingSoon && <p className="em-coming-note">Coming soon. You’ll be able to open {province.name} here when it’s available.</p>}
+      {/* Its iPhone app's install link (TestFlight while testing): only sent for apps the account has. */}
+      {province.install && <a className="em-secondary em-install" href={province.install} target="_blank" rel="noopener">
+        <Glyph name="Download" size={16} />Install the iPhone app</a>}
       <section className="em-detail-section"><h2>About</h2><p>{detail.about || province.blurb}</p></section>
       <section className="em-detail-section"><h2>Features</h2>
         {detail.features && detail.features.length ? <ul>{detail.features.map((feature, i) => <li key={i}><Glyph name="Check" size={15} />{feature}</li>)}</ul> : <p>No features listed yet.</p>}
       </section>
       <Timeline title="What's new" entries={data.chronicle.filter((entry) => entry.project === province.slug)} projects={data.projects} />
-      {!data.me.admin && <button className="em-remove" disabled={busy} onClick={() => onRemove(province.slug)}><Glyph name="Minus" size={16} />{busy ? "Removing…" : "Remove from my ring"}</button>}
     </React.Fragment>;
+  }
+
+  // The "+": the other apps open to users, each with what can be done (EmpireData.offer). Asking puts the app into the
+  // account's requests; Patrik approves, and the app then joins the ring.
+  function MoreApps({ apps, busy, onAsk }) {
+    if (!apps.length) return <div className="em-empty-state"><Glyph name="Check" size={28} /><h2>Nothing more to ask for.</h2>
+      <p>No other apps are open yet.</p></div>;
+    return <div className="em-catalog">{apps.map((app) => {
+      const offer = API.offer(app);
+      return <article className="em-catalog-card" key={app.slug}>
+        <div className="em-catalog-head"><div className="em-catalog-mark"><Mark province={app} /></div>
+          <div><h2>{app.name}</h2>{offer === "soon" && <span className="em-status">COMING SOON</span>}</div></div>
+        {app.blurb && <p className="em-catalog-blurb">{app.blurb}</p>}
+        {offer === "ask" ? <button className="em-primary" disabled={!!busy} onClick={() => onAsk(app.slug)}>
+            <Glyph name="Plus" size={16} />{busy === app.slug ? "Asking…" : "Ask for access"}</button>
+          : <p className={"em-catalog-state" + (offer === "asked" ? " is-asked" : "")}>{offer === "asked"
+            ? <React.Fragment><Glyph name="Clock" size={15} />Asked, waiting for approval</React.Fragment>
+            : "Not open for requests yet."}</p>}
+      </article>;
+    })}</div>;
   }
 
   // The apps an account can ask for, by service (docs/ACCOUNTS.md → Accounts in every app).
@@ -169,15 +189,13 @@
       if (destination) window.open(destination, "_blank", "noopener");
       else open({ type: "province", item: province });
     };
-    const ring = async (change) => {
+    // busy holds the app being asked for, so only its button says "Asking…"; the sheet stays open and shows "Asked".
+    const ask = async (service) => {
       if (locked.current) return;
-      locked.current = true; setBusy(true); setError(null);
+      locked.current = true; setBusy(service); setError(null);
       try {
-        const result = await API.ring(change);
-        if (alive.current) {
-          setData(result); setModal(null);
-          setNotice(change.add ? "Province added to your ring." : "Province removed from your ring.");
-        }
+        const result = await API.ask(service);
+        if (alive.current) { setData(result); setNotice("Asked for access. You get an email when the app is ready."); }
       } catch (err) { if (alive.current) setError(err.message); }
       finally { locked.current = false; if (alive.current) setBusy(false); }
     };
@@ -243,16 +261,11 @@
         </footer>
       </main>
       <span className="em-sr" role="status">{notice}</span>
-      {modal && <Dialog title={({ province: "Provinces", idea: "Expansions", add: "Add a province", approvals: "Approvals" })[modal.type]}
+      {modal && <Dialog title={({ province: "Provinces", idea: "Expansions", add: "More apps", approvals: "Approvals" })[modal.type]}
         sheet={modal.type === "add"} onClose={close} error={error}>
-        {modal.type === "province" && <Province province={modal.item} data={data} busy={busy} onRemove={(slug) => ring({ remove: slug })} />}
+        {modal.type === "province" && <Province province={modal.item} data={data} />}
         {modal.type === "idea" && <React.Fragment><div className="em-detail-hero"><div className="em-detail-mark"><Glyph name="Layers" size={32} /></div><h1>{modal.item.title}</h1><span className="em-status">PLANNED</span></div><section className="em-detail-section"><h2>About</h2><p>{modal.item.note}</p></section></React.Fragment>}
-        {modal.type === "add" && <React.Fragment>
-          {data.addable.length ? <div className="em-catalog">{data.addable.map((p) => <article className="em-catalog-card" key={p.slug}>
-            <div className="em-catalog-head"><div className="em-catalog-mark"><Mark province={p} /></div><div><h2>{p.name}</h2>{p.state === "coming-soon" && <span className="em-status">COMING SOON</span>}</div></div>
-            <button className="em-primary" disabled={busy} onClick={() => ring({ add: p.slug })}><Glyph name="Plus" size={16} />{busy ? "Adding…" : "Add to my ring"}</button>
-          </article>)}</div> : <div className="em-empty-state"><Glyph name="Check" size={28} /><h2>Your ring is up to date.</h2><p>No other provinces are available to add.</p></div>}
-        </React.Fragment>}
+        {modal.type === "add" && <MoreApps apps={data.addable} busy={busy} onAsk={ask} />}
         {modal.type === "approvals" && admin && <Approvals accounts={accounts} loading={loadingAccounts} busy={busy} onDecide={decide} />}
       </Dialog>}
     </div>;

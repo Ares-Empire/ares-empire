@@ -7,6 +7,8 @@
    Forge     — CONQUER. Name a province; it generates the seed CLAUDE.md, the manifest entry
                and the Claude Code handoff, then crowns it onto the ring. (A browser can't
                touch the filesystem, so Claude Code does the actual scaffold.)
+   MoreApps  — a member's "+" on the desktop: the other apps open to users, to ask for access (the phone has its own
+               sheet in mobile.jsx; both follow EmpireData.offer).
    LegalLinks — the privacy policy and imprint, one quiet line, used by the desktop and the phone layout. */
 (function () {
   const { useState, useEffect, useRef } = React;
@@ -347,9 +349,11 @@
                     ? <img src={p.logo} alt={p.name} onError={() => setImgErr(true)} />
                     : <div className="tab-mono">{(p.name || "?")[0]}</div>}
                 </div>
-                <button className="pd-name" onClick={() => onVisit(p)} title={"Open " + (p.domain || p.name || "the site")}>
-                  <span className="pd-name-t">{p.name}</span><window.Icon name="arrow-up-right" size={22} />
-                </button>
+                {window.EmpireData.destination(p)
+                  ? <button className="pd-name" onClick={() => onVisit(p)} title={"Open " + (p.domain || p.name || "the site")}>
+                      <span className="pd-name-t">{p.name}</span><window.Icon name="arrow-up-right" size={22} />
+                    </button>
+                  : <div className="pd-name"><span className="pd-name-t">{p.name}</span></div>}
                 <div className="pd-sub">
                   {st && <span className={"pc-status " + statusClass(st.tone)}>{st.label}</span>}
                   {p.domain && <span className="pd-domain">{p.domain}</span>}
@@ -498,6 +502,60 @@ TODO — stack, deploy, domain.
     );
   }
 
+  // ---------------------------------------------------------------- More apps (a member's "+")
+  // In the Forge's frame: each app with its mark, name and line, and what can be done: ask for access, asked (waiting
+  // for approval), or coming soon. Asking keeps the panel open, so the row turns to "Asked" in place.
+  function AppMark({ app }) {
+    const [imgErr, setImgErr] = useState(false);
+    return app.logo && !imgErr ? <img src={app.logo} alt="" onError={() => setImgErr(true)} /> : <Mono name={app.name} />;
+  }
+
+  function MoreApps({ apps, asking, error, onAsk, onClose }) {
+    useIcons();
+    useEffect(() => {
+      const onKey = (e) => { if (e.key === "Escape") onClose(); };
+      window.addEventListener("keydown", onKey);
+      return () => window.removeEventListener("keydown", onKey);
+    }, [onClose]);
+    return (
+      <div className="forge more" role="dialog" aria-modal="true" aria-label="More apps" onClick={onClose}>
+        <div className="forge-card" onClick={(e) => e.stopPropagation()}>
+          <button className="panel-x" style={{ position: "absolute", top: 16, right: 16 }} onClick={onClose} aria-label="Close">
+            <window.Icon name="x" size={17} />
+          </button>
+          <div className="forge-k">THE EMPIRE</div>
+          <div className="forge-h">More apps</div>
+          <div className="forge-sub">Ask for access to an app. Each request is approved by hand; you get an email when the app is ready.</div>
+          {error && <div className="more-error" role="alert">{error}</div>}
+          {apps.length ? (
+            <div className="more-list">
+              {apps.map((app) => {
+                const offer = window.EmpireData.offer(app);
+                return (
+                  <div className="more-row" key={app.slug}>
+                    <div className="pc-logo more-logo"><AppMark app={app} /></div>
+                    <div className="more-id">
+                      <div className="pc-name more-name">{app.name}</div>
+                      {app.blurb && <div className="more-blurb">{app.blurb}</div>}
+                    </div>
+                    <div className="more-act">
+                      {offer === "ask"
+                        ? <button className="emp-btn" disabled={!!asking} onClick={() => onAsk(app.slug)}>
+                            {asking === app.slug ? "Asking…" : "Ask for access"}</button>
+                        : offer === "asked"
+                          ? <span className="more-state is-asked"><window.Icon name="clock" size={13} />Asked, waiting for approval</span>
+                          : <span className="more-state">Coming soon</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : <div className="more-empty">No other apps are open yet.</div>}
+        </div>
+      </div>
+    );
+  }
+
   // The privacy policy and imprint (webauth/legal.py, open to signed-in visitors too). English like the rest of the
   // hub and the login page; the pages themselves link to their German versions.
   function LegalLinks({ className }) {
@@ -513,5 +571,6 @@ TODO — stack, deploy, domain.
   window.EmpireGoldDust = GoldDust;
   window.ProjectDetail = ProjectDetail;
   window.Forge = Forge;
+  window.MoreApps = MoreApps;
   window.LegalLinks = LegalLinks;
 })();

@@ -1,0 +1,6 @@
+{
+  "aresium": {"scheme": "aresium://", "install": null},
+  "arestemis": {"scheme": "arestemis://", "install": null},
+  "aresus": {"scheme": "aresus://", "install": null},
+  "arestoteles": {"scheme": "arestoteles://", "install": null}
+}

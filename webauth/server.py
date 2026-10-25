@@ -64,17 +64,17 @@ PROVINCES = {
 # empire_sync. Missing → 503 and the frontend uses its embedded seed.
 STATE_PATH = os.environ.get(
     "EMPIRE_STATE", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "state.json"))
-# Which provinces other accounts may add (docs/API-EMPIRE.md → Catalog).
+# Which provinces other accounts may ask for (docs/API-EMPIRE.md → Catalog).
 CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
+# The iPhone app of each province, whoever may see it (docs/API-EMPIRE.md → Apps): its URL scheme (the Empire app opens
+# the province in its app when it is installed) and its install link (TestFlight public link while testing, the App
+# Store later; null until there is one).
+APPS_PATH = os.path.join(os.path.dirname(__file__), "apps.json")
 PULSE_URLS = {"aresium": "https://aresium.de/api/pulse"}
 # Every other province gets its line from Aresus, the watchtower (one overview per account and minute, asked with the
 # visitor's own token; accounts Aresus does not let in get no line: it needs the "aresus" service and its owner
 # allowlist). Same host, so localhost.
 ARESUS_OVERVIEW_URL = os.environ.get("ARESUS_OVERVIEW_URL", "http://127.0.0.1:8098/api/aresus/overview")
-# iPhone apps by province (URL scheme), whoever may see the province: the Empire app opens a province in its app
-# when it is installed. Not part of the catalog, which only says what other accounts may add.
-APP_SCHEMES = {"aresium": "aresium://", "arestemis": "arestemis://", "aresus": "aresus://",
-               "arestoteles": "arestoteles://"}
 LIVE_CACHE_SECS = 60
 
 # Reachable without a session: the login pages and the images they show.
@@ -295,6 +295,32 @@ def load_catalog() -> dict:
         return json.load(f)
 
 
+CATALOG_STATES = ("open", "coming-soon")
+
+
+def catalog_states(catalog: object) -> dict[str, str]:
+    """slug → "open" | "coming-soon" for the provinces open to other accounts; any other entry counts as private."""
+    if not isinstance(catalog, dict):
+        return {}
+    return {slug: entry["users"] for slug, entry in catalog.items()
+            if isinstance(entry, dict) and entry.get("users") in CATALOG_STATES}
+
+
+def load_apps() -> dict[str, dict[str, str | None]]:
+    """apps.json as slug → {"scheme", "install"}. A value that is not a non-empty text counts as None, and so does an
+    install link that is not https (a TestFlight or App Store page)."""
+    with open(APPS_PATH, encoding="utf-8") as f:
+        raw = json.load(f)
+    apps = {}
+    for slug, app in raw.items() if isinstance(raw, dict) else ():
+        if not isinstance(app, dict):
+            continue
+        scheme, install = app.get("scheme"), app.get("install")
+        apps[slug] = {"scheme": scheme if isinstance(scheme, str) and scheme else None,
+                      "install": install if isinstance(install, str) and install.startswith("https://") else None}
+    return apps
+
+
 _live_cache: dict[tuple[str, str, str], tuple[str | dict[str, str] | None, float]] = {}
 _live_lock = threading.Lock()
 
@@ -354,9 +380,10 @@ def live_line(slug: str, account_id: str, token: str, language: str = "en") -> s
     return line
 
 
-def account_ring(record: dict) -> list[str]:
-    ring = record.get("ring")
-    return list(dict.fromkeys(s for s in ring if isinstance(s, str))) if isinstance(ring, list) else []
+def strings_of(record: dict, field: str) -> list[str]:
+    """A list field of an account record (services, requested) as its texts; anything else counts as empty."""
+    value = record.get(field)
+    return [s for s in value if isinstance(s, str)] if isinstance(value, list) else []
 
 
 def require_pb(status: int, forbidden: str = "no_access") -> None:
@@ -376,11 +403,6 @@ def require_pb(status: int, forbidden: str = "no_access") -> None:
 WAITING = "approved = false || requested:length > 0"
 
 
-def requested_of(item: dict) -> list[str]:
-    requested = item.get("requested")
-    return [s for s in requested if isinstance(s, str)] if isinstance(requested, list) else []
-
-
 def pending_accounts(token: str, client_ip: str, count_only: bool = False):
     """The accounts waiting for Patrik, each {id, email, name, created, requested, approved, verified} (verified: the
     email address is confirmed; login needs it too), or with `count_only` how many there are."""
@@ -398,7 +420,7 @@ def pending_accounts(token: str, client_ip: str, count_only: bool = False):
         if count_only:
             return data["totalItems"]
         items.extend({**{k: _string(item.get(k)) for k in ("id", "email", "name", "created")},
-                      "requested": requested_of(item), "approved": item.get("approved") is True,
+                      "requested": strings_of(item, "requested"), "approved": item.get("approved") is True,
                       "verified": item.get("verified") is True}
                      for item in data["items"] if isinstance(item, dict))
         if page >= data.get("totalPages", 1):
@@ -416,43 +438,74 @@ def pending_count(token: str, client_ip: str) -> int | None:
 
 
 def empire_data(record: dict, token: str, client_ip: str, language: str = "en") -> dict:
-    state, catalog = load_state(), load_catalog()
+    """GET /api/empire for this account (docs/API-EMPIRE.md). The ring (`projects`) is every province the account has:
+    an admin every province, anyone else the provinces in its `services` (Patrik grants them). `addable` (the "+") is
+    the rest of the catalog, each with whether the account has asked for it."""
+    state, catalog, apps = load_state(), catalog_states(load_catalog()), load_apps()
     admin = record.get("admin") is True
-    ring = set(account_ring(record)) & catalog.keys()
+    services, requested = set(strings_of(record, "services")), set(strings_of(record, "requested"))
 
-    def province(project):
+    def granted(project):
         slug = project["slug"]
-        return {**project, "state": "open" if admin else catalog[slug]["users"],
-                "app": APP_SCHEMES.get(slug), "live": live_line(slug, record["id"], token, language)}
+        app = apps.get(slug, {})
+        return {**project, "state": "open", "live": live_line(slug, record["id"], token, language),
+                "app": app.get("scheme"), "install": app.get("install"), "access": "granted"}
+
+    def offered(project):
+        # The account has no access to it, so the province is not asked for a live line, and the install link is
+        # only for accounts that have the app.
+        slug = project["slug"]
+        return {**project, "state": catalog[slug], "live": None, "app": apps.get(slug, {}).get("scheme"),
+                "install": None, "access": "requested" if slug in requested else "none"}
 
     projects = state["projects"]
+    ring = [p for p in projects if admin or p["slug"] in services]
+    ring_slugs = {p["slug"] for p in ring}
     return {"version": 2, "me": {"id": record["id"], "name": _string(record.get("name")), "admin": admin},
-            "projects": [province(p) for p in projects if admin or p["slug"] in ring],
-            "addable": [] if admin else [province(p) for p in projects
-                                         if p["slug"] in catalog and p["slug"] not in ring],
-            "chronicle": [e for e in state["chronicle"] if admin or e["project"] in ring],
+            "projects": [granted(p) for p in ring],
+            "addable": [] if admin else [offered(p) for p in projects
+                                         if p["slug"] in catalog and p["slug"] not in ring_slugs],
+            "chronicle": [e for e in state["chronicle"] if admin or e["project"] in ring_slugs],
             "ideas": state["ideas"] if admin else [],
             "pending": pending_count(token, client_ip) if admin else 0}
 
 
-def change_ring(record: dict, token: str, client_ip: str, body: dict, language: str = "en") -> dict:
-    if set(body) not in ({"add"}, {"remove"}):
-        raise APIError(400, "Send exactly one province to add or remove.")
-    action, slug = next(iter(body.items()))
-    if not isinstance(slug, str) or slug not in load_catalog():
-        raise APIError(400, "Unknown catalog province.")
-    ring = account_ring(record)
-    if action == "add" and slug not in ring:
-        ring.append(slug)
-    elif action == "remove":
-        ring = [s for s in ring if s != slug]
-    status, updated = pb_call("/api/collections/users/records/" + record["id"], {"ring": ring},
-                              token=token, client_ip=client_ip, method="PATCH")
+def request_access(record: dict, token: str, client_ip: str, body: dict, language: str = "en") -> dict:
+    """POST /api/empire/request {service}: the account asks for one app of the "+" (an `open` catalog province). It
+    writes the account's own `requested` with its own token, like the apps' "Ask for access" (docs/ACCOUNTS.md →
+    Accounts in every app); the account server then tells Patrik (pb_hooks/accounts.pb.js). Asking again for an app
+    already asked for changes nothing. Answers the fresh GET /api/empire."""
+    if set(body) != {"service"} or not isinstance(body["service"], str):
+        raise APIError(400, "Send the app to ask for as service.")
+    slug = body["service"]
+    state = catalog_states(load_catalog()).get(slug)
+    if state is None:
+        raise APIError(400, "This app is not open to requests.")
+    if state != "open":
+        raise APIError(400, "This app is coming soon and cannot be requested yet.")
+    if record.get("admin") is True:
+        raise APIError(400, "This account already has this app.")  # an admin's ring is every province
+    # Read the account itself (the record from auth-refresh may be a minute old), so what it has and has asked for
+    # is current.
+    path = "/api/collections/users/records/" + record["id"]
+    status, account = pb_call(path + "?" + urlencode({"fields": "id,services,requested"}), token=token,
+                              client_ip=client_ip, method="GET")
     require_pb(status)
-    if updated.get("id") != record["id"] or updated.get("ring") != ring:
+    if account.get("id") != record["id"]:
         raise APIError(503, "Account service returned an unreadable response.")
-    forget_token(token)  # The next request must not reuse the old ring from auth-refresh.
-    return empire_data({**record, "ring": ring}, token, client_ip, language)
+    if slug in strings_of(account, "services"):
+        raise APIError(400, "This account already has this app.")
+    if slug not in strings_of(account, "requested"):
+        # "requested+" adds this one app and keeps every other request, also one made since the read above.
+        status, account = pb_call(path, {"requested+": [slug]}, token=token, client_ip=client_ip, method="PATCH")
+        require_pb(status)
+        # Granted in the meantime, the account server has moved it from requested to services: fine either way.
+        if account.get("id") != record["id"] or slug not in strings_of(account, "requested") + strings_of(
+                account, "services"):
+            raise APIError(503, "Account service returned an unreadable response.")
+    forget_token(token)  # The next GET /api/empire must not reuse the old services and requested from auth-refresh.
+    return empire_data({**record, "services": strings_of(account, "services"),
+                        "requested": strings_of(account, "requested")}, token, client_ip, language)
 
 
 def decision_of(body: dict) -> tuple[str, list[str] | None]:
@@ -481,7 +534,7 @@ def decide_approval(account_id: str, token: str, client_ip: str, body: dict) -> 
     require_pb(status, forbidden="admin_only")
     if account.get("id") != account_id:
         raise APIError(503, "Account service returned an unreadable response.")
-    current = requested_of(account)
+    current = strings_of(account, "requested")
     # The requests this decision is about: the account's requests as read just now, and when the app sends
     # `requested` (what Patrik saw on the card) only those he saw. A request made after he looked is neither granted
     # nor declined: it stays in `requested` and comes back in the list. The "+" and "-" forms change only the values
@@ -777,8 +830,8 @@ class Handler(SimpleHTTPRequestHandler):
             return empire_data(record, token, ip, self.language)
         if self.command in ("GET", "HEAD") and path == "/api/empire/approvals":
             return pending_accounts(token, ip)
-        if self.command == "POST" and path == "/api/empire/ring":
-            return change_ring(record, token, ip, self._json_body(), self.language)
+        if self.command == "POST" and path == "/api/empire/request":
+            return request_access(record, token, ip, self._json_body(), self.language)
         if self.command == "POST" and path.startswith("/api/empire/approvals/"):
             return decide_approval(path.rsplit("/", 1)[1], token, ip, self._json_body())
         raise APIError(404, "Unknown API route.")

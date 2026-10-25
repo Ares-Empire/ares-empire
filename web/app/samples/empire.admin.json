@@ -1,7 +1,7 @@
 {
   "version": 2,
   "me": {
-    "id": "sample-admin",
+    "id": "sampleadmin0001",
     "name": "Commander",
     "admin": true
   },
@@ -28,7 +28,9 @@
       },
       "state": "open",
       "live": "€1,339 spent in October",
-      "app": "aresium://"
+      "app": "aresium://",
+      "install": null,
+      "access": "granted"
     },
     {
       "slug": "arestoteles",
@@ -51,8 +53,10 @@
         "changelog": []
       },
       "state": "open",
-      "live": null,
-      "app": null
+      "live": "Website up · vault synced 2 min ago",
+      "app": "arestoteles://",
+      "install": null,
+      "access": "granted"
     },
     {
       "slug": "arestemis",
@@ -75,32 +79,10 @@
         "changelog": []
       },
       "state": "open",
-      "live": null,
-      "app": null
-    },
-    {
-      "slug": "arescribe",
-      "name": "Arescribe",
-      "url": "",
-      "logo": "brand/athena.webp",
-      "status": "MUSTERING",
-      "domain": "",
-      "blurb": "Maps-review scribe — text it a place and notes, it writes the review.",
-      "detail": {
-        "about": "Athena's craft. Text the Arescribe bot a place plus a few notes and it composes a fitting Google Maps review automatically — and can post it for you.",
-        "features": [
-          "Telegram bot input",
-          "Place-aware review generation",
-          "Google Maps posting"
-        ],
-        "setup": "",
-        "wip": [],
-        "ideas": [],
-        "changelog": []
-      },
-      "state": "open",
-      "live": null,
-      "app": null
+      "live": "Issue: Server down since 04:53",
+      "app": "arestemis://",
+      "install": "https://example.com/testflight/arestemis",
+      "access": "granted"
     },
     {
       "slug": "aresolus",
@@ -116,40 +98,19 @@
           "Best-fare flight search",
           "Flexible date / route hunting"
         ],
+        "setup": "",
+        "wip": [],
         "ideas": [
           "Trains & buses",
           "Price-drop alerts"
         ],
-        "setup": "",
-        "wip": [],
         "changelog": []
       },
       "state": "open",
       "live": null,
-      "app": null
-    },
-    {
-      "slug": "arescrypt",
-      "name": "Arescrypt",
-      "url": "",
-      "logo": "brand/cerberus.webp",
-      "status": "MUSTERING",
-      "domain": "",
-      "blurb": "Personal password vault — the empire's three-headed guard.",
-      "detail": {
-        "about": "Cerberus at the gate. Arescrypt is a personal password manager — a single, guarded vault for every credential.",
-        "features": [
-          "Encrypted vault",
-          "Personal credential store"
-        ],
-        "setup": "",
-        "wip": [],
-        "ideas": [],
-        "changelog": []
-      },
-      "state": "open",
-      "live": null,
-      "app": null
+      "app": null,
+      "install": null,
+      "access": "granted"
     },
     {
       "slug": "aresync",
@@ -176,8 +137,10 @@
         "changelog": []
       },
       "state": "open",
-      "live": null,
-      "app": null
+      "live": "Last sync 3 min ago on 2 machines",
+      "app": null,
+      "install": null,
+      "access": "granted"
     },
     {
       "slug": "aresus",
@@ -200,55 +163,113 @@
         "changelog": []
       },
       "state": "open",
-      "live": null,
-      "app": null
-    },
-    {
-      "slug": "aresis",
-      "name": "Aresis",
-      "url": "",
-      "logo": "brand/nemesis.png",
-      "status": "BESIEGING",
-      "domain": "",
-      "blurb": "Privacy guardian — scans your exposed personal data and proposes fixes.",
-      "detail": {
-        "about": "Nemesis, who balances exposure. Aresis is a personal exposure scanner and privacy-remediation engine: feed it identifiers you own (email, username, name), it runs them through OSINT sources, has an LLM judge each finding by severity, and proposes concrete fixes — to shrink your digital footprint, never to investigate others. The full scan→judge→remediate→report pipeline runs end to end.",
-        "features": [
-          "OSINT exposure scan across breach & footprint sources",
-          "LLM severity judgement (info → critical)",
-          "Concrete remediation steps per finding",
-          "Self-audit only (ownership-gated)"
-        ],
-        "setup": "",
-        "wip": [
-          "Deploy behind shared nginx"
-        ],
-        "ideas": [
-          "Optional auth → privacy SaaS"
-        ],
-        "changelog": []
-      },
-      "state": "open",
-      "live": null,
-      "app": null
+      "live": "All running · checked 1 min ago",
+      "app": "aresus://",
+      "install": null,
+      "access": "granted"
     }
   ],
   "addable": [],
   "chronicle": [
     {
-      "at": "2026-10-23",
-      "project": "aresium",
-      "text": "The Aresium iPhone app grew to the full mobile site: transaction detail, recategorisation and import, plus two home-screen widgets for spending and groceries."
+      "at": "2026-10-25",
+      "project": "empire",
+      "text": "The Empire app was reviewed by three independent reviewers before its first TestFlight build, and their fixes are in: the apps that hold only Patrik's data (Aresium, Arestoteles, Aresus) now let in only him, so approving a request can no longer open them; the hub's answers and errors follow one checked shape; tapping a province always opens something; and every website links the privacy policy and imprint."
+    },
+    {
+      "at": "2026-10-25",
+      "project": "empire",
+      "text": "The empire's data is backed up every night: the server makes an encrypted copy of everything that cannot be rebuilt (accounts, Aresium, Arestemis, Aresus, push, the hub's data and the secrets) and keeps a week of them; the MacBook fetches each copy with Aresync, checks it file by file and keeps up to six months. A restore test brought back every transaction."
+    },
+    {
+      "at": "2026-10-25",
+      "project": "empire",
+      "text": "Every Empire app got light mode: Settings → Appearance (like the iPhone, light or dark) in each app, with every colour shared as a light and a dark value, so each future app has both from its first screen. Aresium keeps its red mode on top of either; the Empire app becomes a marble hall by day (ivory wall, antique gold, the bust as a faint relief); the widgets follow the home screen."
+    },
+    {
+      "at": "2026-10-25",
+      "project": "empire",
+      "text": "Every app now creates and runs the one Ares account itself: sign up, reset a password, ask for access to an app, change the password, leave an app (its data goes with it) or delete the account, which removes its data in every service; the privacy policy and imprint went live with a contact form."
+    },
+    {
+      "at": "2026-10-25",
+      "project": "empire",
+      "text": "Every Empire app got a Settings screen behind a gear: language (chosen in the app), notifications, a contact form that reaches Patrik by email, privacy policy, imprint, font licences, version and the account; and each app's name now ends its main screen, seen only when scrolling down."
+    },
+    {
+      "at": "2026-10-25",
+      "project": "arestoteles",
+      "text": "Arestoteles became quick to look things up in: search by meaning on the server (a German question finds the English passage that answers it, with a small open model on the empire's own server), a search field in every tab, short position cards, and notes, edits and \"discuss later\" marks instead of changing positions on the phone."
+    },
+    {
+      "at": "2026-10-24",
+      "project": "arestoteles",
+      "text": "Arestoteles became the iPhone app for Patrik's Weltbild: his positions first, each with the evidence behind it, topics with briefings, mechanisms, an events timeline and search in English and German; positions can be confirmed, reworded or changed (old views kept with their date), notes edited, and any topic handed to Claude for a discussion that writes back to the vault. The trading bot is gone; the website stays."
+    },
+    {
+      "at": "2026-10-24",
+      "project": "empire",
+      "text": "Every Empire app now speaks English and German: each app follows the iPhone's language, and the servers write their status lines, notes and notifications in that language too. The rule holds for every future app."
+    },
+    {
+      "at": "2026-10-24",
+      "project": "arestemis",
+      "text": "Arestemis's search got simpler: flat or WG, how many move in, sizes, cold and warm rent ranges, dates, portals and extras, each field optional on its own; a sentence can fill in the fields."
+    },
+    {
+      "at": "2026-10-24",
+      "project": "aresus",
+      "text": "Aresus reached the home and lock screens: a widget that says \"All running\" or names the issue, always with how old the check is; and the Empire app's province cards now carry Aresus's live line for each province."
+    },
+    {
+      "at": "2026-10-24",
+      "project": "aresus",
+      "text": "Aresus went live as the empire's watchtower: every minute it checks each province on the server (services, websites, certificates, deploys), keeps incidents and uptime, and receives a report from every Aresync run on the MacBook and the server. Its iPhone app lists the provinces (issues first, then active, then inactive) and the sync runs, and pushes when something breaks or a sync fails. The server now deploys the hub, Arestemis and Aresus by itself after a push."
+    },
+    {
+      "at": "2026-10-24",
+      "project": "arestemis",
+      "text": "Arestemis became an iPhone app: the search set in fields (places anywhere in Germany), the hunt started and paused from the phone, an AI check of every listing against the whole search, matches with their states, and the application text (written once or by AI per listing). The server was rebuilt for Empire accounts; push notifications replace Telegram once the phone can receive them."
+    },
+    {
+      "at": "2026-10-24",
+      "project": "empire",
+      "text": "One push service for every Empire app: apps register with their Empire login, provinces send through it. Runs as a dry run until Apple approves the developer account."
+    },
+    {
+      "at": "2026-10-24",
+      "project": "empire",
+      "text": "The Empire got its own iPhone app: the approved phone hub rebuilt natively (ring, chronicle, province pages, adding a province, approvals), on the one login shared with Aresium; opening a province starts its app when installed. Runs on the simulator; TestFlight waits for Apple."
+    },
+    {
+      "at": "2026-10-24",
+      "project": "empire",
+      "text": "The hub reached the phone: each account now sees its own ring (Patrik everything plus Approvals; others their provinces and a \"+\" to add the ones opened to them, today Aresium as coming soon), on the desktop's own wheel and chronicle. Approvals run with Patrik's own login, no superuser secret on the hub."
     },
     {
       "at": "2026-10-23",
       "project": "aresium",
-      "text": "The first native Aresium app took shape: Empire login, categories and months. Dashboard numbers now come from the server, shared by the website and the app."
+      "text": "The Aresium iPhone app grew to the full mobile site: transaction detail and recategorise, import (button and share sheet), the red Aresium mode with the ARESIUM band and intro, and two home-screen widgets (this month's spending line; Groceries + Drogerie). The server now also sends the recategorise choices and each month's running total; the old browser calculation and the paint animation are gone."
+    },
+    {
+      "at": "2026-10-23",
+      "project": "aresium",
+      "text": "The first iPhone app took shape: native SwiftUI Aresium (Empire login, the start, category and month screens of the mobile site) runs on the simulator. To serve website and app alike, Aresium now calculates every dashboard number on the server (`/api/data` v2), checked identical to the old browser calculation on all real data."
     },
     {
       "at": "2026-10-23",
       "project": "empire",
-      "text": "Charted the next campaign: Empire accounts (one login for every service) and native iPhone apps via TestFlight, starting with Aresium. Opened the empire-ios repo."
+      "text": "The hub and Aresium switched from shared passwords to Empire accounts: log in with email + password, sign up and wait for approval, reset a forgotten password."
+    },
+    {
+      "at": "2026-10-23",
+      "project": "empire",
+      "text": "Empire accounts went live at https://auth.ares-empire.de (PocketBase): sign-up, approval by Patrik, per-service access; email via Resend from ares-empire.de."
+    },
+    {
+      "at": "2026-10-23",
+      "project": "empire",
+      "text": "Charted the next campaign: Empire accounts (one login for every service) and native iPhone apps via TestFlight, starting with Aresium. Opened the `empire-ios` repo and the Connections table."
     },
     {
       "at": "2026-06-19",
@@ -294,5 +315,5 @@
       "note": "A single status board — uptime, last deploy and health for every conquered service."
     }
   ],
-  "pending": 2
+  "pending": 3
 }

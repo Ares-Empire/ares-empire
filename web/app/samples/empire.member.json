@@ -1,0 +1,78 @@
+{
+  "version": 2,
+  "me": {
+    "id": "samplemember001",
+    "name": "Robin Vale",
+    "admin": false
+  },
+  "projects": [
+    {
+      "slug": "arestemis",
+      "name": "Arestemis",
+      "url": "",
+      "logo": "brand/artemis.webp",
+      "status": "CONQUERED",
+      "domain": "",
+      "blurb": "Apartment sniper — claims new flat listings the moment they post.",
+      "detail": {
+        "about": "The huntress. Arestemis watches the Munich housing portals and pounces on a new listing the instant it appears — first to the viewing, first to apply. Runs 24/7 as a Telegram bot in the empire (formerly the FlatSniper project).",
+        "features": [
+          "Real-time listing watch",
+          "Instant alerts",
+          "Fast-track applying"
+        ],
+        "setup": "",
+        "wip": [],
+        "ideas": [],
+        "changelog": []
+      },
+      "state": "open",
+      "live": null,
+      "app": "arestemis://",
+      "install": "https://example.com/testflight/arestemis",
+      "access": "granted"
+    }
+  ],
+  "addable": [
+    {
+      "slug": "aresium",
+      "name": "Aresium",
+      "url": "https://aresium.de",
+      "logo": "brand/hermes.webp",
+      "status": "CONQUERED",
+      "domain": "aresium.de",
+      "blurb": "Personal finance command — VR Bank + PayPal, imported and understood.",
+      "detail": {
+        "about": "The empire's personal-finance command. Aresium imports VR Bank and PayPal activity, reconciles it, and turns raw statements into an understood picture of balances, cash flow and where the money actually goes.",
+        "features": [
+          "VR Bank + PayPal import",
+          "Transaction categorisation & reconciliation",
+          "Balance and cash-flow overview"
+        ],
+        "setup": "",
+        "wip": [],
+        "ideas": [],
+        "changelog": []
+      },
+      "state": "coming-soon",
+      "live": null,
+      "app": "aresium://",
+      "install": null,
+      "access": "none"
+    }
+  ],
+  "chronicle": [
+    {
+      "at": "2026-10-24",
+      "project": "arestemis",
+      "text": "Arestemis's search got simpler: flat or WG, how many move in, sizes, cold and warm rent ranges, dates, portals and extras, each field optional on its own; a sentence can fill in the fields."
+    },
+    {
+      "at": "2026-10-24",
+      "project": "arestemis",
+      "text": "Arestemis became an iPhone app: the search set in fields (places anywhere in Germany), the hunt started and paused from the phone, an AI check of every listing against the whole search, matches with their states, and the application text (written once or by AI per listing). The server was rebuilt for Empire accounts; push notifications replace Telegram once the phone can receive them."
+    }
+  ],
+  "ideas": [],
+  "pending": 0
+}

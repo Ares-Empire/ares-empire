@@ -3,15 +3,22 @@
 
 Every file is the hub's exact answer, made by webauth/server.py's own request handler in memory, with made-up accounts,
 a fake account server and made-up live lines (no network, no real account data). The provinces, expansions and
-chronicle are the committed seed, web/app/empire-data.js. Contract: docs/API-EMPIRE.md. The files go into the iPhone
-repo (empire-ios) by hand; run this again whenever the contract or the seed changes.
+chronicle are the committed seed, web/app/empire-data.js. The catalog and one install link are made up too (SAMPLE_CATALOG,
+SAMPLE_INSTALL), so every state the apps show appears; the committed catalog opens no app yet. Contract:
+docs/API-EMPIRE.md. The files go into the iPhone repo (empire-ios) by hand; run this again whenever the contract or the
+seed changes.
 
   empire.admin.json        GET /api/empire as an admin: every province, the expansions, the whole chronicle, pending
-  empire.member.json       the same as a member with one province in the ring
-  empire.new-member.json   the same as a member approved just now: an empty ring and the catalog to add from
+  empire.member.json       the same as a member with one app (Arestemis, with an install link) and the "+" catalog
+  empire.new-member.json   the same as a member approved just now: an empty ring and the catalog to ask from
+  empire.requested.json    the same as a member who asked for Arestemis: in the "+", waiting for approval
+  access-request.json      POST /api/empire/request {service: "arestemis"} as the new member: the fresh hub data
   approvals.json           GET /api/empire/approvals: two sign-ups (one email not confirmed) and a member asking for more
   approval-decision.json   POST /api/empire/approvals/<id> {approve: true, requested: <the card's apps>} on a sign-up
   error.<code>.json        one error answer per code clients act on
+
+`--web` writes the hub website's own previews instead (WEB_PREVIEWS into web/app/samples, which the localhost preview
+loads; webauth/test_server.py checks they are current).
 
 The check_* functions say whether an answer has the contract's shape (webauth/test_server.py uses them too).
 """
@@ -36,6 +43,10 @@ if str(REPO_ROOT) not in sys.path:
 from webauth import server  # noqa: E402
 
 SEED = REPO_ROOT / "web" / "app" / "empire-data.js"
+WEB_SAMPLES = REPO_ROOT / "web" / "app" / "samples"
+# The fixtures the website's localhost preview loads (web/app/empire-api.js: ?as=admin|member|new-member|requested).
+WEB_PREVIEWS = ("empire.admin.json", "empire.member.json", "empire.new-member.json", "empire.requested.json",
+                "approvals.json")
 
 
 # ── The seed (plain JavaScript data) ─────────────────────────────────────────
@@ -212,6 +223,8 @@ def _province(where: str, value: object, problems: list[str]) -> None:
         "slug": lambda v: isinstance(v, str) and bool(server.SLUG.fullmatch(v)), "name": _text, "url": _text,
         "logo": _text, "status": _text, "domain": _text, "blurb": _text, "detail": lambda v: True,
         "state": lambda v: v in ("open", "coming-soon"), "live": _optional_text, "app": _optional_text,
+        "install": lambda v: v is None or (isinstance(v, str) and v.startswith("https://")),
+        "access": lambda v: v in ("granted", "requested", "none"),
     }, problems)
     if isinstance(value, dict):
         _check_fields(where + ".detail", value.get("detail"), {
@@ -250,6 +263,17 @@ def check_empire(data: object) -> list[str]:
     if isinstance(data.get("me"), dict) and data["me"].get("admin") is False:
         if data.get("pending") != 0 or data.get("ideas") != []:
             problems.append("empire: a member gets pending 0 and no ideas")
+    elif isinstance(data.get("me"), dict) and data["me"].get("admin") is True and data.get("addable") != []:
+        problems.append("empire: an admin has every province, so nothing in addable")
+    # The ring is what the account has; the "+" what it may ask for. Install links only for apps the account has.
+    for number, province in enumerate(p for p in data.get("projects") or [] if isinstance(p, dict)):
+        if (province.get("state"), province.get("access")) != ("open", "granted"):
+            problems.append(f"empire.projects[{number}]: a ring province is open and granted")
+    for number, province in enumerate(p for p in data.get("addable") or [] if isinstance(p, dict)):
+        if province.get("access") not in ("requested", "none") or province.get("install") is not None:
+            problems.append(f"empire.addable[{number}]: requested or none, and never an install link")
+        if province.get("access") == "requested" and province.get("state") != "open":
+            problems.append(f"empire.addable[{number}]: only an open app can be requested")
     return problems
 
 
@@ -294,14 +318,20 @@ def check_error(data: object) -> list[str]:
 CREATED = "2026-10-24 08:40:00.000Z"  # PocketBase's date format
 ACCOUNTS = {  # token → the account record auth-refresh returns
     "sample-admin-token": {"id": "sampleadmin0001", "name": "Commander", "admin": True, "approved": True,
-                           "verified": True, "services": ["empire", "aresium", "aresus"], "ring": []},
+                           "verified": True, "services": ["empire", "aresium", "aresus"], "requested": []},
     "sample-member-token": {"id": "samplemember001", "name": "Robin Vale", "admin": False, "approved": True,
-                            "verified": True, "services": ["empire"], "ring": ["aresium"]},
+                            "verified": True, "services": ["empire", "arestemis"], "requested": []},
     "sample-new-member-token": {"id": "samplenewmbr001", "name": "", "admin": False, "approved": True,
-                                "verified": True, "services": ["empire"], "ring": []},
+                                "verified": True, "services": ["empire"], "requested": []},
+    "sample-requested-token": {"id": "samplerequest01", "name": "Sam Okafor", "admin": False, "approved": True,
+                               "verified": True, "services": ["empire"], "requested": ["arestemis"]},
     "sample-no-access-token": {"id": "samplenoacce001", "name": "Kim", "admin": False, "approved": True,
-                               "verified": True, "services": ["arestemis"], "ring": []},
+                               "verified": True, "services": ["arestemis"], "requested": []},
 }
+# Which apps other accounts may ask for: Arestemis open, Aresium coming soon (the committed catalog opens nothing yet).
+SAMPLE_CATALOG = {"aresium": {"users": "coming-soon"}, "arestemis": {"users": "open"}}
+# A made-up install link for Arestemis (apps.json has none until there is a TestFlight link).
+SAMPLE_INSTALL = {"arestemis": "https://example.com/testflight/arestemis"}
 WAITING = [  # accounts waiting for Patrik (fictional example.com addresses)
     {"id": "samplesignup001", "email": "alex@example.com", "name": "Alex Rowan", "created": CREATED,
      "approved": False, "verified": True, "services": [], "requested": ["empire", "arestemis"]},
@@ -321,17 +351,25 @@ ARESUS = {"provinces": [
 
 
 class FakeAccountServer:
-    """The few PocketBase calls the hub makes, over the records above; approve and decline apply the account server's
-    two rules (accounts.pb.js → settle)."""
+    """The few PocketBase calls the hub makes, over the records above; approve, decline and an account's own request
+    apply the account server's two rules (accounts.pb.js → settle)."""
 
     def __init__(self):
         self.waiting = copy.deepcopy(WAITING)
+        self.accounts = copy.deepcopy(ACCOUNTS)
 
     def __call__(self, path, body=None, token=None, client_ip=None, method="POST"):
+        me = self.accounts.get(token)
         if path.endswith("/auth-refresh"):
-            record = ACCOUNTS.get(token)
-            return (200, {"record": copy.deepcopy(record)}) if record else (401, {})
-        if ACCOUNTS.get(token, {}).get("admin") is not True:
+            return (200, {"record": copy.deepcopy(me)}) if me else (401, {})
+        if me and path.partition("?")[0].endswith("/records/" + me["id"]):
+            # An account reads its own record and asks for an app ("requested+"), as the hub's "+" does.
+            if method == "PATCH":
+                me["requested"] += [s for s in body["requested+"] if s not in me["requested"]]
+                me["requested"] = [s for s in me["requested"] if s not in me["services"]]
+                return 200, copy.deepcopy(me)
+            return 200, {k: copy.deepcopy(me[k]) for k in ("id", "services", "requested")}
+        if (me or {}).get("admin") is not True:
             return 403, {}
         if path.startswith("/api/collections/users/records?"):
             query = parse_qs(urlparse(path).query)
@@ -368,6 +406,17 @@ def _live(url, token, language):
     return copy.deepcopy(ARESUS if url == server.ARESUS_OVERVIEW_URL else PULSE)
 
 
+_load_committed_apps = server.load_apps  # fake_world() replaces server.load_apps with _apps
+
+
+def _apps():
+    """The committed apps.json with the made-up install link."""
+    apps = _load_committed_apps()
+    for slug, link in SAMPLE_INSTALL.items():
+        apps[slug] = {**apps.get(slug, {"scheme": None}), "install": link}
+    return apps
+
+
 @contextlib.contextmanager
 def fake_world(seed: dict | None = None):
     """The hub server with the seed as its state.json, the fake account server and the made-up live lines."""
@@ -379,6 +428,8 @@ def fake_world(seed: dict | None = None):
         stack.callback(server._live_cache.clear)
         stack.enter_context(patch.object(server, "pb_call", FakeAccountServer()))
         stack.enter_context(patch.object(server, "read_state", lambda: copy.deepcopy(state)))
+        stack.enter_context(patch.object(server, "load_catalog", lambda: copy.deepcopy(SAMPLE_CATALOG)))
+        stack.enter_context(patch.object(server, "load_apps", _apps))
         stack.enter_context(patch.object(server, "_fetch_json", _live))
         stack.enter_context(patch.object(server, "log", lambda message: None))
         stack.enter_context(patch.object(server.Handler, "log_message", lambda *args: None))
@@ -429,6 +480,10 @@ def build(seed: dict | None = None) -> dict[str, object]:
         samples["empire.member.json"] = _expect("member", answer("GET", "/api/empire", member), 200, check_empire)
         samples["empire.new-member.json"] = _expect("new member", answer("GET", "/api/empire", new_member), 200,
                                                     check_empire)
+        samples["empire.requested.json"] = _expect("requested", answer(
+            "GET", "/api/empire", "sample-requested-token"), 200, check_empire)
+        samples["access-request.json"] = _expect("access request", answer(
+            "POST", "/api/empire/request", new_member, {"service": "arestemis"}), 200, check_empire)
         approvals = _expect("approvals", answer("GET", "/api/empire/approvals", admin), 200, check_approvals)
         samples["approvals.json"] = approvals
         card = next(a for a in approvals if not a["approved"])  # a sign-up; the app sends the apps its card showed
@@ -440,7 +495,7 @@ def build(seed: dict | None = None) -> dict[str, object]:
             "unauthorized": (401, answer("GET", "/api/empire", "sample-expired-token")),
             "no_access": (403, answer("GET", "/api/empire", "sample-no-access-token")),
             "admin_only": (403, answer("GET", "/api/empire/approvals", member)),
-            "bad_request": (400, answer("POST", "/api/empire/ring", member, {"add": "nowhere"})),
+            "bad_request": (400, answer("POST", "/api/empire/request", member, {"service": "aresium"})),
             "not_found": (404, answer("POST", "/api/empire/approvals/samplemissing01", admin, {"decline": True})),
         }
         with patch.object(server, "read_state", side_effect=server.APIError(503, "Hub data unavailable, try again "
@@ -456,15 +511,26 @@ def build(seed: dict | None = None) -> dict[str, object]:
     return samples
 
 
+def dump(data: object) -> str:
+    """A fixture file's text."""
+    return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Write the Empire app's fixtures from the hub server itself.")
-    parser.add_argument("outdir", type=Path, help="folder for the JSON files (created if missing)")
+    parser.add_argument("outdir", type=Path, nargs="?", help="folder for the JSON files (created if missing)")
+    parser.add_argument("--web", action="store_true", help=f"write the website's previews into {WEB_SAMPLES}")
     args = parser.parse_args(argv)
+    if args.web == bool(args.outdir):
+        parser.error("give either OUTDIR or --web")
     samples = build()
-    args.outdir.mkdir(parents=True, exist_ok=True)
+    if args.web:
+        samples = {name: samples[name] for name in WEB_PREVIEWS}
+    outdir = WEB_SAMPLES if args.web else args.outdir
+    outdir.mkdir(parents=True, exist_ok=True)
     for name, data in samples.items():
-        (args.outdir / name).write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"wrote {len(samples)} fixtures to {args.outdir}")
+        (outdir / name).write_text(dump(data), encoding="utf-8")
+    print(f"wrote {len(samples)} fixtures to {outdir}")
     return 0
 
 

@@ -33,13 +33,21 @@ TEXTS = {
         "de": "Dafür brauchst du Administratorrechte.",
     },
     "Please log in again.": {"en": "Please log in again.", "de": "Bitte melde dich erneut an."},
-    "Send exactly one province to add or remove.": {
-        "en": "Send exactly one province to add or remove.",
-        "de": "Schick genau eine Provinz zum Hinzufügen oder Entfernen.",
+    "Send the app to ask for as service.": {
+        "en": "Send the app to ask for as service.",
+        "de": "Schick die gewünschte App als service.",
     },
-    "Unknown catalog province.": {
-        "en": "Unknown catalog province.",
-        "de": "Diese Provinz steht nicht im Katalog.",
+    "This app is not open to requests.": {
+        "en": "This app is not open to requests.",
+        "de": "Diese App kann nicht angefragt werden.",
+    },
+    "This app is coming soon and cannot be requested yet.": {
+        "en": "This app is coming soon and cannot be requested yet.",
+        "de": "Diese App kommt bald und kann noch nicht angefragt werden.",
+    },
+    "This account already has this app.": {
+        "en": "This account already has this app.",
+        "de": "Dieses Konto hat diese App schon.",
     },
     "Invalid account id.": {"en": "Invalid account id.", "de": "Ungültige Konto-ID."},
     "Send approve: true or decline: true.": {

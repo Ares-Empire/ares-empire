@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "me": {
+    "id": "samplenewmbr001",
+    "name": "",
+    "admin": false
+  },
+  "projects": [],
+  "addable": [
+    {
+      "slug": "aresium",
+      "name": "Aresium",
+      "url": "https://aresium.de",
+      "logo": "brand/hermes.webp",
+      "status": "CONQUERED",
+      "domain": "aresium.de",
+      "blurb": "Personal finance command — VR Bank + PayPal, imported and understood.",
+      "detail": {
+        "about": "The empire's personal-finance command. Aresium imports VR Bank and PayPal activity, reconciles it, and turns raw statements into an understood picture of balances, cash flow and where the money actually goes.",
+        "features": [
+          "VR Bank + PayPal import",
+          "Transaction categorisation & reconciliation",
+          "Balance and cash-flow overview"
+        ],
+        "setup": "",
+        "wip": [],
+        "ideas": [],
+        "changelog": []
+      },
+      "state": "coming-soon",
+      "live": null,
+      "app": "aresium://",
+      "install": null,
+      "access": "none"
+    },
+    {
+      "slug": "arestemis",
+      "name": "Arestemis",
+      "url": "",
+      "logo": "brand/artemis.webp",
+      "status": "CONQUERED",
+      "domain": "",
+      "blurb": "Apartment sniper — claims new flat listings the moment they post.",
+      "detail": {
+        "about": "The huntress. Arestemis watches the Munich housing portals and pounces on a new listing the instant it appears — first to the viewing, first to apply. Runs 24/7 as a Telegram bot in the empire (formerly the FlatSniper project).",
+        "features": [
+          "Real-time listing watch",
+          "Instant alerts",
+          "Fast-track applying"
+        ],
+        "setup": "",
+        "wip": [],
+        "ideas": [],
+        "changelog": []
+      },
+      "state": "open",
+      "live": null,
+      "app": "arestemis://",
+      "install": null,
+      "access": "none"
+    }
+  ],
+  "chronicle": [],
+  "ideas": [],
+  "pending": 0
+}

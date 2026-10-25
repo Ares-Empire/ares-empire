@@ -1,26 +1,21 @@
-/* Shared transport for the two hub trees. Localhost previews fetch JSON fixtures;
-   sample actions stay in memory. Other hosts always use the account API. */
+/* Shared transport for the two hub trees. Localhost previews fetch JSON fixtures (web/app/samples, written by
+   tools/empire_samples.py --web from the hub server itself); sample actions stay in memory. Other hosts always use the
+   account API. */
 (function () {
   const sampleMode = location.hostname === "localhost" || location.hostname === "127.0.0.1";
   const params = new URLSearchParams(location.search);
+  // ?as=… picks the preview account: admin (the default), member, new-member or requested.
+  const PREVIEWS = ["admin", "member", "new-member", "requested"];
   let sample;
   let sampleLoading;
-  let sampleChronicle;
-  // A new sign-up and an approved account asking for more apps, like GET /api/empire/approvals.
-  let pending = [
-    { id: "sample-robin", email: "robin@example.com", name: "Robin Vale", created: "2026-10-24T08:40:00Z",
-      requested: ["arestemis"], approved: false },
-    { id: "sample-alex", email: "alex@example.com", name: "Alex Rowan", created: "2026-10-23T17:15:00Z",
-      requested: ["aresium", "aresus"], approved: true },
-  ];
+  let pending;  // the approvals preview (app/samples/approvals.json), changed in memory by decisions
   const clone = (value) => JSON.parse(JSON.stringify(value));
 
   async function sampleData() {
     if (!sampleLoading) {
-      const role = params.get("as") === "user" ? "user" : "admin";
+      const role = PREVIEWS.includes(params.get("as")) ? params.get("as") : "admin";
       sampleLoading = request("app/samples/empire." + role + ".json").then(validate).then((data) => {
         sample = data;
-        sampleChronicle = data.chronicle.slice();
         return data;
       }).catch((error) => {
         sampleLoading = null;
@@ -43,8 +38,13 @@
       throw new Error("The Empire could not be reached. Check your connection and try again.");
     }
     if (!response.ok) {
+      // The hub's own sentence says what was wrong with a request (400, e.g. "This app is not open to requests.").
+      let sentence = null;
+      try { const answer = await response.json(); if (answer && typeof answer.error === "string") sentence = answer.error; }
+      catch (_) {}
       const error = new Error(({401: "Your session has ended. Please log in again.", 403: "This account does not have access.",
-        503: "The Empire is temporarily unavailable. Try again shortly."})[response.status] || "That action could not be completed. Please try again.");
+        503: "The Empire is temporarily unavailable. Try again shortly."})[response.status] ||
+        (response.status === 400 && sentence) || "That action could not be completed. Please try again.");
       error.status = response.status;
       throw error;
     }
@@ -68,21 +68,16 @@
     initial: () => sampleMode && sample ? clone(sample) : null,
     load: async () => sampleMode ? clone(await sampleData()) : request("/api/empire"),
     validate,
-    async ring(change) {
-      if (!sampleMode) return validate(await request("/api/empire/ring", change));
+    // What the "+" offers for an app the account does not have (docs/API-EMPIRE.md): "ask" (open, not asked for yet),
+    // "asked" (waiting for approval) or "soon" (coming soon, cannot be asked for yet).
+    offer: (province) => province.access === "requested" ? "asked" : province.state === "open" ? "ask" : "soon",
+    // Ask for access to one app of the "+" (POST /api/empire/request); answers the fresh hub data. Patrik approves it.
+    async ask(service) {
+      if (!sampleMode) return validate(await request("/api/empire/request", { service }));
       const data = await sampleData();
-      if (data.me.admin) throw new Error("The admin ring already contains every province.");
-      if (change.add) {
-        const province = data.addable.find((p) => p.slug === change.add);
-        if (!province) throw new Error("This province is no longer available.");
-        data.projects.push(province);
-        data.addable = data.addable.filter((p) => p.slug !== change.add);
-      } else if (change.remove) {
-        const province = data.projects.find((p) => p.slug === change.remove);
-        if (province) data.addable.push(province);
-        data.projects = data.projects.filter((p) => p.slug !== change.remove);
-      }
-      data.chronicle = sampleChronicle.filter((entry) => data.projects.some((p) => p.slug === entry.project));
+      const app = data.addable.find((p) => p.slug === service);
+      if (!app || app.state !== "open") throw new Error("This app is not open to requests.");
+      app.access = "requested";
       return clone(data);
     },
     async approvals() {
@@ -92,14 +87,17 @@
         return result;
       }
       if (!(await sampleData()).me.admin) throw new Error("Approvals are only available to admins.");
+      if (!pending) pending = await request("app/samples/approvals.json");
       return clone(pending);
     },
     async decide(id, decision) {
       if (!sampleMode) return request("/api/empire/approvals/" + encodeURIComponent(id), decision);
       const data = await sampleData();
       if (!data.me.admin) throw new Error("Approvals are only available to admins.");
+      if (!pending) pending = await request("app/samples/approvals.json");
       pending = pending.filter((account) => account.id !== id);
       data.pending = pending.length;
+      return { ok: true, approvals: clone(pending), pending: pending.length };
     },
     destination(province) {
       // Connections in EMPIRE.md: only Aresium currently uses the hub hand-off.

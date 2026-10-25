@@ -350,6 +350,23 @@ button.proj-card { cursor: pointer; }
   box-shadow: var(--shadow), inset 0 1px 0 var(--edge);
   transform: scale(.97); opacity: 0; animation: forgeIn .4s cubic-bezier(.2,.8,.25,1) forwards; }
 @keyframes forgeIn { to { transform: none; opacity: 1; } }
+/* More apps (a member's "+"): the Forge's frame over a dimmed hub, one row per app. */
+.forge.more { background: rgba(2,2,4,0.55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.more-list { display: flex; flex-direction: column; border-top: 1px solid var(--line-soft); }
+.more-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 16px;
+  padding: 16px 2px; border-bottom: 1px solid var(--line-soft); }
+.more-logo { width: 52px; height: 52px; }
+.more-logo .tab-mono { width: 46px; height: 46px; font-size: 22px; }
+.more-id { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.more-name { font-size: 16px; }
+.more-blurb { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); text-wrap: pretty; }
+.more-act .emp-btn { height: 40px; padding: 0 16px; font-size: 12.5px; white-space: nowrap; }
+.more-state { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+.more-state.is-asked { color: var(--gold-2); text-transform: none; letter-spacing: 0.02em; font-size: 12px; }
+.more-error { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; font-size: 13px; color: #e0b4a6;
+  border: 1px solid rgba(207,143,120,0.3); background: rgba(58,34,34,0.3); }
+.more-empty { font-size: 13px; color: var(--ink-3); text-align: center; padding: 18px 0 6px; }
 .forge-k { font-size: 10.5px; font-weight: 700; letter-spacing: 0.30em; text-indent: 0.30em; color: var(--gold-2); text-align: center; }
 .forge-h { font-size: 25px; font-weight: 700; letter-spacing: -0.01em; text-align: center; margin: 7px 0 4px;
   background: var(--gold-text); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }

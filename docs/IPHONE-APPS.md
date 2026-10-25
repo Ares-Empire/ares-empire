@@ -85,8 +85,11 @@ for every new app:
   Keychain group and App Group); `EmpireAppIdentity.all` and `AppAccent` in `Shared/`; its URL scheme
   (`CFBundleURLTypes`); the screenshot launch arguments in `Shared/AppRoot.swift`; its String Catalog and privacy
   manifest; its entry in `docs/APP-STORE.md`.
-- **Hub (`ares-empire`):** `APP_SCHEMES` in `webauth/server.py`; the province in `web/app/empire-data.js` and in the
-  server's `data/state.json` (and a chronicle line in both); `webauth/catalog.json` if other accounts may add it.
+- **Hub (`ares-empire`):** its entry in `webauth/apps.json` (the URL scheme; its install link once there is a
+  TestFlight public link, later the App Store link: [API-EMPIRE.md → Apps](API-EMPIRE.md#apps); since 2026-10-25 the
+  one place for both, replacing `APP_SCHEMES` in `webauth/server.py`); the province in `web/app/empire-data.js` and in
+  the server's `data/state.json` (and a chronicle line in both); `webauth/catalog.json` if other accounts may ask for
+  it.
 - **Accounts:** the service name in the account server's `services`/`requested` options and `NAMES`
   (`accounts/pb_hooks/lib/accounts.js` and a migration). An app that holds only Patrik's data also gets the owner list
   `EMPIRE_ALLOWED_USERS` in its server (like Aresium, Arestoteles, Aresus), so approving a request cannot open it.

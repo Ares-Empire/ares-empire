@@ -50,7 +50,8 @@ One home screen that keeps the desktop hub's identity, top to bottom:
 **The catalog** is `webauth/catalog.json`, one entry per province open to users: `users: "open" | "coming-soon"`
 (a province not listed is private). Today: Aresium `coming-soon` (it holds only Patrik's data until it becomes multi-user, a later project);
 every other province `private` (Arestoteles has nothing for others, Aresync is two scripts, Arestemis is an
-unactivated bot). A `coming-soon` province can be added; its card then says "coming soon" and does not open.
+unactivated bot). A `coming-soon` province is shown in the "+" and cannot be asked for yet (2026-10-25; before, it
+could be added to a saved ring).
 
 **Access stays `services`, set by Patrik** (decided 2026-10-25, replacing the saved ring and its instant adding):
 the ring shows what an account may use, so a friend approved for Arestemis sees Arestemis without adding it.
@@ -68,20 +69,22 @@ service; live once Apple's push key exists (the push service runs as a dry run u
 
 ## How it works underneath
 
-- **PocketBase** (migration): two new user fields.
-  - `admin` (bool): only a superuser sets it. Admins may list and view all users and set `approved`, `services`
-    and `requested` on other accounts (and delete unapproved sign-ups). Approvals therefore run with Patrik's own token;
-    no superuser password is stored on the hub or in an app.
-  - `ring` (list of province slugs): the user may edit their own.
+- **PocketBase** (migration): the user field `admin` (bool): only a superuser sets it. Admins may list and view all
+  users and set `approved`, `services` and `requested` on other accounts (and delete unapproved sign-ups). Approvals
+  therefore run with Patrik's own token; no superuser password is stored on the hub or in an app. The saved `ring`
+  (2026-10-24) was dropped on 2026-10-25 (migration `1793400000_drop_ring.js`): the ring is the account's `services`.
 - **Hub server `GET /api/empire`** answers per account, so the website and the app only display:
-  `me {id, name, admin}`, `projects` (the ring as this account sees it: admin → all; others → their `ring` ∩
-  catalog, each with `state: "open" | "coming-soon"`), `addable` (catalog minus their ring), `chronicle` (admin: all;
-  others: entries tagged with their ring's provinces), `ideas` (admin only), `pending` (admin only: number waiting,
-  `null` when the account server could not say).
-  Live lines come from the server too (it asks each province with the visitor's token; e.g. Aresium's month spending).
-- **Hub server actions:** add or remove a province in your own ring (checked against the catalog); admin: list
-  pending accounts, approve, decline. Same auth statuses as Aresium (401 / 403 / 503); every error also carries a
+  `me {id, name, admin}`, `projects` (the ring: admin → every province; others → the provinces in their `services`,
+  each `access: "granted"` with its `install` link), `addable` (the "+": catalog provinces they do not have, each with
+  the catalog's `state` and `access: "requested" | "none"`), `chronicle` (admin: all; others: entries about their
+  ring's provinces), `ideas` (admin only), `pending` (admin only: number waiting, `null` when the account server could
+  not say). Live lines come from the server too (it asks each province with the visitor's token; e.g. Aresium's month
+  spending). The apps' URL schemes and install links are in `webauth/apps.json`.
+- **Hub server actions:** ask for an app of the "+" (`POST /api/empire/request`, checked against the catalog); admin:
+  list pending accounts, approve, decline. Same auth statuses as Aresium (401 / 403 / 503); every error also carries a
   `code` the app acts on ([API-EMPIRE.md → Errors](API-EMPIRE.md#errors), 2026-10-25).
+- **Notifications:** the account server sends them through the push service next to its emails
+  ([PUSH.md → Who sends what](PUSH.md#who-sends-what)).
 - **One login for all** (iPhone): the Empire app and the Aresium app share the token in a Keychain access group;
   needs the paid team (pending).
 
@@ -90,7 +93,7 @@ service; live once Apple's push key exists (the push service runs as a dry run u
 1. ✅ **Mobile hub (website):** the throne room at phone widths, built against the `/api/empire` shape above with sample
    data for an admin and for a normal user. Look and feel decided on screenshots, then refined.
 2. ✅ **Accounts + hub API:** the PocketBase migration (tested on a copy before the live server), per-account
-   `/api/empire`, ring actions, approvals, live lines.
+   `/api/empire`, ring actions (replaced on 2026-10-25 by asking for access), approvals, live lines.
 3. ✅ **Empire iPhone app** in `empire-ios` (simulator; TestFlight pending) (a second app target; shared code — login, API client, design tokens —
    moves into a shared folder now that a second app exists), following the mobile hub.
 4. Later: multi-user Aresium; then flip Aresium to `open` in the catalog.

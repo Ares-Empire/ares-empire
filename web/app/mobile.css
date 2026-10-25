@@ -87,15 +87,15 @@
 .em-secondary { color: #c0c4bf; border: 1px solid #ffffff20; background: #ffffff04; }
 .em-danger { color: #e4aaaa; border: 1px solid #bc6d6d44; background: #5e29292b; }
 .em-primary:hover { background: #fff; }
-.em-primary:disabled, .em-secondary:disabled, .em-danger:disabled, .em-remove:disabled { opacity: .5; cursor: wait; }
+.em-primary:disabled, .em-secondary:disabled, .em-danger:disabled { opacity: .5; cursor: wait; }
 .em-detail-section { margin: 28px 0; }
 .em-detail-section p, .em-detail-section li { font-size: 13px; color: #adb2ad; line-height: 1.85; }
 .em-detail-section p { margin: 13px 0 0; }
 .em-detail-section ul { list-style: none; margin: 14px 0 0; padding: 0; }
 .em-detail-section li { display: flex; align-items: baseline; gap: 10px; margin: 0 0 11px; }
 .em-detail-section li svg { flex: none; color: #8c9391; position: relative; top: 3px; }
-.em-coming-note { font-size: 12px; line-height: 1.8; color: #b3bab3; border: 1px solid #ffffff15; background: #ffffff04; padding: 15px; border-radius: 12px; }
-.em-remove { width: 100%; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 11px; color: #b1b7b0; border: 1px solid #ffffff18; border-radius: 11px; margin-top: 20px; }
+/* A ring app's install link (TestFlight while testing), under the province's name. */
+.em-install { display: flex; width: 100%; text-decoration: none; }
 .em-accounts { display: flex; flex-direction: column; gap: 18px; }
 .em-account, .em-catalog-card { padding: 20px; border: 1px solid #ffffff16; border-radius: 17px;
   background: linear-gradient(135deg, #ffffff06, transparent), #111417; box-shadow: inset 0 1px 0 #ffffff07; }
@@ -122,7 +122,12 @@
 .em-catalog-mark { width: 48px; height: 54px; display: flex; justify-content: center; align-items: center; }
 .em-catalog-mark img { width: 100%; height: 100%; object-fit: contain; }
 .em-catalog-card h2 { font-size: 18px; font-weight: 500; color: #e4e9df; margin: 0 0 8px; }
-.em-catalog-card .em-primary { width: 100%; margin-top: 22px; }
+.em-catalog-card .em-primary { width: 100%; margin-top: 20px; }
+.em-catalog-blurb { font-size: 12px; line-height: 1.7; color: #a3a9a4; margin: 14px 0 0; }
+/* Instead of the button: asked (waiting for approval, the one quiet accent) or not open for requests yet. */
+.em-catalog-state { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; margin: 20px 0 0;
+  border: 1px dashed #ffffff1c; border-radius: 11px; font-size: 12px; color: #8f9590; }
+.em-catalog-state.is-asked { color: #c5ae7e; border: 1px solid #c5ae7e40; background: #c5ae7e0a; }
 .em-catalog-card + .em-catalog-card { margin-top: 14px; }
 .em-sr { position: absolute; height: 1px; width: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .em-loading { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 30px; text-align: center; }
