@@ -98,7 +98,7 @@ worth trying once the app is shared with a real group of users.
    mobile website (`aresium/web/public/app/mobile.jsx`) has the layout, gestures and spacing worked out;
    the SwiftUI screens follow it, compared side by side on the simulator (mobile site in the simulator's
    Safari vs the app).
-5. Later: Aresium for several users (each person's data separated on the server).
+5. Later: Aresium for other people, their data on their iPhone, not the server (decided 2026-10-25; EMPIRE.md → Now and next).
 6. ✅ (simulator; TestFlight pending) The Empire itself on the phone: [EMPIRE-APP.md](EMPIRE-APP.md) (throne room, per-user ring, approvals).
 7. ✅ (simulator; TestFlight pending) Arestemis ([ARESTEMIS-APP.md](ARESTEMIS-APP.md)) and Aresus with Aresync
    ([ARESUS-APP.md](ARESUS-APP.md)), on one push service for all apps ([PUSH.md](PUSH.md)), 2026-10-24.

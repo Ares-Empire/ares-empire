@@ -221,8 +221,8 @@ Reference implementation: `aresium/src/web/empire-auth.ts` (also limits access t
 
 ## Open questions (decide when building)
 
-- For multi-user Aresium: which data is per person (transactions, accounts, rules) and
-  which is shared (the category list).
+- Settled 2026-10-25: other people's Aresium data (transactions, accounts, rules, categories) stays on their iPhone,
+  not on the server (EMPIRE.md → Now and next).
 
 ## Phone lost or token leaked
 
