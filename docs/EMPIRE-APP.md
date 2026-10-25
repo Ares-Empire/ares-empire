@@ -13,10 +13,10 @@ in `empire-ios`, TestFlight) and [ACCOUNTS.md](ACCOUNTS.md) (Empire accounts in 
 4. **One login for all:** log in once in the Empire app; the province apps (Aresium) use the same login
    (shared Keychain between the apps).
 
-**iPhone features** ([IPHONE-APPS.md](IPHONE-APPS.md) → check for every app): open, for Patrik (council 2026-10-25:
-since every app now logs in and asks for access itself, the Empire app is the launcher, the chronicle and approvals).
-Candidates: a notification for a new sign-up with Approve/Decline on the lock screen (the push service already knows
-the app), and the last hub kept on the phone so the app opens offline.
+**iPhone features** ([IPHONE-APPS.md](IPHONE-APPS.md) → check for every app; Patrik, 2026-10-25): notifications —
+Patrik gets new sign-ups and access requests with Approve and Decline on the notification, everyone else gets told
+when a request is approved ("Whose ring shows what" below). Every app now logs in and asks for access itself, so the
+Empire app is the launcher, the chronicle, getting more apps, and (Patrik) approvals.
 
 As for Aresium, the hub gets a **mobile website version first**: it is what phone browsers see and the template the
 SwiftUI app follows (compared side by side on the simulator).
@@ -42,8 +42,8 @@ One home screen that keeps the desktop hub's identity, top to bottom:
 
 | | Patrik (admin) | Everyone else |
 |---|---|---|
-| Ring | every province, always | only the provinces in their own ring, plus an empty **"+"** card at the end |
-| "+" | — | lists the provinces **open to users** (the catalog Patrik controls); adding is **instant** |
+| Ring | every province, always | **every app the account has access to** (its `services`), plus a **"+"** card at the end (Patrik, 2026-10-25) |
+| "+" | — | the other apps **open to users** (the catalog Patrik controls), each with its state: *Ask for access* → *Asked, waiting for approval*; *coming soon* ones shown, not requestable |
 | Below the ring | the full chronicle | "What's new" for their ring's provinces |
 | Expansions, Approvals | yes | no |
 
@@ -52,7 +52,19 @@ One home screen that keeps the desktop hub's identity, top to bottom:
 every other province `private` (Arestoteles has nothing for others, Aresync is two scripts, Arestemis is an
 unactivated bot). A `coming-soon` province can be added; its card then says "coming soon" and does not open.
 
-**Adding to the ring never grants access to a province's data.** Access stays `services`, set by Patrik.
+**Access stays `services`, set by Patrik** (decided 2026-10-25, replacing the saved ring and its instant adding):
+the ring shows what an account may use, so a friend approved for Arestemis sees Arestemis without adding it.
+
+**Getting an app** (Patrik, 2026-10-25): in "+", *Ask for access* puts the app into the account's `requested`;
+Patrik gets a notification (below) and approves; the person gets a notification that the app is ready, and it joins
+their ring. Tapping an app in the ring opens it when installed, else its website, else its page with **Install**: the
+app's install link from the hub (a TestFlight public link while in testing, the App Store link later; the link is
+shown only to accounts that have the app).
+
+**Notifications** (Patrik, 2026-10-25, the Empire app's iPhone features): Patrik gets one for each new sign-up and
+each access request ("Robin Vale asks for Arestemis"), with Approve and Decline on the notification; everyone else
+gets one when a request is approved (they never see who asked for what). Sent by the account server through the push
+service; live once Apple's push key exists (the push service runs as a dry run until then).
 
 ## How it works underneath
 
