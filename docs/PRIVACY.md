@@ -58,7 +58,7 @@ AV-Vertrag).
 | **Emails** (Resend) | Confirmation link, password reset, "login from a new location" alert (PocketBase built-in), "approved" mail to the person; to the superusers an approval request naming the new account's email (`pb_hooks/accounts.pb.js`). |
 | **Logs** | PocketBase's request log, with the visitor's IP (Caddy's `X-Forwarded-For`, `trustedProxy` in the first migration). Settings → Logs on the server (lead, 2026-10-24): `maxDays` 5, `logIP` true, `logAuthId` false, so 5 days, with IP, without the account. |
 | **New-location alerts** | `_authOrigins` rows: `collectionRef`, `recordRef` (the account), `fingerprint`, `created`, `updated`. PocketBase 0.40.6 (`apis/record_helpers.go`, `authAlert`): `fingerprint = MD5(ip + userAgent)`, the user agent cut to 200 characters; no plain IP is stored. Made or refreshed at each login (password, OTP, OAuth2; not at a token refresh); at most 5 per account (`maxAuthOrigins`, the oldest go); deleted when the password changes or the account is deleted (`core/auth_origin_model.go`). A login with a new fingerprint (not the first login) emails the person the time, IP and user agent. |
-| **Admins** | See the email, name, creation time and requested apps of accounts waiting for approval and of approved accounts that asked for another app, to decide them (`admin-visibility.pb.js`, hub `GET /api/empire/approvals`). |
+| **Admins** | See the email, name, creation time, requested apps and whether the email is confirmed of accounts waiting for approval and of approved accounts that asked for another app, to decide them (`admin-visibility.pb.js`, hub `GET /api/empire/approvals`). |
 | **Basis** | Account and login: Art. 6(1)(b) GDPR. Logs, rate limits, alerts: Art. 6(1)(f) (security). |
 | **Deleting** | Every app: Settings → Account → Delete Ares account (since 2026-10-25); it reaches every service with per-account data (`deletions` jobs). An admin account cannot be deleted this way. |
 
@@ -67,7 +67,8 @@ AV-Vertrag).
 - Login, sign-up and reset forms pass email and password to PocketBase on localhost with the visitor's IP (for
   PocketBase's rate limit). The hub stores nothing itself.
 - Its log lines (journald) hold the request line and Caddy's address, **not** the visitor's IP (`address_string()`
-  is the proxy).
+  is the proxy). Since 2026-10-25 also: the traceback of an unexpected API error (method and path; no IP, token or
+  body), and short notes when `state.json` entries are skipped or the pending count is unavailable.
 - `GET /api/empire` (website and Empire app): asks Aresium's `/api/pulse` and Aresus's overview with the visitor's
   token for the live lines, cached 60 s per account in memory.
 - **No third parties in the browser** (since 2026-10-25): the fonts (`web/fonts/`, `fonts.css`) and the scripts
@@ -80,7 +81,7 @@ AV-Vertrag).
 
 | | |
 |---|---|
-| **Data** | Per device: app (bundle id), APNs device token, account id, `sandbox`/`production`, language, created/updated (`push/store.py`). Outbox: the last 200 notifications (time, app, account id or "all", title, body, link, language, result), never a device token. |
+| **Data** | Per device: app (bundle id), APNs device token, account id, `sandbox`/`production`, language, created/updated (`push/store.py`). Outbox: the last 200 notifications (time, app, account id or "all", title, body, link, language, result), never a device token. Aresus addresses its pushes to the owner's account id (since 2026-10-25), not "all". |
 | **Where** | `/var/lib/empire-push/push.db`. |
 | **How long** | Device: until logout, losing the app's service, Apple calling the token stale, or 60 days without re-registration (daily clean-up). Outbox: last 200 rows. |
 | **Recipient** | Apple Push Notification service (title, body, link of each notification, the device token) once the APNs key exists; until then a dry run that sends nothing. Apple: for the EU, Apple Distribution International Ltd. (Ireland); its privacy policy says transfers from the EU to the US run under Standard Contractual Clauses (checked 2026-10-24; Apple was not found on the DPF list, whose search needs JavaScript). |
