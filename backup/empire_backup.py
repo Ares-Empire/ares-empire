@@ -7,7 +7,7 @@ Run as root by empire-backup.service (timer, 03:15). A manual run (`python3 back
   /var/backups/empire/outbox/YYYY-MM-DD.tar.gz.age   the same, encrypted for the Mac (backup/serve.sh hands it out)
 
 Each place keeps its 7 newest. Any failure ends the run with an error, so the unit's result shows it (Aresus check
-"Backups"; the Mac's aresync alerts when the newest copy is older than 30 hours).
+"Backups"; the Mac's aresync alerts when the newest copy is older than 26 hours).
 
 Tests: python3 -m unittest backup/test_backup.py
 """

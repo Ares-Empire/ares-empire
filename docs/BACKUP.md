@@ -58,7 +58,7 @@ that goes missing fails the nightly run on purpose, so a moved file is noticed t
 - **The server job fails:** the unit's result is "failed"; Aresus's check "Backups" in the Empire province turns it
   into an Issue and a push (once push works on the phone).
 - **On the Mac** (Aresync problems → Telegram and the Aresus report): the fetch fails (alert from the second run on),
-  a copy fails its check (at once), or the server's newest copy is older than 30 hours (at once: the nightly job has
+  a copy fails its check (at once), or the server's newest copy is older than 26 hours (at once: the nightly job has
   stopped).
 - `journalctl -u empire-backup` shows each night's summary line; `journalctl -t empire-backup` each fetch by the Mac.
 
