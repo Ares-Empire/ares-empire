@@ -5,9 +5,9 @@
 (`empire-ios/docs/APP-STORE.md`). Keep it current: a service that starts storing or sending something new updates its
 row here, then the pages (`web/legal/`), then the app's `PrivacyInfo.xcprivacy`.
 
-Facts the code cannot show (server settings, providers) were confirmed by the lead on 2026-10-24. One point only
-Patrik can answer (the AVV with netcup) stays marked **[lead to confirm]** in the pages, and the address is filled in. The imprint's second quick way to reach him is the website's contact form (brief E7, 2026-10-25). The pages are not
-served while they still contain `[lead to confirm]` or `[ADDRESS]` (`webauth/legal.py`).
+Facts the code cannot show (server settings, providers) were confirmed by the lead on 2026-10-24/25; the AVV with
+netcup was concluded by Patrik on 2026-10-25. The pages went live on 2026-10-25 after Patrik read them. A page is not
+served while it contains `[lead to confirm]` or `[ADDRESS]` (`webauth/legal.py`): keep that marker for anything unconfirmed.
 
 ## What the public pages cover (Patrik, 2026-10-25)
 
@@ -32,8 +32,7 @@ AV-Vertrag).
 - **Supervisory authority:** Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach,
   www.lda.bayern.de (checked 2026-10-24).
 - **Host:** one netcup VPS in Germany runs every service below (lead, 2026-10-24); Caddy in front, TLS everywhere.
-  Processing agreement (AVV) with netcup signed in the customer panel: **[lead to confirm]** (Patrik is concluding it,
-  2026-10-25). Declared there: affected persons: Interessenten (contact and support messages), visitors of the
+  Processing agreement (AVV) with netcup concluded in the customer panel (Patrik, 2026-10-25). Declared there: affected persons: Interessenten (contact and support messages), visitors of the
   websites, users of the websites and apps (registered accounts); data: Personenstammdaten (name, optional; email),
   Kommunikationsdaten (email, messages), access and usage data (login data, IP addresses, server logs, push device
   ids), content data of the applications (settings, search profiles, notes); no special categories (Art. 9). No bank,
@@ -173,13 +172,11 @@ Framework; its DPA also has the SCCs; stored data (sent-mail logs) is in the US 
   `/root/arestemis-backup-before-languages-20261024.db`, `state.json.bak-*` (STATUS.md). Delete them once no longer
   needed, and name the backup's retention in the policy when backups exist.
 
-## Before publishing the pages
+## Published
 
-1. ~~**Journald:** 14 days.~~ Done 2026-10-25 (`deploy/journald/retention.conf`, older logs removed).
-2. **Patrik** approves the text and answers the marked point: the AVV with netcup. (The imprint's second quick way to
-   reach him besides email, § 5(1) no. 2 DDG, is the contact form since 2026-10-25.)
-3. ~~**The address.**~~ Filled 2026-10-25 (Patrik's choice: his home address, no paid address service).
-4. `grep -rn "lead to confirm\|\[ADDRESS\]" web/legal` prints nothing; then the pages are served.
+2026-10-25: Patrik approved the text, the AVV with netcup is concluded, journald keeps 14 days
+(`deploy/journald/retention.conf`), the address is filled in (his choice), the imprint's second contact route is the
+contact form.
 
 ## To do (follow-up builds)
 
