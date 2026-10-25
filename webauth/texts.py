@@ -32,6 +32,33 @@ TEXTS = {
         "en": "Administrator access required.",
         "de": "Dafür brauchst du Administratorrechte.",
     },
+    "Please log in again.": {"en": "Please log in again.", "de": "Bitte melde dich erneut an."},
+    "Send exactly one province to add or remove.": {
+        "en": "Send exactly one province to add or remove.",
+        "de": "Schick genau eine Provinz zum Hinzufügen oder Entfernen.",
+    },
+    "Unknown catalog province.": {
+        "en": "Unknown catalog province.",
+        "de": "Diese Provinz steht nicht im Katalog.",
+    },
+    "Invalid account id.": {"en": "Invalid account id.", "de": "Ungültige Konto-ID."},
+    "Send approve: true or decline: true.": {
+        "en": "Send approve: true or decline: true.",
+        "de": "Schick approve: true oder decline: true.",
+    },
+    "requested must be a list of apps.": {
+        "en": "requested must be a list of apps.",
+        "de": "requested muss eine Liste von Apps sein.",
+    },
+    "Unknown API route.": {"en": "Unknown API route.", "de": "Unbekannte API-Route."},
+    "Invalid content length.": {"en": "Invalid content length.", "de": "Ungültige Inhaltslänge."},
+    "Request too large.": {"en": "Request too large.", "de": "Die Anfrage ist zu groß."},
+    "A JSON object is required.": {"en": "A JSON object is required.", "de": "Erwartet wird ein JSON-Objekt."},
+    "Invalid JSON.": {"en": "Invalid JSON.", "de": "Ungültiges JSON."},
+    "Something went wrong on the server. Try again later.": {
+        "en": "Something went wrong on the server. Try again later.",
+        "de": "Auf dem Server ist etwas schiefgegangen. Versuch es später noch einmal.",
+    },
 }
 
 

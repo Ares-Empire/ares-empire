@@ -58,10 +58,12 @@ unactivated bot). A `coming-soon` province can be added; its card then says "com
 - **Hub server `GET /api/empire`** answers per account, so the website and the app only display:
   `me {id, name, admin}`, `provinces` (the ring as this account sees it: admin → all; others → their `ring` ∩
   catalog, each with `state: "open" | "coming-soon"`), `addable` (catalog minus their ring), `chronicle` (admin: all;
-  others: entries tagged with their ring's provinces), `ideas` (admin only), `pending` (admin only: number waiting).
+  others: entries tagged with their ring's provinces), `ideas` (admin only), `pending` (admin only: number waiting,
+  `null` when the account server could not say).
   Live lines come from the server too (it asks each province with the visitor's token; e.g. Aresium's month spending).
 - **Hub server actions:** add or remove a province in your own ring (checked against the catalog); admin: list
-  pending accounts, approve, decline. Same auth statuses as Aresium (401 / 403 / 503).
+  pending accounts, approve, decline. Same auth statuses as Aresium (401 / 403 / 503); every error also carries a
+  `code` the app acts on ([API-EMPIRE.md → Errors](API-EMPIRE.md#errors), 2026-10-25).
 - **One login for all** (iPhone): the Empire app and the Aresium app share the token in a Keychain access group;
   needs the paid team (pending).
 
