@@ -5,10 +5,12 @@ A new app has both from its first screen; no screen ships in only one of them.
 
 ## Which language an app shows
 
-- The iPhone decides: the phone's language (Settings → General → Language & Region), or the app's own language
-  (Settings → Apps → *the app* → Language, which iOS offers by itself once an app has two languages).
-- German when the phone puts German before English, otherwise English. English is the fallback for every other language.
-- No language switch inside the apps: iOS already has one per app.
+- By default the iPhone decides: German when the phone puts German before English, otherwise English (the fallback
+  for every other language).
+- **Each app's Settings → Language** chooses for that app: like the iPhone, English or Deutsch. It is the same setting
+  as iOS's own per-app Language (Settings → Apps → *the app*), which iOS only shows when the phone lists two or more
+  languages (tested on iOS 27, 2026-10-24); so the apps offer it themselves (Patrik asked "how do I switch?", the
+  earlier "no switch in the apps" rule is replaced). The choice takes effect when the app is opened again.
 
 ## What is translated
 

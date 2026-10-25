@@ -51,11 +51,33 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
 
 Local verification (no live account data): `bash accounts/test-rules.sh` uses a disposable PocketBase 0.40.6
 from `$POCKETBASE` (default `~/.pocketbase-test/pocketbase`) and checks API rules, email visibility and migration
-rollback/reapply. It loads the visibility hook but excludes the mail hooks. Hub contract tests use fake
+rollback/reapply. It loads the visibility hook and the feedback hook (its mail goes to a local SMTP sink the
+script starts; never Resend, never the system's sendmail) but not the sign-up mail hooks. Hub contract tests use fake
 PocketBase responses: `python3 -m unittest webauth/test_server.py`.
 - **Email**: Resend via `smtp.resend.com:2465` (the host blocks outgoing 25/465/587), domain
   `ares-empire.de` (DNS at Hetzner), sender `noreply@ares-empire.de`. The
   SMTP key is entered only in the admin UI (Settings → Mail settings), never in git or chat.
+
+## Contact & support (`feedback`, 2026-10-24)
+
+Every app's Settings has "Contact & support": the person picks a kind and writes a message, the app sends it to the
+account server, and Patrik gets it by email. Migration `1793100000_feedback.js`, hook `pb_hooks/feedback.pb.js`.
+
+- **Collection `feedback`:** `user` (the account; required; deleted with it), `app` (`empire`, `aresium`, `arestemis`,
+  `aresus`, `arestoteles`; required), `kind` (`problem`, `idea`, `question`, `other`; required), `message` (1–5000
+  characters, not only blanks), `app_version` (≤ 40), `system` (≤ 80, e.g. "iOS 27.0 · iPhone"), `language` (`en`,
+  `de`), `created`.
+- **Rules:** create only with a login of a verified, approved account, and only as itself
+  (`@request.body.user = @request.auth.id`; approval is checked again on every request, so an account switched to
+  unapproved cannot send with its old token). List, view, update and delete: superusers only. Patrik reads them in the
+  admin UI (Collections → feedback).
+- **Rate limit:** at most 10 creates per hour per client IP (rule `feedback:create`, 3600 s, in Settings → Rate limits,
+  added by the migration). The app shows "too many messages, try later" on the 429.
+- **Email:** after each create the hook mails it to `REDACTED-EMAIL` (the constant `TO` in the hook) from the
+  server's sender, `Reply-To` the account's email, subject `[Arestoteles] Idea: <first words>`, a plain body (kind,
+  app, version, system, language, account email, the message, a link to the record). A failed email is logged
+  (`feedback email failed` in the admin UI's logs) and the record stays; the create never fails because of mail.
+- App side: `empire-ios` `Shared/Support/` (`POST /api/collections/feedback/records` with the Empire token).
 
 ## Website flow
 

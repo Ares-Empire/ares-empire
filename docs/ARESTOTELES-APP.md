@@ -19,6 +19,11 @@ Weltbild`, repo `carlsenares/opinions`, rules in its own `CLAUDE.md`). The websi
   figure or a source"): position cards show one short line (the vault's bold part); long notes open with their
   sections closed, each with its first sentence; every note has Figures & dates, Sources and Terms; search shows the
   matching sentences first and jumps to them.
+- **Search by meaning, no generated answers** (Patrik asked for search "kinda like Google", 2026-10-24): the server
+  ranks passages by their words and their meaning (`GET /search`, EmbeddingGemma-300m on the empire's server, nothing
+  leaves it), so a German question finds the English passage; the Search tab shows these "best matches" above the
+  device's own results, and works with the device's results alone offline. No AI writes an answer: for a figure or a
+  source the passage is the answer, and a small model could misstate a number. Each tab also has its own search field.
 - **Positions are not changed on the phone** (Patrik: they are "very considered and well built"): a position offers
   Discuss (now with Claude, or later: a `kind: discuss` Inbox note the next session brings up), Edit (the wording) and
   Note (an Inbox note about it). Any paragraph or list item can be edited on its own. The server keeps the change and
