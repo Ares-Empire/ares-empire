@@ -9,12 +9,24 @@ Facts the code cannot show (server settings, providers) were confirmed by the le
 Patrik can answer (the AVV with netcup) stays marked **[lead to confirm]** in the pages, and the address is filled in. The imprint's second quick way to reach him is the website's contact form (brief E7, 2026-10-25). The pages are not
 served while they still contain `[lead to confirm]` or `[ADDRESS]` (`webauth/legal.py`).
 
+## What the public pages cover (Patrik, 2026-10-25)
+
+This file is the full internal inventory. The public policy covers only processing that concerns people other than
+Patrik, as a normal, neutral German policy (statements and "Sie", no "ich"/"du"; English the same with "you"):
+visiting the websites (server logs, Google Fonts and unpkg until self-hosted), Empire accounts (sign-up, approval,
+emails, login notices, logs), the website contact form, and in the apps only login, contact & support and push
+registration; recipients, third-country transfers, storage periods, rights, BayLDA. Provinces that hold only Patrik's
+data (Aresium, Arestemis, Aresus, Arestoteles, Aresync; checked 2026-10-25: the account server has only Patrik's two
+accounts with a province service) are documented below and named nowhere in the public pages.
+
+**Rule:** when a province is opened to other accounts (its service given to anyone but Patrik, or `open` in the hub
+catalog), its section is added to the public policy, in German and English, **before** that happens.
+
 ## Facts that hold everywhere
 
 - **Controller:** Patrik Breeck, REDACTED-ADDRESS, 85748 Garching, `REDACTED-EMAIL`. A private project, no company; no data
-  protection officer needed (§ 38 BDSG: fewer than 20 people process data). Patrik has chosen the address (lead,
-  2026-10-24); it is not written into the repo (no real address in files) and goes into the policy's controller line
-  and the imprint only, when the lead publishes.
+  protection officer needed (§ 38 BDSG: fewer than 20 people process data). Patrik chose the address (2026-10-25); the
+  public pages show it only in the policy's controller line and the imprint.
 - **Supervisory authority:** Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach,
   www.lda.bayern.de (checked 2026-10-24).
 - **Host:** one netcup VPS in Germany runs every service below (lead, 2026-10-24); Caddy in front, TLS everywhere.
@@ -169,7 +181,8 @@ Framework; its DPA also has the SCCs; stored data (sent-mail logs) is in the US 
    (including Arestemis data and push devices); today that is by hand, since a deleted account leaves its Arestemis
    rows and its push devices (until 60 days) behind.
 2. **Self-host the website fonts and scripts** (hub, aresium.de, arestoteles.de: Google Fonts, unpkg), then delete
-   section 10 "The websites" / "Die Websites" from both policies.
+   section 4 "Externe Inhalte" / "External content" and the Google and unpkg lines in sections 8 and 9 from both
+   policies.
 3. **Search terms in logs:** consider dropping query strings from uvicorn's access log (`--no-access-log` or a
    filter), since `?q=` carries what people search.
 4. **Links:** the login page links to `/privacy` and `/imprint` now; the signed-in hub, aresium.de and arestoteles.de

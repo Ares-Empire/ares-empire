@@ -1,10 +1,11 @@
 <h1>Kontakt</h1>
-<p class="lead">Schreib mir hier eine Nachricht. Sie kommt per E-Mail bei mir an, und ich antworte an die Adresse, die
-du angibst. Was dabei mit deinen Daten passiert, steht in der <a href="/datenschutz">Datenschutzerklärung</a>.</p>
+<p class="lead">Nachrichten über dieses Formular werden per E-Mail an Patrik Breeck weitergeleitet. Die Antwort erfolgt
+an die angegebene E-Mail-Adresse. Informationen zur Verarbeitung Ihrer Daten enthält die
+<a href="/datenschutz">Datenschutzerklärung</a>.</p>
 
 <form id="contact-form" class="contact" method="post" action="https://auth.ares-empire.de/api/collections/contact/records">
   <div class="field">
-    <label for="contact-name">Name <span class="optional">(freiwillig)</span></label>
+    <label for="contact-name">Name <span class="optional">(optional)</span></label>
     <input id="contact-name" name="name" type="text" autocomplete="name" maxlength="100" />
   </div>
   <div class="field">
@@ -20,19 +21,19 @@ du angibst. Was dabei mit deinen Daten passiert, steht in der <a href="/datensch
     <input id="contact-website" name="website" type="text" tabindex="-1" autocomplete="off" />
   </div>
   <div aria-live="polite">
-    <p class="problem" data-problem="empty" hidden>Schreib bitte eine Nachricht.</p>
-    <p class="problem" data-problem="email" hidden>Diese E-Mail-Adresse sieht nicht richtig aus. Prüf sie bitte.</p>
-    <p class="problem" data-problem="many" hidden>Gerade kamen zu viele Nachrichten von hier. Versuch es in einer Stunde
-      noch mal.</p>
-    <p class="problem" data-problem="failed" hidden>Das hat nicht geklappt. Versuch es noch mal oder schreib mir an
-      <a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a>.</p>
+    <p class="problem" data-problem="empty" hidden>Bitte geben Sie eine Nachricht ein.</p>
+    <p class="problem" data-problem="email" hidden>Die E-Mail-Adresse ist ungültig. Bitte prüfen Sie die Eingabe.</p>
+    <p class="problem" data-problem="many" hidden>Von diesem Anschluss wurden zu viele Nachrichten gesendet. Bitte
+      versuchen Sie es in einer Stunde erneut.</p>
+    <p class="problem" data-problem="failed" hidden>Die Nachricht konnte nicht gesendet werden. Bitte versuchen Sie
+      es erneut oder schreiben Sie an <a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a>.</p>
   </div>
   <button type="submit" data-sending="Wird gesendet…">Senden</button>
-  <noscript><p class="note">Das Formular braucht JavaScript. Du kannst mir auch direkt an
-    <a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a> schreiben.</p></noscript>
+  <noscript><p class="note">Das Formular benötigt JavaScript. Nachrichten können auch per E-Mail an
+    <a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a> gesendet werden.</p></noscript>
 </form>
 
 <div id="contact-sent" class="sent" tabindex="-1" hidden>
-  <h2>Danke, deine Nachricht ist angekommen.</h2>
-  <p>Ich antworte per E-Mail an die Adresse, die du angegeben hast.</p>
+  <h2>Vielen Dank, Ihre Nachricht wurde übermittelt.</h2>
+  <p>Die Antwort erfolgt per E-Mail an die angegebene Adresse.</p>
 </div>

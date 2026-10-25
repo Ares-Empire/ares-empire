@@ -1,6 +1,6 @@
 <h1>Contact</h1>
-<p class="lead">Write me a message here. It reaches me by email, and I answer at the address you give. What happens with
-your data is described in the <a href="/privacy">privacy policy</a>.</p>
+<p class="lead">Messages sent with this form are forwarded to Patrik Breeck by email. Replies are sent to the email
+address you provide. Information on how your data is processed is given in the <a href="/privacy">privacy policy</a>.</p>
 
 <form id="contact-form" class="contact" method="post" action="https://auth.ares-empire.de/api/collections/contact/records">
   <div class="field">
@@ -21,18 +21,18 @@ your data is described in the <a href="/privacy">privacy policy</a>.</p>
   </div>
   <div aria-live="polite">
     <p class="problem" data-problem="empty" hidden>Please write a message.</p>
-    <p class="problem" data-problem="email" hidden>This email address doesn't look right. Please check it.</p>
-    <p class="problem" data-problem="many" hidden>Too many messages came from here just now. Please try again in an
-      hour.</p>
-    <p class="problem" data-problem="failed" hidden>That didn't work. Please try again, or write to me at
+    <p class="problem" data-problem="email" hidden>The email address is not valid. Please check it.</p>
+    <p class="problem" data-problem="many" hidden>Too many messages have been sent from this connection. Please
+      try again in an hour.</p>
+    <p class="problem" data-problem="failed" hidden>The message could not be sent. Please try again or write to
       <a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a>.</p>
   </div>
   <button type="submit" data-sending="Sending…">Send</button>
-  <noscript><p class="note">This form needs JavaScript. You can also write to me directly at
+  <noscript><p class="note">This form requires JavaScript. Messages can also be sent by email to
     <a href="mailto:REDACTED-EMAIL">REDACTED-EMAIL</a>.</p></noscript>
 </form>
 
 <div id="contact-sent" class="sent" tabindex="-1" hidden>
-  <h2>Thanks, your message has arrived.</h2>
-  <p>I'll answer by email, at the address you gave.</p>
+  <h2>Thank you, your message has been sent.</h2>
+  <p>A reply will be sent by email to the address you provided.</p>
 </div>

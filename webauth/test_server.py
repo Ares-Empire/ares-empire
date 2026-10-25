@@ -741,6 +741,17 @@ class LegalPageTests(unittest.TestCase):
         for name in ('impressum.html', 'imprint.html'):
             self.assertNotIn('lead to confirm', (WEB / 'legal' / name).read_text())
 
+    def test_the_real_pages_read_as_legal_documents(self):
+        # Patrik (2026-10-25): neutral statements, "Sie" where the reader is addressed; never "ich"/"du" or "I"/"my".
+        informal = {'de': re.compile(r'\b(?i:ich|mich|mir|mein\w*|du|dich|dir|dein\w*)\b'),
+                    'en': re.compile(r'\bI\b|\b(?i:me|my|mine|myself)\b')}
+        for entry in legal.PAGES.values():
+            text = re.sub(r'<[^>]+>', ' ', (WEB / 'legal' / entry.file).read_text(encoding='utf-8'))
+            with self.subTest(page=entry.file):
+                self.assertEqual(informal[entry.language].findall(text), [])
+        for name, register in (('datenschutz.html', 'Sie haben das Recht'), ('kontakt.html', 'Ihre Nachricht')):
+            self.assertIn(register, (WEB / 'legal' / name).read_text(encoding='utf-8'))
+
     def test_login_page_links_to_privacy_and_imprint(self):
         with patch.object(server, 'WEB_ROOT', str(WEB)):
             page = send('/login')[1].decode()
