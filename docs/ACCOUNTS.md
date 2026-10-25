@@ -34,7 +34,7 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
 - Install/update: `deploy/install-accounts.sh` (pinned version + SHA-256). The account rules are the
   migration in `accounts/pb_migrations/`, applied automatically on start.
   PocketBase stops publishing on GitHub after 0.40.6; future versions come from the author's own site.
-- Data: `/var/lib/empire-accounts/pb_data` (not in git). Must be part of the off-server backup.
+- Data: `/var/lib/empire-accounts/pb_data` (not in git). In the nightly backup ([BACKUP.md](BACKUP.md)).
 - **Users** (`users` collection): email + password, plus
   - `approved` — set by a superuser or an admin approving another account; login needs
     `verified = true && approved = true`.

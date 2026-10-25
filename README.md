@@ -107,6 +107,8 @@ grows on its own.
   (PocketBase, `deploy/install-accounts.sh`).
 - `empire-push.service` (`push/`, `deploy/install-push.sh`): one push service for every Empire app; Caddy routes
   `/api/push/*` to it. Contract and operating notes: [docs/PUSH.md](docs/PUSH.md).
+- `empire-backup.timer` (`backup/`, `deploy/install-backup.sh`): the nightly backup of the data that cannot be
+  rebuilt; the MacBook fetches it with Aresync. [docs/BACKUP.md](docs/BACKUP.md).
 - Caddy proxies the domain → the service and handles TLS itself. (`deploy/nginx/` and the TLS
   scripts are from the old nginx setup, kept for reference.)
 - **Updating the site:** edit `web/…`; the service serves from disk live (no rebuild).

@@ -167,10 +167,14 @@ Framework; its DPA also has the SCCs; stored data (sent-mail logs) is in the US 
 
 ### Backups and copies
 
-- No off-server backup yet (ACCOUNTS.md, ARESUS-APP.md); the policy names none.
+- **Nightly backup** since 2026-10-25 ([BACKUP.md](BACKUP.md)): every service's data that cannot be rebuilt
+  (accounts, Arestemis, Aresus, push, Aresium, the hub's data, the `.env` files). Kept 7 days on the server (plain,
+  root only) and up to about 6 months on Patrik's MacBook (encrypted with age; only the Mac has the key). No new
+  provider: the server copies are covered by the netcup AVV, the Mac is the controller's own device. Data deleted
+  in a service leaves the backups when their copies expire (at most about 6 months).
 - The one-off copies made during the builds of 2026-10-24/25 (`pb_data.before-*`, `/root/arestemis-backup-*`,
   `/root/backups/`, `state.json.bak-*`) were deleted on 2026-10-25. A copy made before a migration is deleted once the
-  migration is checked live. When off-server backups exist, name their retention in the policy.
+  migration is checked live.
 
 ## Published
 
@@ -191,5 +195,6 @@ contact form.
    access log (path, status and IP stay, 14 days).
 4. **Links:** the login pages and the apps' Settings link to the privacy policy and imprint; the signed-in hub,
    aresium.de and arestoteles.de do not yet (a footer link, before other people use them).
-5. ~~**Backups:** delete the one-off copies.~~ Done 2026-10-25. Open: there is no off-server backup at all; when one
-   exists, name its retention in the policy.
+5. ~~**Backups:** delete the one-off copies.~~ Done 2026-10-25. The nightly backup runs since 2026-10-25
+   ([BACKUP.md](BACKUP.md)). Open: its sentence in the policy's section 9 (Speicherdauer / Storage period), proposed
+   to Patrik 2026-10-25, goes live once he has read it.

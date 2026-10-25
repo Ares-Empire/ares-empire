@@ -34,7 +34,7 @@ developer enrollment has been pending since 2026-10-23.
    do before planning it.
 5. **New apps**, each built on the standard from its first screen.
 
-**Smaller open items:** no off-server backup exists for any data (accounts, Arestemis, push); a privacy/imprint link
+**Smaller open items:** a privacy/imprint link
 on the signed-in hub, aresium.de and arestoteles.de; the rest is in `empire-ios/CLAUDE.md` → Open and
 [PRIVACY.md](docs/PRIVACY.md) → To do.
 
@@ -81,6 +81,9 @@ bigger than the task at hand, tell Patrik what, why and roughly how big before s
 **Every app speaks English and German** (Patrik, 2026-10-24), the current ones and every future one: the iPhone's
 language decides, English is the fallback. Interface text is translated, including the sentences servers write for the
 apps and the notifications; content people wrote is not. Rules: [docs/LANGUAGES.md](docs/LANGUAGES.md).
+
+**Data that cannot be rebuilt is backed up every night** (Patrik, 2026-10-25): a service that starts storing such
+data adds it to the nightly backup in the same change ([docs/BACKUP.md](docs/BACKUP.md) → New data).
 
 ---
 
@@ -176,6 +179,7 @@ Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y"). The hub and the Empire app show the server's copy, `/root/ares-empire/data/state.json` →
 `chronicle` on aresis, which a push does not update: add each new entry there too (at the top, same text).
 
+- **2026-10-25 · empire** — The empire's data is backed up every night: the server makes an encrypted copy of everything that cannot be rebuilt (accounts, Aresium, Arestemis, Aresus, push, the hub's data and the secrets) and keeps a week of them; the MacBook fetches each copy with Aresync, checks it file by file and keeps up to six months. A restore test brought back every transaction.
 - **2026-10-25 · empire** — Every Empire app got light mode: Settings → Appearance (like the iPhone, light or dark) in each app, with every colour shared as a light and a dark value, so each future app has both from its first screen. Aresium keeps its red mode on top of either; the Empire app becomes a marble hall by day (ivory wall, antique gold, the bust as a faint relief); the widgets follow the home screen.
 - **2026-10-25 · empire** — Every app now creates and runs the one Ares account itself: sign up, reset a password, ask for access to an app, change the password, leave an app (its data goes with it) or delete the account, which removes its data in every service; the privacy policy and imprint went live with a contact form.
 - **2026-10-25 · empire** — Every Empire app got a Settings screen behind a gear: language (chosen in the app), notifications, a contact form that reaches Patrik by email, privacy policy, imprint, font licences, version and the account; and each app's name now ends its main screen, seen only when scrolling down.

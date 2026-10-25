@@ -25,7 +25,7 @@ Aresus, the watchtower province, combined with Aresync in one **iPhone app** (no
   before it counts, so a restart does not wake anyone.
 - **Checks per province:** systemd units, Docker containers, timers, HTTPS answers (status and time), TLS certificate
   expiry, and the deployed commit (and whether GitHub is ahead). The server itself: disk, memory, load, uptime.
-  Backups are not checked yet (Patrik will set backups up later).
+  Backups: the timer check "Backups" in the Empire province ([BACKUP.md](BACKUP.md) → Alerts).
 - **Push:** when an issue opens (time-sensitive) and when it is fixed (quiet). Aresync pushes exactly when its Telegram
   alert would fire today: immediately for a rebase conflict, a failed deploy hook or the privacy guard; for network-type
   failures only once they have lasted an hour. The app shows every failed run in red right away.

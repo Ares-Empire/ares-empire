@@ -1,0 +1,14 @@
+[Unit]
+Description=Ares Empire — nightly backup of the data that cannot be rebuilt (docs/BACKUP.md)
+Documentation=https://github.com/Ares-Empire/ares-empire/blob/main/docs/BACKUP.md
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Runs straight from the checkout, so a pulled change applies the next night (aresync deploys the repo).
+WorkingDirectory=/root/ares-empire
+ExecStart=/usr/bin/python3 /root/ares-empire/backup/empire_backup.py
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=30min

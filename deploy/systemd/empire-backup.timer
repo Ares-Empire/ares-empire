@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly Ares Empire backup (the Mac fetches it with aresync in the morning)
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
