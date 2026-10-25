@@ -87,6 +87,14 @@ python3 -m http.server 8099 --directory web    # → http://localhost:8099
   the Claude Code handoff (copy buttons), then adds it to the circle.
 - **Login / logout** — Empire accounts (email + password, sign-up with approval, password reset) via
   `webauth/server.py` + the `web/login.html` template; a logout control sits top-right. See [docs/ACCOUNTS.md](docs/ACCOUNTS.md).
+- **Privacy policy and imprint** — `/datenschutz`, `/privacy`, `/impressum`, `/imprint`, open without login
+  (`webauth/legal.py`, text in `web/legal/`, self-hosted font in `web/fonts/`). A page still holding `[ADDRESS]` or
+  `[lead to confirm]` answers 404; `LEGAL_PREVIEW=1` shows drafts locally. What the text is based on:
+  [docs/PRIVACY.md](docs/PRIVACY.md).
+- **Contact form** — `/kontakt`, `/contact`, open without login, served only while the privacy policy in its language is
+  (`web/legal/kontakt.html`, `contact.html`, one inline script `contact.js`). It posts from the browser straight to the
+  account server's open `contact` collection, which mails Patrik ([docs/ACCOUNTS.md](docs/ACCOUNTS.md) → Website contact
+  form).
 
 **Source of truth** — [`EMPIRE.md`](EMPIRE.md) (narrative) + `web/app/empire-data.js`
 (`window.EMPIRE`, the manifest the circle renders from). Add a province by appending to both; the circle

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!-- The frame of the legal pages, filled in by webauth/legal.py (slots: lang, title, other_href, other_lang,
+     other_label, nav, content, script). Loads nothing from other hosts. -->
+<html lang="$lang" data-theme="empire">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>$title · Ares Empire</title>
+<link rel="icon" type="image/png" href="/brand/ares-bust-icon.png" />
+<link rel="alternate" hreflang="$other_lang" href="$other_href" />
+<style>
+  /* Space Grotesk, self-hosted (SIL Open Font License: /fonts/OFL-SpaceGrotesk.txt). */
+  @font-face { font-family: "Space Grotesk"; src: url("/fonts/SpaceGrotesk-Variable.ttf") format("truetype");
+    font-weight: 300 700; font-style: normal; font-display: swap; }
+  :root { color-scheme: dark; --sans: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --ink: #f4f1e9; --body: #cfc9bb; --muted: #8a8475; --faint: #6f6a5d; --gold: #e9c86b;
+    --gold-text: linear-gradient(180deg, #fff7da 0%, #f4dd92 28%, #e4c264 52%, #bd9239 78%, #8c6620 100%); }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; min-height: 100vh; font-family: var(--sans); color: var(--ink); background: #000;
+    -webkit-font-smoothing: antialiased; }
+  /* the hub's faint glow and stars, behind everything */
+  body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(52% 34% at 50% 0%, rgba(233,170,70,0.12), transparent 66%),
+      radial-gradient(40% 30% at 0% 100%, rgba(150,40,40,0.08), transparent 70%),
+      radial-gradient(40% 30% at 100% 100%, rgba(60,90,140,0.08), transparent 70%),
+      radial-gradient(1.3px 1.3px at 18% 22%, rgba(255,248,225,0.55), transparent 60%),
+      radial-gradient(1.2px 1.2px at 82% 16%, rgba(255,255,255,0.4), transparent 60%),
+      radial-gradient(1px 1px at 70% 64%, rgba(255,246,210,0.35), transparent 60%); }
+  .wrap { position: relative; z-index: 1; width: min(100%, 780px); margin: 0 auto;
+    padding: max(22px, env(safe-area-inset-top)) 16px max(40px, env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 4px 22px; }
+  .home { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .home img { width: 30px; height: 30px; object-fit: contain; }
+  .word { font-weight: 700; font-size: 13px; letter-spacing: 0.22em; background: var(--gold-text);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .lang { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--body);
+    text-decoration: none; padding: 7px 13px; border-radius: 999px; border: 1px solid rgba(233,200,107,0.18);
+    background: rgba(233,200,107,0.04); }
+  .lang:hover { border-color: rgba(233,200,107,0.45); color: var(--ink); }
+  main { padding: 38px 42px 34px; border: 1px solid transparent; border-radius: 20px;
+    background: linear-gradient(rgba(16,13,9,0.7), rgba(16,13,9,0.7)) padding-box,
+      linear-gradient(135deg, rgba(253,240,194,0.24), rgba(233,200,107,0.05) 36%, rgba(233,200,107,0.1)) border-box;
+    backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%);
+    box-shadow: 0 34px 80px -30px rgba(0,0,0,0.9), inset 0 1px 0 rgba(253,240,194,0.1); }
+  h1 { margin: 0 0 6px; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+  .stand { margin: 0 0 26px; font-size: 12.5px; color: var(--muted); }
+  h2 { margin: 34px 0 10px; font-size: 16.5px; font-weight: 650; letter-spacing: 0; line-height: 1.35; }
+  h3 { margin: 22px 0 6px; font-size: 14.5px; font-weight: 650; color: var(--ink); }
+  p, li { font-size: 15px; line-height: 1.65; color: var(--body); }
+  p { margin: 0 0 12px; }
+  ul { margin: 0 0 12px; padding-left: 20px; }
+  li { margin: 0 0 6px; }
+  li::marker { color: var(--faint); }
+  strong { color: var(--ink); font-weight: 600; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.9em; color: var(--ink); }
+  a { color: var(--gold); text-decoration: none; overflow-wrap: anywhere; }
+  a:hover { text-decoration: underline; }
+  .lead { font-size: 15.5px; color: var(--ink); }
+  .address { margin: 0 0 12px; font-style: normal; font-size: 15px; line-height: 1.65; color: var(--body); }
+  .keep { white-space: nowrap; }   /* an address that should move to the next line whole, not break at its hyphen */
+  /* the contact form (/kontakt, /contact); fields and button as on the login page */
+  [hidden] { display: none !important; }
+  .contact { margin: 28px 0 4px; }
+  .field { margin: 0 0 18px; }
+  .contact label { display: block; margin: 0 0 8px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); }
+  .contact label .optional { font-weight: 500; letter-spacing: 0.02em; text-transform: none; color: var(--faint); }
+  /* 16px, or Safari on the iPhone zooms into the field */
+  .contact input, .contact textarea { display: block; width: 100%; margin: 0; padding: 13px 16px; font: inherit;
+    font-size: 16px; line-height: 1.5; color: var(--ink); border: 1px solid rgba(233,200,107,0.16); border-radius: 12px;
+    background: rgba(233,200,107,0.04); outline: none; transition: border-color .18s, background .18s, opacity .18s; }
+  .contact textarea { min-height: 200px; resize: vertical; }
+  .contact input:focus, .contact textarea:focus { border-color: rgba(233,200,107,0.55); background: rgba(233,200,107,0.07); }
+  .contact[aria-busy="true"] input, .contact[aria-busy="true"] textarea { opacity: 0.55; }
+  .contact button { display: flex; align-items: center; justify-content: center; width: 100%; height: 50px;
+    margin: 4px 0 0; font: inherit; font-size: 14px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase;
+    color: #1a1206; cursor: pointer; border: none; border-radius: 12px; background: linear-gradient(180deg, #fdf0c2, #cda74c);
+    box-shadow: 0 12px 30px -10px rgba(233,200,107,0.42); transition: filter .18s, transform .06s; }
+  .contact button:hover { filter: brightness(1.05); }
+  .contact button:active { transform: translateY(1px); }
+  .contact button:disabled { cursor: progress; filter: saturate(0.55) brightness(0.8); transform: none; }
+  .problem { margin: 0 0 14px; padding: 10px 13px; font-size: 13.5px; line-height: 1.5; color: #ffd7dc;
+    border-radius: 11px; background: rgba(255,45,75,0.12); border: 1px solid rgba(255,45,75,0.36); }
+  .problem a { color: #ffe6ea; text-decoration: underline; }
+  .note { font-size: 13.5px; color: var(--muted); }
+  /* the honeypot: off screen, out of the tab order, hidden from screen readers; only bots fill it */
+  .trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+  .sent { margin: 28px 0 4px; padding: 22px 22px 10px; border-radius: 14px; border: 1px solid rgba(233,200,107,0.22);
+    background: rgba(233,200,107,0.05); }
+  .sent:focus { outline: none; }
+  .sent h2 { margin: 0 0 8px; }
+  footer { margin: 22px 4px 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;
+    font-size: 12.5px; color: var(--faint); }
+  footer a { color: var(--muted); }
+  footer a[aria-current="page"] { color: var(--gold); }
+  @media (max-width: 560px) {
+    main { padding: 26px 20px 22px; border-radius: 16px; }
+    h1 { font-size: 22px; }
+    p, li, .address { font-size: 14.5px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="home" href="/" aria-label="Ares Empire">
+        <img src="/brand/ares-bust-icon.png" alt="" />
+        <span class="word">ARES EMPIRE</span>
+      </a>
+      <a class="lang" href="$other_href" hreflang="$other_lang" lang="$other_lang">$other_label</a>
+    </header>
+    <main>
+$content
+    </main>
+    <footer>
+      <nav>$nav</nav>
+      <span>Ares Empire</span>
+    </footer>
+  </div>
+$script
+</body>
+</html>

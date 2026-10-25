@@ -155,11 +155,13 @@ failures = 0
 checks = 0
 
 
-def call(method, path, body=None, token=''):
+def call(method, path, body=None, token='', headers=()):
     args = ['curl', '--silent', '--show-error', '--max-time', '5', '--noproxy', '*',
             '--request', method, '--write-out', '\n%{http_code}', base + path]
     if token:
         args += ['--header', 'Authorization: ' + token]
+    for header in headers:
+        args += ['--header', header]
     payload = None
     if body is not None:
         args += ['--header', 'Content-Type: application/json', '--data-binary', '@-']
@@ -214,6 +216,14 @@ def feedback(owner, **extra):
     return {'user': owner, 'app': 'arestoteles', 'kind': 'idea',
             'message': 'Fictional idea: search could also look inside the panels.',
             'app_version': '1.0 (12)', 'system': 'iOS 27.0 · iPhone', 'language': 'en', **extra}
+
+
+CONTACT = '/api/collections/contact/records'
+
+
+def contact(**extra):
+    return {'name': 'Fictional Visitor', 'email': 'visitor@example.com',
+            'message': 'Fictional question about the imprint.', 'language': 'en', 'website': '', **extra}
 
 
 def mails(at_least=0):
@@ -603,16 +613,77 @@ try:
     must('PATCH', '/api/settings', {'rateLimits': {'enabled': False}}, supertoken)
     check('the 11th feedback within the hour is refused (429)', statuses == [200] * 10 + [429])
 
+    # The website's contact form (contact): open to everyone, mailed to Patrik, read only by superusers.
+    before = len(mails())
+    status, written = call('POST', CONTACT, contact())
+    check('anyone can send the contact form, without a login', status == 200 and written.get('email') == 'visitor@example.com')
+    kept = mails(at_least=before + 1)
+    mail = kept[-1] if len(kept) > before else None
+    check('a contact message is mailed to Patrik, Reply-To the given email', mail is not None and
+          mail['To'] == 'REDACTED-EMAIL' and mail['Reply-To'] == 'visitor@example.com' and
+          mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
+          mail['Subject'] == '[Website] Contact: Fictional question about the imprint.')
+    text = mail.get_body(('plain',)).get_content() if mail else ''
+    check('the contact mail names the name, email, language and the message', all(part in text for part in (
+          'Name:     Fictional Visitor', 'Email:    visitor@example.com', 'Language: en',
+          'Fictional question about the imprint.')))
+    before = len(mails())
+    status, _ = call('POST', CONTACT, contact(name='', language='de', message='Eine erfundene Frage ' * 5))
+    german = mails(at_least=before + 1)[-1]
+    check('a German message without a name: subject "Kontakt", cut on a word; the name is "–"', status == 200 and
+          german['Subject'] == '[Website] Kontakt: ' + ' '.join(['Eine erfundene Frage'] * 2) + ' Eine erfundene…'
+          and 'Name:     –' in german.get_body(('plain',)).get_content())
+    check('a logged-in visitor can send it too', call('POST', CONTACT, contact(), user_token)[0] == 200)
+    before = len(mails())
+    check('the honeypot filled in is refused, and nothing is mailed',
+          call('POST', CONTACT, contact(website='https://spam.example'))[0] == 400 and len(mails()) == before)
+    for label, body in [('an empty message', {'message': ''}), ('a message of blanks', {'message': ' \n\t '}),
+                        ('a message over 5000', {'message': 'x' * 5001}), ('no email', {'email': ''}),
+                        ('an invalid email', {'email': 'not-an-email'}), ('a name over 100', {'name': 'n' * 101}),
+                        ('an unknown language', {'language': 'fr'})]:
+        check('contact with ' + label + ' is refused', call('POST', CONTACT, contact(**body))[0] == 400)
+    check('contact of 5000 characters is taken', call('POST', CONTACT, contact(message='x' * 5000))[0] == 200)
+    for who, token in [('a visitor', ''), ('a user', user_token), ('an admin', admin_token)]:
+        status, listed = call('GET', CONTACT, token=token)
+        check(who + ' cannot list contact messages', status == 403 or (status == 200 and listed['items'] == []))
+        check(who + ' cannot view a contact message',
+              call('GET', CONTACT + '/' + written['id'], token=token)[0] in (403, 404))
+        check(who + ' cannot change or delete a contact message',
+              call('PATCH', CONTACT + '/' + written['id'], {'message': 'Changed'}, token)[0] in (400, 403, 404)
+              and call('DELETE', CONTACT + '/' + written['id'], token=token)[0] in (403, 404))
+    check('superuser can view a contact message, unchanged',
+          must('GET', CONTACT + '/' + written['id'], token=supertoken)['message'] == written['message'])
+    # The mail fails (nothing listens on port 9): the message is kept and the failure logged.
+    must('PATCH', '/api/settings', {'smtp': {**SMTP_SINK, 'port': 9}}, supertoken)
+    before = len(mails())
+    status, unsent = call('POST', CONTACT, contact())
+    must('PATCH', '/api/settings', {'smtp': SMTP_SINK}, supertoken)
+    check('a failed contact email keeps the message', status == 200 and len(mails()) == before and
+          call('GET', CONTACT + '/' + unsent['id'], token=supertoken)[0] == 200)
+    check('a failed contact email is logged', logged('contact email failed'))
+    rules = must('GET', '/api/settings', token=supertoken)['rateLimits']['rules']
+    check('contact rate limit is 5 per hour',
+          {'label': 'contact:create', 'audience': '', 'duration': 3600, 'maxRequests': 5} in rules)
+    # Caddy puts the visitor's address last in X-Forwarded-For; the limit counts per address.
+    visitor, other = ['X-Forwarded-For: 198.51.100.7'], ['X-Forwarded-For: 198.51.100.8']
+    must('PATCH', '/api/settings', {'rateLimits': {'enabled': True}}, supertoken)
+    statuses = [call('POST', CONTACT, contact(message=f'Fictional message {n}'), headers=visitor)[0] for n in range(6)]
+    another = call('POST', CONTACT, contact(), headers=other)[0]
+    must('PATCH', '/api/settings', {'rateLimits': {'enabled': False}}, supertoken)
+    check('the 6th contact message from one address within the hour is refused (429)', statuses == [200] * 5 + [429])
+    check('another address can still write', another == 200)
+
+    # PocketBase also runs the deletion cron by itself every 5 minutes. From here to the end, the checks need a minute
+    # without such a run (the deletion just below must still find its jobs open), so wait for one first if it is near.
+    wait = 300 - time.time() % 300
+    if wait < 60:
+        time.sleep(wait + 2)
     status, _ = call('DELETE', '/api/collections/users/records/' + normal['id'], token=user_token)
     check('normal user can still delete own account', status == 204)
     query = FEEDBACK + '?filter=' + urllib.parse.quote(f"user = '{normal['id']}'")
     check("an account's feedback goes with the account", must('GET', query, token=supertoken)['totalItems'] == 0)
 
     # Deleting an account reaches every service: one job per service, the cron calls the fake service.
-    # PocketBase also runs the cron by itself every 5 minutes; keep these checks clear of such a run.
-    wait = 300 - time.time() % 300
-    if wait < 40:
-        time.sleep(wait + 2)
     check('the deleted account got one open job per service', {
         service: (job['done'], job['attempts']) for service, job in jobs(normal['id']).items()} ==
         {'arestemis': (False, 0), 'push': (False, 0)})
@@ -714,7 +785,26 @@ ok = not {'requested', 'language'} & set(names) and create == own and update == 
 print(('PASS' if ok else 'FAIL') + ' migration down removes requested and language and restores the rules')
 sys.exit(0 if ok else 1)
 PY
-# 0. feedback down: the collection and its rate limit are gone, the accounts stay.
+# 0. contact down: the collection and its rate limit are gone, feedback stays.
+if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
+  --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
+  echo 'FAIL migration down (contact)'
+  cat "$RULES_TMP/down.log" >&2
+  exit 1
+fi
+python3 - <<'PY'
+import json, os, sqlite3, sys
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    collections = {row[0] for row in db.execute('SELECT name FROM _collections')}
+    tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    settings = json.loads(db.execute("SELECT value FROM _params WHERE id = 'settings'").fetchone()[0])
+labels = [rule['label'] for rule in settings['rateLimits']['rules']]
+ok = ('contact' not in collections | tables and 'contact:create' not in labels
+      and 'feedback' in collections and 'feedback:create' in labels)
+print(('PASS' if ok else 'FAIL') + ' migration down removes the contact collection and its rate limit')
+sys.exit(0 if ok else 1)
+PY
+# 1. feedback down: the collection and its rate limit are gone, the accounts stay.
 if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
   echo 'FAIL migration down (feedback)'
@@ -732,7 +822,7 @@ ok = 'feedback' not in collections | tables and 'feedback:create' not in labels 
 print(('PASS' if ok else 'FAIL') + ' migration down removes the feedback collection and its rate limit')
 sys.exit(0 if ok else 1)
 PY
-# 1. service_arestoteles down: arestoteles is no longer offered, the four earlier services stay.
+# 2. service_arestoteles down: arestoteles is no longer offered, the four earlier services stay.
 if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
   echo 'FAIL migration down (arestoteles)'
@@ -748,7 +838,7 @@ ok = services['values'] == ['empire', 'aresium', 'arestemis', 'aresus'] and serv
 print(('PASS' if ok else 'FAIL') + ' migration down removes arestoteles only')
 sys.exit(0 if ok else 1)
 PY
-# 2. services_arestemis_aresus down: the services field offers only empire and aresium again.
+# 3. services_arestemis_aresus down: the services field offers only empire and aresium again.
 if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
   echo 'FAIL migration down (services)'
@@ -765,7 +855,7 @@ ok = services['values'] == ['empire', 'aresium'] and services['maxSelect'] == 2 
 print(('PASS' if ok else 'FAIL') + ' migration down restores the two original services')
 sys.exit(0 if ok else 1)
 PY
-# 3. admin_ring down.
+# 4. admin_ring down.
 if ! printf 'y\n' | "$POCKETBASE" migrate down 1 --dir "$RULES_TMP/data" \
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/down.log" 2>&1; then
   echo 'FAIL migration down'
@@ -801,8 +891,9 @@ with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
     fields = json.loads(db.execute('SELECT fields FROM _collections WHERE name = ?', ('users',)).fetchone()[0])
     options = json.loads(db.execute('SELECT options FROM _collections WHERE name = ?', ('users',)).fetchone()[0])
 labels = [rule['label'] for rule in settings['rateLimits']['rules']]
-ok = 'feedback' in collections and labels.count('feedback:create') == 1
-print(('PASS' if ok else 'FAIL') + ' migration up adds the feedback collection and one rate limit again')
+ok = ({'feedback', 'contact'} <= collections and labels.count('feedback:create') == 1
+      and labels.count('contact:create') == 1)
+print(('PASS' if ok else 'FAIL') + ' migration up adds the feedback and contact collections, one rate limit each')
 again = ('deletions' in collections and {'requested', 'language'} <= {field['name'] for field in fields} and
          options['verificationTemplate']['subject'] == 'Confirm your Ares account · Bestätige dein Ares-Konto')
 print(('PASS' if again else 'FAIL') + ' migration up adds requested, language, deletions and the two-language emails again')
