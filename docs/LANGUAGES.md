@@ -10,7 +10,12 @@ A new app has both from its first screen; no screen ships in only one of them.
 - **Each app's Settings → Language** chooses for that app: like the iPhone, English or Deutsch. It is the same setting
   as iOS's own per-app Language (Settings → Apps → *the app*), which iOS only shows when the phone lists two or more
   languages (tested on iOS 27, 2026-10-24); so the apps offer it themselves (Patrik asked "how do I switch?", the
-  earlier "no switch in the apps" rule is replaced). The choice takes effect when the app is opened again.
+  earlier "no switch in the apps" rule is replaced).
+- Choosing another language asks first, in the language it switches to ("Switch to English?" / "Auf Deutsch
+  umstellen?"), with Cancel in the current one, then the app restarts inside itself in that language (Patrik,
+  2026-10-25): back on its main screen, the servers' sentences and the device's notification language switch with it,
+  and its widget follows. Words iOS draws itself inside the app (the Cut/Copy menu on selected text) follow at its next
+  launch.
 
 ## What is translated
 
