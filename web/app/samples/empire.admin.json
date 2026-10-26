@@ -172,6 +172,11 @@
   "addable": [],
   "chronicle": [
     {
+      "at": "2026-10-27",
+      "project": "aresium",
+      "text": "Aresium got a public demo at aresium.de/demo: the whole website with a made-up account, for anyone and without an account. Nothing reaches the server and nothing is saved; trying to import or change something asks the visitor to log in, and the login page links the demo. Patrik's own aresium.de stays behind the login."
+    },
+    {
       "at": "2026-10-26",
       "project": "empire",
       "text": "Every Ares app on an iPhone now lets go of an account the moment it logs out in any of them: widgets drop its numbers, and notifications stop for all apps, not only the one used to log out. The app switcher shows each app's name instead of its screens. These were the last two checks before anyone but Patrik gets an app."
