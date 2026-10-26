@@ -143,7 +143,7 @@ Every category shows where it came from (starter rule, learned, auto, you), as t
    merchant (the name cleaned of card numbers, cities and dates) and asks once: "Also the 12 other payments to
    REWE?". Future payments from that merchant follow. Own rules ("text contains …") as today. This layer should sort
    most payments, because a few merchants make up most of them (M2 checks this).
-3. **Auto-sort through our server, one switch in Aresium's settings, off by default** (Patrik, 2026-10-26: easier,
+3. **Not in version 1** (D2 changed 2026-10-26, see Decisions). As first planned: **auto-sort through our server, one switch in Aresium's settings, off by default** (Patrik, 2026-10-26: easier,
    works on every iPhone, only a few friends will use it). For what layers 1 and 2 leave open:
    - The app sends the person's category list and the open payments (date, amount, text, counterparty; a random
      reference per payment, no bank ids) to a new Aresium route; the server asks the AI model, sends back one category
@@ -253,13 +253,14 @@ Answered by Patrik on 2026-10-26:
 
 Patrik approved the default list (2026-10-26).
 
-**Reopened 2026-10-26 — D2, the auto-sort route,** after the legal check (`PRIVACY.md` → "Opening Aresium: legal
-check", on branch `codex/03-aresium-privacy` until decided) and M3: the server route needs more than the AVV and the
-policy (Groq's contract and a transfer assessment for the USA, explicit consent for sensitive booking texts, people
-named in booking texts, a record of processing, and possibly a DPIA, which in Germany would also require a data
-protection officer, § 38 BDSG), while M3 shows it saves about 4 fixes a month. Claude's recommendation: version 1
-without the server route (shop rules, learning, the PayPal rule); Apple's on-device model as the optional switch later,
-where nothing leaves the phone. Waiting for Patrik.
+**D2 changed 2026-10-26 (Patrik: "makes sense"): version 1 has no server sorting.** After the legal check
+(`PRIVACY.md` → "Opening Aresium: legal check", kept on branch `codex/03-aresium-privacy`) and M3: the server route needs
+more than the AVV and the policy (Groq's contract and a transfer assessment for the USA, explicit consent for sensitive
+booking texts, people named in booking texts, a record of processing, and possibly a DPIA, which in Germany would also
+require a data protection officer, § 38 BDSG), while M3 shows it saves about 4 fixes a month. Version 1 sorts with the
+shop rules, learning and the PayPal rule; nothing about payments leaves the phone, the AVV stays as it is, and the
+policy's Aresium section says the data stays on the iPhone. Apple's on-device model can come later as the optional
+switch. The Groq client stays in `aresium/src/sort/` (also usable for Patrik's own server).
 
 ## Measurements before choosing
 
