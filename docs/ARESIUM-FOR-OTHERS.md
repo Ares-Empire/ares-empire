@@ -240,8 +240,7 @@ Answered by Patrik on 2026-10-26:
   places give the same numbers, and Patrik's server, website and scripts keep working. Rejected: a second copy in Swift
   (two copies that must stay identical, every change twice); moving Patrik to phone mode as well (one engine, but it
   changes his website imports, the Groq pass and the Telegram bot). **Condition:** M5 shows it runs fast enough on the
-  phone (apps get JavaScriptCore without its fastest mode); if not, a Swift copy with shared test files. M5 running as
-  `empire-ios/prompts/10-engine-test-run.md`.
+  phone (apps get JavaScriptCore without its fastest mode); if not, a Swift copy with shared test files. **Confirmed by M5 (2026-10-26).**
 - **D2 — Auto-sort route:** our server only, with Groq (part 5, layer 3). One switch, off by default.
 - **D3 — Categories:** a default list to choose from, nothing preselected, own names typed in (part 4).
 - **D4 — Receipts:** version 2; photos not kept.
@@ -273,6 +272,12 @@ back. The answer key is D6 (1,055 payments).
 - **M5 — Engine test run (D1):** today's parsers and dashboard bundled into one JavaScript file and run in
   JavaScriptCore on the simulator, on the existing test files (`AresiumTests/server-dashboard.sample.json` and the
   server's expected answer). Identical output → one engine; problems → reconsider.
+  **Result (2026-10-26, `empire-ios/prompts/10-engine-test-run.md`):** identical output for the sample dashboard and
+  all three readers (numbers and payment ids). iPhone 17 simulator, median of 5, with JavaScriptCore's fast mode off as
+  on a phone: bundle load 3 ms; dashboard for 1,246 payments 5 ms, for 5,000 payments 11 ms; reading a 5,000-row VR
+  Bank CSV 430 ms. Bundle 215 KB. A real iPhone is slower than the Mac behind the simulator; even several times slower
+  is fine for an import. The engine lives in `aresium/src/engine/` (`npm run engine`); the hashing for payment ids no
+  longer needs Node (same ids, checked).
 
 The results go into this file before the choices that depend on them.
 
@@ -292,7 +297,7 @@ Rough sizes in focused work days (Claude with Codex), not counting Patrik's time
 7. **Privacy policy (including the auto-sort route), App Store information, external TestFlight, hub open.** 1–2
    days, and Apple's approval of the developer account (pending since 2026-10-23).
 
-Version 1 in total: roughly four to five weeks of steady work. M5 (step 3) is running; M1–M3 can start now.
+Version 1 in total: roughly four to five weeks of steady work. M5 done (one engine confirmed); M1–M3 can start now.
 
 **Version 2: receipts** (part 6): splits (server and phone), scanner, reading, checking, matching; M4 on real
 receipts. About 6–10 days.
