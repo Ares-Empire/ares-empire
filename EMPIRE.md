@@ -12,13 +12,19 @@ province is added or its state changes, update *both* this file and the manifest
 > On the name: "Ares" is Patrik's long-standing handle. The war-god association is
 > treated as *aesthetic* — marble, gold, command, gravitas — never devotional.
 
-## Now and next (updated 2026-10-25)
+## Now and next (updated 2026-10-26)
 
 **Where things stand:** five iPhone apps (Empire, Aresium, Arestemis, Aresus, Arestoteles) run on the simulator, all
 on the shared standard (Settings, English/German with an in-app switch, light and dark, one Ares account run from every
-app). The
-privacy policy and imprint are live, and the websites load nothing from other hosts. Nothing is on a phone yet: Apple's
-developer enrollment has been pending since 2026-10-23.
+app). The Empire app was reviewed before its first TestFlight build (council 2026-10-25, fixes live); its ring shows
+every app an account has and "+" asks for more ([docs/EMPIRE-APP.md](docs/EMPIRE-APP.md)). The privacy policy and
+imprint are live and linked from every site, the websites load nothing from other hosts, and the data that cannot be
+rebuilt is backed up every night to the MacBook ([docs/BACKUP.md](docs/BACKUP.md)). Showcase images of every app with
+made-up data: `empire-ios/showcase/`. Nothing is on a phone yet: Apple's developer enrollment has been pending since
+2026-10-23.
+
+**Next up (2026-10-26):** the plan for Aresium for other people (step 3), written before any code: imports, categories,
+sorting, each layer measured on Patrik's own transactions.
 
 **The big steps, in this order** (Patrik, 2026-10-25):
 
