@@ -183,6 +183,8 @@ to know the empire's shape, and appends to the **Chronicle** below whenever it c
 Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 ("did X to conquer Y"). The hub and the Empire app show the server's copy, `/root/ares-empire/data/state.json` →
 `chronicle` on aresis, which a push does not update: add each new entry there too (at the top, same text).
+After adding a line to `web/app/empire-data.js`, run `python3 tools/empire_samples.py --web` (the website's
+previews are generated from it; a test checks they are current).
 
 - **2026-10-26 · empire** — The Empire's ring now shows every app an account has access to, and its "+" lists the other apps open to users: asking for one sends the request to Patrik, and the person is told when it is approved and it joins their ring, with an Install button when the app is not on the phone yet. Patrik keeps getting sign-ups and requests by email.
 - **2026-10-25 · empire** — The Empire app was reviewed by three independent reviewers before its first TestFlight build, and their fixes are in: the apps that hold only Patrik's data (Aresium, Arestoteles, Aresus) now let in only him, so approving a request can no longer open them; the hub's answers and errors follow one checked shape; tapping a province always opens something; and every website links the privacy policy and imprint.
