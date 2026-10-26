@@ -1,9 +1,20 @@
 /* Shared transport for the two hub trees. Localhost previews fetch JSON fixtures (web/app/samples, written by
    tools/empire_samples.py --web from the hub server itself); sample actions stay in memory. Other hosts always use the
-   account API. */
+   account API, except the public demo (/demo, webauth/server.py): the same sample mode with the made-up guest
+   (app/samples/empire.demo.json), each app's link from its sample (Aresium's demo, the request form) and a band
+   saying it is a demo. */
 (function () {
-  const sampleMode = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  const demoMode = location.pathname === "/demo";
+  const sampleMode = demoMode || location.hostname === "localhost" || location.hostname === "127.0.0.1";
   const params = new URLSearchParams(location.search);
+  if (demoMode) {
+    document.documentElement.classList.add("demo");
+    const band = document.createElement("div");
+    band.className = "demo-band";
+    band.innerHTML = '<span class="demo-dot"></span><span><b>Demo</b> · a made-up account to look around</span>' +
+      '<a href="/login">Log in</a>';
+    document.body.appendChild(band);
+  }
   // ?as=… picks the preview account: admin (the default), member, new-member or requested.
   const PREVIEWS = ["admin", "member", "new-member", "requested"];
   let sample;
@@ -13,7 +24,7 @@
 
   async function sampleData() {
     if (!sampleLoading) {
-      const role = PREVIEWS.includes(params.get("as")) ? params.get("as") : "admin";
+      const role = demoMode ? "demo" : PREVIEWS.includes(params.get("as")) ? params.get("as") : "admin";
       sampleLoading = request("app/samples/empire." + role + ".json").then(validate).then((data) => {
         sample = data;
         return data;
@@ -64,6 +75,7 @@
 
   window.EmpireData = {
     sampleMode,
+    demoMode,
     skipIntro: sampleMode && params.has("skipIntro"),
     initial: () => sampleMode && sample ? clone(sample) : null,
     load: async () => sampleMode ? clone(await sampleData()) : request("/api/empire"),
@@ -100,6 +112,8 @@
       return { ok: true, approvals: clone(pending), pending: pending.length };
     },
     destination(province) {
+      // The demo: each app's own link from the sample (Aresium's demo, the others' request form).
+      if (demoMode) return province.url || null;
       // Connections in EMPIRE.md: only Aresium currently uses the hub hand-off.
       return province.state === "coming-soon" ? null : province.slug === "aresium"
         ? "/sso?to=" + encodeURIComponent(province.slug) : province.url || null;

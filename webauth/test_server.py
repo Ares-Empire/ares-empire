@@ -995,6 +995,40 @@ WEB = Path(__file__).resolve().parent.parent / 'web'
 RESOURCE = re.compile(r'<(?:link|script|img|iframe|source|video|audio)\b[^>]*?\b(?:href|src)="([^"]*)"|url\(\s*["\']?([^"\')]+)')
 
 
+class DemoTests(unittest.TestCase):
+    """The public demo (/demo): open without an account, it loads the demo's words and the made-up guest; the real
+    seed (app/empire-data.js) and the other samples stay behind the login."""
+
+    def setUp(self):
+        self.enterContext(patch.object(server, 'WEB_ROOT', str(WEB)))
+
+    def test_the_demo_page_is_open_and_loads_the_demos_words_not_the_seed(self):
+        status, body, _ = send('/demo')
+        self.assertEqual(status, 200)
+        page = body.decode()
+        self.assertIn('src="app/samples/demo-empire.js"', page)
+        self.assertNotIn('empire-data.js', page)
+        status, _, headers = send('/demo/')
+        self.assertEqual((status, headers['Location']), (303, '/demo'))
+        self.assertEqual(send('/demo', method='HEAD')[0], 200)
+
+    def test_everything_the_demo_page_loads_is_open(self):
+        page = send('/demo')[1].decode()
+        paths = {'/' + (m.group(1) or m.group(2)) for m in RESOURCE.finditer(page)}
+        paths |= {'/app/samples/empire.demo.json', '/app/samples/demo-empire.js', '/brand/hermes.webp'}
+        for path in sorted(paths):
+            with self.subTest(path=path):
+                self.assertEqual(send(path)[0], 200)
+
+    def test_the_seed_and_the_other_samples_stay_behind_the_login(self):
+        for path in ('/', '/index.html', '/app/empire-data.js', '/app/samples/empire.admin.json',
+                     '/app/samples/empire.member.json', '/app/samples/approvals.json', '/brand/../app/empire-data.js',
+                     '/wallpaper.html', '/brand/', '/fonts/', '/vendor/', '/app/', '/app/samples/'):
+            with self.subTest(path=path):
+                status, _, headers = send(path)
+                self.assertEqual((status, headers.get('Location')), (303, '/login'))
+
+
 class LegalPageTests(unittest.TestCase):
     """Privacy policy, imprint and contact form: open without login, in their language, nothing loaded from other
     hosts."""

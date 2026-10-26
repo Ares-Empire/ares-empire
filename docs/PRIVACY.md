@@ -114,6 +114,19 @@ AV-Vertrag).
 | **Telegram** | Aresync's own alerts go to Patrik's chat until push works (`TG_*` in each Aresync config). |
 | **Logs** | uvicorn access log with IP, without the query string, as Arestemis. |
 
+### Demo pages (`aresium.de/demo`, `www.ares-empire.de/demo`; Patrik, 2026-10-27)
+
+- Public pages without an account that show a made-up sample (Aresium: `app/dashboard.sample.json`, a seeded generated
+  account; the hub: `app/samples/empire.demo.json`, a made-up guest, `tools/empire_samples.py --web`). No real data,
+  nothing entered is sent or stored: Aresium's demo answers its own API requests in the browser and refuses every
+  change; the hub's demo runs its sample mode in memory. The real data and every API stay behind the login.
+- Processing: only the request itself (IP address, time, URL), as for any page; neither server writes an access log
+  (the hub's log lines carry Caddy's address, Aresium logs only errors), Caddy's error entries keep 14 days.
+- The public policy covers them since 2026-10-27 (Patrik: aresium.de and every demo page): its first sentence names
+  "the websites www.ares-empire.de and aresium.de, the demo pages of the Ares apps", section 2 says the demos show
+  made-up data and store nothing. A new demo page fits that sentence as long as it, too, stores nothing; one that
+  would store something gets its own section first.
+
 ### Aresium (`aresium.service`, `aresium.de`, `~/aresium`)
 
 - Patrik's own bank (VR Bank CAMT/CSV) and PayPal transactions: date, amount, balance, description, counterparty

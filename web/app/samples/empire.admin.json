@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-10-27",
+      "project": "empire",
+      "text": "The hub got a public demo at www.ares-empire.de/demo: a made-up guest with Aresium, Arestemis and Arestoteles on the ring and a made-up chronicle, for anyone without an account; Aresium opens its own demo, the others the request form. The real provinces, plans and chronicle stay behind the login, and the privacy policy now names aresium.de and every demo page."
+    },
+    {
+      "at": "2026-10-27",
       "project": "aresium",
       "text": "Aresium got a public demo at aresium.de/demo: the whole website with a made-up account, for anyone and without an account. Nothing reaches the server and nothing is saved; trying to import or change something asks the visitor to log in, and the login page links the demo. Patrik's own aresium.de stays behind the login."
     },

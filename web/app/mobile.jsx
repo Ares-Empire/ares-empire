@@ -257,7 +257,7 @@
         {!expanded && <Timeline title={admin ? "Chronicle" : "What's new"} entries={data.chronicle} projects={data.projects} />}
         <footer className="em-home-footer">
           <window.LegalLinks className="em-legal" />
-          {API.sampleMode && <span>{admin ? "Admin sample" : "Member sample"}</span>}
+          {API.sampleMode && !API.demoMode && <span>{admin ? "Admin sample" : "Member sample"}</span>}
         </footer>
       </main>
       <span className="em-sr" role="status">{notice}</span>

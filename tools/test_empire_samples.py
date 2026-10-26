@@ -94,7 +94,28 @@ class GeneratorTests(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertEqual((samples.WEB_SAMPLES / name).read_text(encoding="utf-8"), samples.dump(self.files[name]),
                                  "run python3 tools/empire_samples.py --web")
-        self.assertEqual(sorted(path.name for path in samples.WEB_SAMPLES.glob("*.json")), sorted(samples.WEB_PREVIEWS))
+        # The public demo's two files (www.ares-empire.de/demo) are the generator's output too.
+        self.assertEqual((samples.WEB_SAMPLES / samples.DEMO_FILE).read_text(encoding="utf-8"),
+                         samples.dump(samples.build_demo()), "run python3 tools/empire_samples.py --web")
+        self.assertEqual((samples.WEB_SAMPLES / samples.DEMO_WORDS_FILE).read_text(encoding="utf-8"), samples.demo_words(),
+                         "run python3 tools/empire_samples.py --web")
+        self.assertEqual(sorted(path.name for path in samples.WEB_SAMPLES.glob("*.json")),
+                         sorted([*samples.WEB_PREVIEWS, samples.DEMO_FILE]))
+
+    def test_the_demo_holds_only_the_demo(self):
+        # A guest with the three apps others can have, the demo's own texts and chronicle, nothing of the real seed.
+        demo, seed = samples.build_demo(), samples.read_seed()
+        self.assertEqual(demo["me"]["admin"], False)
+        self.assertEqual([p["slug"] for p in demo["projects"]], ["aresium", "arestemis", "arestoteles"])
+        self.assertEqual(demo["chronicle"], samples.DEMO_CHRONICLE)
+        self.assertEqual((demo["ideas"], demo["addable"], demo["pending"]), ([], [], 0))
+        real = {c["text"] for c in seed["chronicle"]} | {p["blurb"] for p in seed["projects"]}
+        shown = {c["text"] for c in demo["chronicle"]} | {p["blurb"] for p in demo["projects"]}
+        self.assertEqual(real & shown, set())
+        self.assertEqual(demo["projects"][0]["url"], "https://aresium.de/demo")
+        words = samples.demo_words()
+        self.assertIn('"CONQUERED"', words)
+        self.assertNotIn("chronicle", words.split("window.EMPIRE", 1)[1])
 
     def test_outdir_or_web(self):
         for argv in ([], ["--web", "somewhere"]):

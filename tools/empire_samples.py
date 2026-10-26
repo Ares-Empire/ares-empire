@@ -18,7 +18,8 @@ seed changes.
   error.<code>.json        one error answer per code clients act on
 
 `--web` writes the hub website's own previews instead (WEB_PREVIEWS into web/app/samples, which the localhost preview
-loads; webauth/test_server.py checks they are current).
+loads; tools/test_empire_samples.py checks they are current), and the public demo's two files (DEMO_FILE and
+DEMO_WORDS_FILE, see "The public demo" below).
 
 The check_* functions say whether an answer has the contract's shape (webauth/test_server.py uses them too).
 """
@@ -166,13 +167,24 @@ class _Reader:
         return result
 
 
+def read_seed_const(name: str, path: Path = SEED) -> dict:
+    """One `const NAME = {...}` object of the seed: EMPIRE (words, projects, ideas, chronicle) or STATUS (the status
+    words, which EMPIRE only names)."""
+    source = path.read_text(encoding="utf-8")
+    match = re.search(r"\bconst\s+" + re.escape(name) + r"\s*=\s*(?=\{)", source)
+    if not match:
+        raise ValueError(f"{path.name}: no `const {name} = {{` found")
+    return _Reader(source, match.end()).value()
+
+
+def read_seed_object(path: Path = SEED) -> dict:
+    """The seed's whole EMPIRE object."""
+    return read_seed_const("EMPIRE", path)
+
+
 def read_seed(path: Path = SEED) -> dict:
     """The seed's {projects, ideas, chronicle}, as data/state.json holds them."""
-    source = path.read_text(encoding="utf-8")
-    match = re.search(r"\bconst\s+EMPIRE\s*=\s*(?=\{)", source)
-    if not match:
-        raise ValueError(f"{path.name}: no `const EMPIRE = {{` found")
-    empire = _Reader(source, match.end()).value()
+    empire = read_seed_object(path)
     return {key: empire.get(key) for key in ("projects", "ideas", "chronicle")}
 
 
@@ -511,6 +523,90 @@ def build(seed: dict | None = None) -> dict[str, object]:
     return samples
 
 
+# ── The public demo (www.ares-empire.de/demo) ─────────────────────────────────
+# The hub for anyone, without an account (webauth/server.py serves it; web/app/empire-api.js loads these two files on
+# /demo). A made-up guest has the three apps other people can have (Aresium, Arestemis, Arestoteles; Aresus and Aresync
+# stay Patrik's own and are left out), with texts written for strangers and a made-up chronicle: when each app was
+# started and finished (Patrik, 2026-10-27). Nothing of the real seed's content goes into it: only its words (name,
+# tagline, STATUS) and the three provinces' logos.
+DEMO_FILE = "empire.demo.json"
+DEMO_WORDS_FILE = "demo-empire.js"          # window.EMPIRE on the demo page, in place of app/empire-data.js
+DEMO_TOKEN = "sample-demo-token"
+DEMO_REQUEST = "https://www.ares-empire.de/contact"   # where a guest asks for an app (the contact form for now)
+ACCOUNTS[DEMO_TOKEN] = {"id": "sampledemo00001", "name": "Guest", "admin": False, "approved": True, "verified": True,
+                        "services": ["empire", "aresium", "arestemis", "arestoteles"], "requested": []}
+DEMO_PROVINCES = {   # slug → what the demo says about it; the ring keeps this order
+    "aresium": {
+        "url": "https://aresium.de/demo", "domain": "aresium.de", "blurb": "Personal finance, understood.",
+        "about": "Aresium reads bank and PayPal exports, sorts every transaction into categories and shows where the "
+                 "money goes, month by month.",
+        "features": ["Automatic categories", "Clear charts by month and category", "Image processing for receipts"]},
+    "arestemis": {
+        "url": DEMO_REQUEST, "domain": "", "blurb": "Flat finding on autopilot.",
+        "about": "Arestemis keeps one search for the flat you want, has an AI check every new listing against it and "
+                 "tells you the moment a match goes live.",
+        "features": ["One search: places, size, rent, move-in date", "An AI check of every new listing",
+                     "Instant alerts for matching listings"]},
+    "arestoteles": {
+        "url": DEMO_REQUEST, "domain": "", "blurb": "A personal wiki, on every device.",
+        "about": "Arestoteles keeps detailed notes and fact-based positions, each with the evidence behind it, "
+                 "searchable by meaning on every device.",
+        "features": ["Positions with the evidence behind them", "RAG search across all notes",
+                     "Edits synced across devices"]},
+}
+DEMO_CHRONICLE = [   # newest first, as the hub shows it
+    {"at": "2026-10-24", "project": "aresium", "text": "Aresium's iPhone app is finished: categories, charts and "
+                                                       "receipts, right on the phone."},
+    {"at": "2026-10-21", "project": "arestoteles", "text": "Arestoteles is finished: positions, evidence and RAG "
+                                                           "search on every device."},
+    {"at": "2026-10-18", "project": "arestemis", "text": "Arestemis is finished: an instant alert for every matching "
+                                                         "listing."},
+    {"at": "2026-09-30", "project": "arestoteles", "text": "Arestoteles started: a personal wiki for positions and the "
+                                                           "evidence behind them."},
+    {"at": "2026-09-12", "project": "arestemis", "text": "Arestemis started: a flat finder that checks every new "
+                                                         "listing against one search."},
+    {"at": "2026-08-28", "project": "aresium", "text": "Aresium joined the empire: personal finance, from bank exports "
+                                                       "to clear charts."},
+]
+
+
+def demo_seed() -> dict:
+    """The demo's state.json: the three provinces with the demo's texts, no expansions, the demo's chronicle."""
+    seed = {p["slug"]: p for p in read_seed()["projects"]}
+    projects = []
+    for slug, says in DEMO_PROVINCES.items():
+        projects.append({**seed[slug], "url": says["url"], "domain": says["domain"], "status": "CONQUERED",
+                         "blurb": says["blurb"], "detail": {"about": says["about"], "features": says["features"],
+                                                            "setup": "", "wip": [], "ideas": [], "changelog": []}})
+    return {"projects": projects, "ideas": [], "chronicle": copy.deepcopy(DEMO_CHRONICLE)}
+
+
+def _demo_apps():
+    """The committed apps.json, with the guest's way to get each app (the request form)."""
+    apps = _load_committed_apps()
+    return {slug: {**apps.get(slug, {"scheme": None}), "install": DEMO_REQUEST} for slug in DEMO_PROVINCES}
+
+
+def build_demo() -> object:
+    """The hub's answer to the demo guest, checked against the contract."""
+    with fake_world(demo_seed()):
+        with patch.object(server, "load_catalog", lambda: {slug: {"users": "open"} for slug in DEMO_PROVINCES}), \
+                patch.object(server, "load_apps", _demo_apps):
+            data = _expect("demo", answer("GET", "/api/empire", DEMO_TOKEN), 200, check_empire)
+    if [p["slug"] for p in data["projects"]] != list(DEMO_PROVINCES) or data["addable"] or data["ideas"]:
+        raise ValueError("demo: the guest must have exactly the demo's apps, nothing to ask for and no expansions")
+    return data
+
+
+def demo_words() -> str:
+    """The demo page's window.EMPIRE: the seed's words only (name, tagline, STATUS), no provinces or chronicle."""
+    empire = read_seed_object()
+    words = {"name": empire["name"], "tagline": empire["tagline"], "STATUS": read_seed_const("STATUS")}
+    return ("// Made by tools/empire_samples.py --web: the hub's words for the public demo (/demo), in place of\n"
+            "// app/empire-data.js, which holds the real provinces and chronicle and stays behind the login.\n"
+            "window.EMPIRE = " + json.dumps(words, indent=2, ensure_ascii=False) + ";\n")
+
+
 def dump(data: object) -> str:
     """A fixture file's text."""
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
@@ -526,11 +622,14 @@ def main(argv: list[str] | None = None) -> int:
     samples = build()
     if args.web:
         samples = {name: samples[name] for name in WEB_PREVIEWS}
+        samples[DEMO_FILE] = build_demo()
     outdir = WEB_SAMPLES if args.web else args.outdir
     outdir.mkdir(parents=True, exist_ok=True)
     for name, data in samples.items():
         (outdir / name).write_text(dump(data), encoding="utf-8")
-    print(f"wrote {len(samples)} fixtures to {outdir}")
+    if args.web:
+        (outdir / DEMO_WORDS_FILE).write_text(demo_words(), encoding="utf-8")
+    print(f"wrote {len(samples)} fixtures to {outdir}" + (f" and {DEMO_WORDS_FILE}" if args.web else ""))
     return 0
 
 

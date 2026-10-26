@@ -98,6 +98,43 @@ LOGIN_FONTS = frozenset({"/fonts/fonts.css", "/fonts/SpaceGrotesk-Variable.ttf",
 OPEN_PATHS = frozenset({"/login", "/login/email", "/signup", "/forgot", "/logout", "/favicon.ico",
                         "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"}) | legal.ASSET_PATHS | LOGIN_FONTS
 
+# The public demo (www.ares-empire.de/demo, Patrik 2026-10-27): the hub for anyone, without an account. It is
+# index.html with the demo's words (app/samples/demo-empire.js) in place of the real seed, and app/empire-api.js loads
+# the made-up guest (app/samples/empire.demo.json); tools/empire_samples.py --web writes both. The page's own files are
+# open for it, read from index.html so a new script is covered; the real seed (app/empire-data.js: the provinces,
+# expansions and chronicle) and the other samples stay behind the login.
+DEMO_SEED_SCRIPT = 'src="app/empire-data.js"'
+DEMO_WORDS_SCRIPT = 'src="app/samples/demo-empire.js"'
+DEMO_SAMPLES = frozenset({"/app/samples/empire.demo.json", "/app/samples/demo-empire.js"})
+DEMO_DIRS = ("/vendor/", "/fonts/", "/brand/")
+
+
+def _index_html() -> str:
+    with open(os.path.join(WEB_ROOT, "index.html"), encoding="utf-8") as f:
+        return f.read()
+
+
+def demo_page() -> bytes:
+    page = _index_html()
+    if DEMO_SEED_SCRIPT not in page:
+        raise RuntimeError("index.html no longer loads app/empire-data.js: the demo would load no words")
+    return page.replace(DEMO_SEED_SCRIPT, DEMO_WORDS_SCRIPT).encode("utf-8")
+
+
+def is_demo_file(path: str) -> bool:
+    """A file the demo page loads: index.html's own scripts and styles except the real seed, the demo's two samples,
+    and files (never a folder, so no listing) in the shared folders of pictures, fonts and libraries."""
+    if path in DEMO_SAMPLES:
+        return True
+    if path.startswith(DEMO_DIRS):
+        return ".." not in path and not path.endswith("/") and os.path.isfile(os.path.join(WEB_ROOT, path.lstrip("/")))
+    try:
+        page = _index_html()
+    except OSError:
+        return False
+    page_files = {"/" + ref for ref in re.findall(r'(?:src|href)="([^":?#]+)"', page)}
+    return path in page_files - {"/app/empire-data.js"}
+
 
 # ── Talking to the accounts server ───────────────────────────────────────────
 
@@ -873,6 +910,12 @@ class Handler(SimpleHTTPRequestHandler):
             return self._redirect(province["url"] + "/")
         if is_brand_image(path) and self.headers.get("Authorization") and self._bearer_ok():
             return super().do_GET()
+        if path == "/demo/":
+            return self._redirect("/demo")  # the page's paths are relative
+        if path == "/demo":
+            return self._send_html(demo_page())
+        if is_demo_file(path):
+            return super().do_GET()
         if path not in OPEN_PATHS and not self._web_gate():
             return
         return super().do_GET()
@@ -883,6 +926,10 @@ class Handler(SimpleHTTPRequestHandler):
             return self._api(path)
         if path in legal.PAGES:
             return self._send_legal(path)
+        if path == "/demo":
+            return self._send_html(demo_page())
+        if is_demo_file(path):
+            return super().do_HEAD()
         if path not in OPEN_PATHS and not self._web_gate():
             return
         return super().do_HEAD()
