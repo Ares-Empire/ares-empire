@@ -251,7 +251,15 @@ Answered by Patrik on 2026-10-26:
   checks them later only if a larger test set is needed. This set suits a new user well: without Patrik's rules,
   auto-sort would see payments like these.
 
-Still open: Patrik's OK on the default list and the two built-in categories (part 4).
+Patrik approved the default list (2026-10-26).
+
+**Reopened 2026-10-26 — D2, the auto-sort route,** after the legal check (`PRIVACY.md` → "Opening Aresium: legal
+check", on branch `codex/03-aresium-privacy` until decided) and M3: the server route needs more than the AVV and the
+policy (Groq's contract and a transfer assessment for the USA, explicit consent for sensitive booking texts, people
+named in booking texts, a record of processing, and possibly a DPIA, which in Germany would also require a data
+protection officer, § 38 BDSG), while M3 shows it saves about 4 fixes a month. Claude's recommendation: version 1
+without the server route (shop rules, learning, the PayPal rule); Apple's on-device model as the optional switch later,
+where nothing leaves the phone. Waiting for Patrik.
 
 ## Measurements before choosing
 
@@ -266,6 +274,22 @@ back. The answer key is D6 (1,055 payments).
 - **M3 — Auto-sort:** correct share, time and cost per payment for the server route (Groq), both for a new user
   (everything the starter rules leave open) and after learning (what M2 leaves open); which categories get mixed up;
   with the default list and with a short custom list.
+- **Results M1–M3 (2026-10-26, on the server, 1,055 payments, 2025-09 to 2026-10; `aresium/bench`, results file kept
+  off the repos):**
+  - **M1:** the shipped shop rules sort 63.7% of payments on day one, 95.2% of them right (both scenarios).
+  - **M2:** with shop rules plus learning from corrections, a new user fixes 12 payments in the first month, 14 in the
+    first 100, 158 in all (15% of payments); from the second month on 86–99% of each month's payments get a category
+    by themselves, 77–97% right. Learning alone, without the shop rules: 490 fixes. The shop rules cut the work by
+    two thirds.
+  - **M3 (Groq, `openai/gpt-oss-120b`; `llama-3.3-70b-versatile` is no longer available to the account):** on what
+    the shop rules leave open for a new user, 31% right with Patrik's own list, 38% with the default list. In the
+    monthly replay, Groq saves 60–63 fixes over 14 months (263 → 203), about 4 a month. About 1 s per payment;
+    about $0.01 for all.
+  - **Main error source in all layers:** Patrik imports both his bank and his PayPal export, so the bank's PayPal lines
+    are transfers for him (`isPaypalBankFunding` on the server), while their text names the shop ("Ihr Einkauf bei
+    Vinted"); learning and the AI put them under the shop's category (Transfer → Clothes 68 times in M3). The engine
+    needs the server's PayPal rule (a person who imports both: bank-side PayPal lines are own transfers). Measure
+    again after it.
 - **M4 — Receipts (version 2):** 20–30 real receipts from different shops (REWE, Aldi, Lidl, Edeka, dm, Rossmann, a bakery, a
   restaurant), photographed by Patrik: items read correctly, totals that check out, items sorted correctly, seconds per
   receipt; whether the QR code is there and readable.
