@@ -23,8 +23,9 @@ rebuilt is backed up every night to the MacBook ([docs/BACKUP.md](docs/BACKUP.md
 made-up data: `empire-ios/showcase/`. Nothing is on a phone yet: Apple's developer enrollment has been pending since
 2026-10-23.
 
-**Next up (2026-10-26):** the plan for Aresium for other people (step 3), written before any code: imports, categories,
-sorting, each layer measured on Patrik's own transactions.
+**Next up (2026-10-26):** the plan for Aresium for other people (step 3) is drafted:
+[docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) (phone mode, imports, categories, three sorting layers,
+receipts, measurements M1–M5). It waits for Patrik's decisions D1–D8; then the measurements, then code.
 
 **The big steps, in this order** (Patrik, 2026-10-25):
 
@@ -41,7 +42,8 @@ sorting, each layer measured on Patrik's own transactions.
    Needs a plan and tests first (Patrik, 2026-10-25): imports from other banks; suggested categories that people
    change and extend; sorting learned from their own corrections; auto-sort for the rest only if they switch it on
    (Apple's on-device model or the server without storing anything, to be decided); each layer measured on Patrik's
-   own transactions before choosing.
+   own transactions before choosing. Also receipts from a photo (Patrik, 2026-10-26). Plan:
+   [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md).
 4. **Aresync file sharing from the phone:** Patrik's idea (2026-10-25), on hold: he will say what it should do when
    it comes up; not needed for the current work.
 5. **New apps**, each built on the standard from its first screen.
