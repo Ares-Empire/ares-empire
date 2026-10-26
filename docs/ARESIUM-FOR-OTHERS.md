@@ -1,7 +1,8 @@
 # Aresium for other people — plan
 
-**Draft 2026-10-26** (Claude, for Patrik). Nothing here is built yet. Decisions marked **D1–D8** wait for Patrik;
-measurements **M1–M5** come before the choices that depend on them. Server: `~/aresium`; app: `empire-ios/Aresium`.
+**Draft 2026-10-26** (Claude, for Patrik); Patrik's answers the same evening are in "Decisions". Nothing here is built
+yet. Measurements **M1–M5** come before the choices that depend on them. **Version 1 is the basics** (phone mode,
+imports, categories, sorting); receipts are version 2 (Patrik, 2026-10-26). Server: `~/aresium`; app: `empire-ios/Aresium`.
 
 ## What it is
 
@@ -17,7 +18,7 @@ approves can use the app for their own money, with their data on their own iPhon
   sorting learned from their own corrections; auto-sort for the rest only if they switch it on (Apple's on-device
   model, or a server that stores nothing); each layer measured on Patrik's own transactions before choosing.
 - **Receipts** (2026-10-26, new): take a photo of a receipt in the app; it adds it to the right payment and sorts the
-  items into categories. Keeping the photo with the payment: probably too bulky (Patrik's first take, D4).
+  items into categories. **Version 2**, after the basics; no photos kept (Patrik, 2026-10-26).
 - Import stays in the app (2026-10-23). The privacy policy gets Aresium's section before anyone else gets it
   ([PRIVACY.md](PRIVACY.md) → the rule).
 
@@ -72,12 +73,17 @@ parsers, duplicates, rules, dashboard, recurring payments). **D1** decides how t
 - **Standard formats first:** most German banks offer CAMT (XML) and many MT940; one reader each covers many banks.
   The CAMT reader exists (written for VR Bank; to test with other banks' files). Which bank offers what is checked per
   bank, not assumed.
-- **Bank CSVs:** one CSV reader with a small profile per bank (column names, separator, date and number format, text
-  encoding), recognised by the header line. Many German bank CSVs are not UTF-8 (Windows-1252 / ISO-8859-1); the app
-  reads only UTF-8 today, which would break umlauts. An unknown CSV opens a short "which column is what" screen; the
-  answer is saved as a profile on the phone.
-- **Order:** the banks of the first people (**D5**), then the common ones (Sparkasse, Volksbank, ING, DKB, comdirect,
-  N26, Revolut, Trade Republic), PayPal (exists), credit cards later.
+- **Bank CSVs differ in layout:** column names and order, `;` or `,`, decimal commas, date formats, one amount column
+  or separate debit/credit columns, account details in lines above the table, and the text encoding (many German bank
+  CSVs are Windows-1252 / ISO-8859-1, not UTF-8; the app reads only UTF-8 today, which breaks umlauts).
+- **Flexible reading, with AI only for the layout** (Patrik, 2026-10-26: no list of people or banks yet, so be
+  flexible): the app finds the table and the encoding itself; known layouts are recognised by their header line; for
+  an unknown one, an AI maps the **column names** to date, amount, text, counterparty and so on (the header line holds
+  no one's payments, so nothing personal leaves the phone). The app then checks the mapping against the values (dates
+  parse as dates, amounts as amounts), shows a preview of the first rows on the phone, the person confirms once, and
+  the layout is saved on the phone for the next import. Where a bank offers CAMT, the app suggests it.
+- **Order:** CAMT and MT940, then the common CSVs (Sparkasse, Volksbank, ING, DKB, comdirect, N26, Revolut, Trade
+  Republic) as known layouts; PayPal exists; credit cards later.
 - **Test files:** made-up files with each bank's real header and formats; never anyone's real export in a repo.
   Sources for the formats: the banks' export pages, and open-source importers that already describe them (for example
   the Firefly III data importer's bank configurations).
@@ -115,17 +121,18 @@ Every category shows where it came from (starter rule, learned, auto, you), as t
    merchant (the name cleaned of card numbers, cities and dates) and asks once: "Also the 12 other payments to
    REWE?". Future payments from that merchant follow. Own rules ("text contains …") as today. This layer should sort
    most payments, because a few merchants make up most of them (M2 checks this).
-3. **Auto-sort, only if switched on**, for what 1 and 2 leave open (**D2**):
-   - **Apple's on-device model:** nothing leaves the phone. Needs an iPhone 15 Pro or newer with Apple Intelligence on;
-     German is supported (checked on the MacBook's model list, 2026-10-26).
-   - **Apple's Private Cloud Compute model** (new in iOS 27): a larger model on Apple's servers; Apple stores no
-     prompts; free for apps under 2 million first downloads; needs an entitlement; each user has a daily limit. Data
-     leaves the phone, but to Apple, not to us.
-   - **Our server** calling an AI provider and storing nothing (like Groq today): data passes through our server and a
-     third party, which means a privacy-policy section, a processing agreement and cost. Only if the first two fall
-     short.
+3. **Auto-sort, one switch in Aresium's settings, off by default** (Patrik, 2026-10-26), for what 1 and 2 leave open:
+   - **Our server** calling an AI model and storing nothing: works on every iPhone (Patrik, 2026-10-26: not everyone
+     has Apple Intelligence or a phone that supports it). The payments it sorts pass through our server and the AI
+     provider, so the switch says so, and the privacy policy, a processing agreement with the provider and its location
+     (Groq is in the US) are settled before it opens. Only payments that layers 1 and 2 left open are sent, and only
+     their date, amount, text and counterparty.
+   - **Apple's on-device model** (measured too, M3): nothing leaves the phone, but it needs an iPhone 15 Pro or newer
+     with Apple Intelligence switched on. If it sorts about as well, the app uses it where it is available and our
+     server elsewhere. German is supported (checked on the MacBook's model list, 2026-10-26). (Apple's Private Cloud
+     Compute model, new in iOS 27, is a further option to check later; it most likely needs Apple Intelligence too.)
 
-### 6. Receipts (new)
+### 6. Receipts (version 2)
 
 **What it does:** take a photo of a receipt → the app reads the items and the total → finds the payment (a card
 payment usually reaches the account one to three days later) → splits it into categories (REWE €47.83 → Groceries
@@ -190,34 +197,39 @@ My additions, each with what I would do. Several are in the parts above already.
 | 8 | **Category names in both languages**; today's mix | Now (part 4) |
 | 9 | **Face ID lock** for the app | Later, optional; the app-switcher cover (Open 12) comes first |
 | 10 | **Budgets, savings goals, shared bills with flatmates** | Later (already on the Aresium roadmap); splits make shared bills easier |
-| 11 | **An answer key for measuring:** today's categories are mostly guesses by rules and Groq; only 25 were corrected by hand | Patrik checks categories once per merchant (a few hundred merchants instead of 1,246 lines), **D7** |
+| 11 | **An answer key for measuring:** 191 payments were sorted by the Groq AI or not at all, never checked | Patrik checks those once per merchant, about 15 minutes, **D7** |
 | 12 | **Widgets in phone mode** | They read the phone's snapshot as today; small change |
 | 13 | **The website:** others have nothing on aresium.de | Say so on the site's login: "Aresium for others is the iPhone app" |
 | 14 | **Leaving or deleting** removes the phone's data | After offering an export (part 2) |
 
-## Decisions for Patrik
+## Decisions
 
-- **D1 — How the phone gets the logic.** Recommended: **one engine**. Today's TypeScript parsers, rules and dashboard
-  become pure functions (no database, no Node-only parts); the server runs them in Node as now, and the app runs the
-  same file in JavaScriptCore, Apple's built-in JavaScript engine (allowed in App Store apps when the code ships inside
-  the app). A fix or a new bank lands once, and both places give the same numbers. The alternatives: rewrite it in Swift
-  for the phone and keep two copies that must stay identical (every change twice), or move Patrik to phone mode as well
-  (one Swift engine, but it changes his website imports, the Groq pass and the Telegram bot). First step either way: a
-  short test run (M5).
-- **D2 — Auto-sort route.** Recommended: measure Apple's on-device model and Apple's Private Cloud Compute (M3); our own
-  server only if both fall short.
-- **D3 — Is auto-sort off by default?** Already decided: yes, people switch it on. Open: one switch for everything, or
-  "ask me for each import"? Recommended: one switch in Aresium's settings, off.
-- **D4 — Receipt photos.** Recommended: not kept by default; "Keep photo" per receipt.
-- **D5 — Who are the first people, and which banks do they use?** That decides which bank formats come first.
-- **D6 — iOS 27 for receipts?** Recommended: receipts need iOS 27 (better reading through the image route); the rest of
-  phone mode stays on iOS 26.
-- **D7 — Answer key session:** about 30–45 minutes going through merchants and their categories (I prepare the list,
-  on the Mac, not committed anywhere).
-- **D8 — Apple Intelligence on the MacBook** (System Settings → Apple Intelligence & Siri; downloads the model, a few
-  GB) so I can measure the on-device model on the Mac now. It is switched off today
-  (`appleIntelligenceNotEnabled`, 2026-10-26). The other way is to measure on the iPhone once TestFlight runs. The
-  image input needs macOS/iOS 27; the Mac has macOS 26.6.
+Answered by Patrik on 2026-10-26:
+
+- **D1 — How the phone gets the logic:** Patrik left it to Claude ("what makes the most sense overall"). **One
+  engine:** today's TypeScript parsers, rules and dashboard become pure functions (no database, no Node-only parts);
+  the server runs them in Node as now, and the app runs the same file in JavaScriptCore, Apple's built-in JavaScript
+  engine (allowed in App Store apps when the code ships inside the app). Why: a fix or a new bank lands once, both
+  places give the same numbers, and Patrik's server, website and scripts keep working. Rejected: a second copy in Swift
+  (two copies that must stay identical, every change twice); moving Patrik to phone mode as well (one engine, but it
+  changes his website imports, the Groq pass and the Telegram bot). **Condition:** M5 shows it runs fast enough on the
+  phone (apps get JavaScriptCore without its fastest mode); if not, a Swift copy with shared test files.
+- **D2 — Auto-sort route:** measure both; our server works for everyone, Apple's on-device model only where available
+  (part 5, layer 3).
+- **D3 — Auto-sort switch:** one switch, off by default.
+- **D4 — Receipt photos:** not kept.
+- **D5 — First people and banks:** not known yet → flexible reading with AI for unknown layouts (part 3).
+- **D6 — Receipts:** version 2, after the basics.
+
+Still open:
+
+- **D7 — The answer key for measuring.** The 1,246 payments' categories were set by Patrik's own keyword rules
+  (1,003), the Groq AI pass (123), by hand (52), or not at all (68) (counted 2026-10-26). The rules are Patrik's
+  choices, so they count as right; the 191 from the AI or without a category were never checked. Patrik checks those
+  once, grouped by merchant, plus a sample of rule-sorted ones to confirm the rules: about 15 minutes on a page Claude
+  prepares (on the Mac only; the corrections also fix Patrik's own dashboard).
+- **D8 — Apple Intelligence on the MacBook**, to measure Apple's model (Patrik agreed to measuring it): switch it on in
+  System Settings → Apple Intelligence & Siri (downloads the model, a few GB). Off on 2026-10-26.
 
 ## Measurements before choosing
 
@@ -228,9 +240,9 @@ measurements and never committed. The answer key comes from D7.
 - **M2 — Learning from corrections:** replay Patrik's payments in date order as if he were a new user who fixes every
   wrong category; count the fixes needed (first month, first 100 payments, in total), with and without starter rules.
   This shows how much work a new user has.
-- **M3 — Auto-sort:** on what M1 and M2 leave open: correct share and time per payment, on-device model vs Private
-  Cloud Compute; which categories get mixed up.
-- **M4 — Receipts:** 20–30 real receipts from different shops (REWE, Aldi, Lidl, Edeka, dm, Rossmann, a bakery, a
+- **M3 — Auto-sort:** on what M1 and M2 leave open: correct share and time per payment, our server's model vs
+  Apple's on-device model; which categories get mixed up.
+- **M4 — Receipts (version 2):** 20–30 real receipts from different shops (REWE, Aldi, Lidl, Edeka, dm, Rossmann, a bakery, a
   restaurant), photographed by Patrik: items read correctly, totals that check out, items sorted correctly, seconds per
   receipt; whether the QR code is there and readable.
 - **M5 — Engine test run (D1):** today's parsers and dashboard bundled into one JavaScript file and run in
@@ -243,20 +255,22 @@ The results go into this file before the choices that depend on them.
 
 Rough sizes in focused work days (Claude with Codex), not counting Patrik's time.
 
-1. **Decisions D1–D8** (Patrik).
+1. ~~**Decisions D1–D6**~~ (Patrik, 2026-10-26); D7 and D8 open.
 2. **Measuring bench, answer key, M1–M2** (Codex: export and replay scripts; Claude checks). 1–2 days.
 3. **M5 engine test run**, then pull the engine out of the server into pure functions, with the server switching to it
    only after it gives identical numbers on the real data. 3–5 days.
 4. **Phone mode:** storage, import of VR Bank / PayPal / CAMT on the phone, dashboard from the phone's engine, export,
    logout without deleting. Checked by importing Patrik's own files on the test account: the same numbers as
    aresium.de. 5–8 days.
-5. **Categories you can edit, learned sorting, starter rules, more banks** (D5 first). 5–8 days.
+5. **Categories you can edit, learned sorting, starter rules, flexible bank reading** (part 3). 5–8 days.
 6. **Auto-sort** after M3. 2–3 days.
-7. **Receipts:** splits (server and phone), scanner, reading, checking, matching; M4 on real receipts. 6–10 days.
-8. **Privacy policy, App Store information, external TestFlight, hub open.** 1–2 days, and Apple's approval of the
-   developer account (pending since 2026-10-23).
+7. **Privacy policy (including the auto-sort route), App Store information, external TestFlight, hub open.** 1–2
+   days, and Apple's approval of the developer account (pending since 2026-10-23).
 
-In total roughly five to seven weeks of steady work. Steps 2–3 can start as soon as D1, D7 and D8 are answered.
+Version 1 in total: roughly four to five weeks of steady work. M5 (step 3) starts now; M1–M3 after D7 and D8.
+
+**Version 2: receipts** (part 6): splits (server and phone), scanner, reading, checking, matching; M4 on real
+receipts. About 6–10 days.
 
 ## Sources
 
