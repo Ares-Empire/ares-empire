@@ -1,6 +1,6 @@
 # 03: Aresium for other people: privacy texts, the netcup AVV and Groq
 
-Status: running (2026-10-26)
+Status: kept on its branch, not merged (2026-10-26: version 1 has no server sorting; the legal check stays for reference)
 Branch: `codex/03-aresium-privacy` · Worktree: `~/ares-empire-03-aresium-privacy` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
