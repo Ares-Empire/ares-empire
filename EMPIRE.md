@@ -25,7 +25,9 @@ made-up data: `empire-ios/showcase/`. Nothing is on a phone yet: Apple's develop
 
 **Next up (2026-10-26):** the plan for Aresium for other people (step 3) is drafted:
 [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) (phone mode, imports, categories, three sorting layers,
-receipts, measurements M1–M5). It waits for Patrik's decisions D1–D8; then the measurements, then code.
+receipts as version 2). Agreed with Patrik the same evening: one engine shared by server and app (confirmed by
+measurement M5), auto-sort only through our server, categories picked from a default list. Next: measurements M1–M3,
+then phone mode.
 
 **The big steps, in this order** (Patrik, 2026-10-25):
 
