@@ -1,6 +1,6 @@
 # Aresium for other people — plan
 
-**Draft 2026-10-26** (Claude, for Patrik); Patrik's answers the same evening are in "Decisions". Nothing here is built
+**Draft 2026-10-26** (Claude, for Patrik); Patrik's answers the same evening (two rounds) are in "Decisions". Nothing here is built
 yet. Measurements **M1–M5** come before the choices that depend on them. **Version 1 is the basics** (phone mode,
 imports, categories, sorting); receipts are version 2 (Patrik, 2026-10-26). Server: `~/aresium`; app: `empire-ios/Aresium`.
 
@@ -16,7 +16,7 @@ approves can use the app for their own money, with their data on their own iPhon
   data stays on the server for aresium.de (2026-10-25; [PRIVACY.md](PRIVACY.md) → Facts, `empire-ios/CLAUDE.md` → Open 5).
 - **A plan and tests first** (2026-10-25): imports from other banks; suggested categories people change and extend;
   sorting learned from their own corrections; auto-sort for the rest only if they switch it on (Apple's on-device
-  model, or a server that stores nothing); each layer measured on Patrik's own transactions before choosing.
+  model, or a server that stores nothing); each layer measured on Patrik's own transactions before choosing. Changed 2026-10-26: our server only, Groq, nothing stored (D2).
 - **Receipts** (2026-10-26, new): take a photo of a receipt in the app; it adds it to the right payment and sorts the
   items into categories. **Version 2**, after the basics; no photos kept (Patrik, 2026-10-26).
 - Import stays in the app (2026-10-23). The privacy policy gets Aresium's section before anyone else gets it
@@ -100,37 +100,64 @@ parsers, duplicates, rules, dashboard, recurring payments). **D1** decides how t
 
 ### 4. Categories
 
-- **A starter set**, each with a name in English and German (shown in the app's language), an icon, a colour and a kind
-  (expense, income, transfer). Based on today's 22, cleaned up: one language per name, and some that students need
-  (transport and Deutschlandticket, insurance, phone and internet, gifts, cash withdrawals). The list is settled with
-  Patrik before building.
-- **People change it:** rename, add, delete (its payments move to another category), merge; pick icon and colour.
-  Icons and colours are stored per category, not fixed by name in code.
-- **Splits** (new): one payment divided into parts with their own category and amount. Receipts need it (part 6);
-  shared bills use it too. The server gets the same, so Patrik's receipts work in server mode.
-- Flat list, as today (no subcategories).
+Decided by Patrik (2026-10-26): **a solid list to choose from, nothing preselected.** On first start (and later in
+Aresium's settings) a clear screen lists the default categories in groups; people tick the ones they want and type
+names to add their own. Their list (defaults ticked plus their own) is what sorting uses, and what the app sends with
+an auto-sort request.
+
+- **The default list** (draft for Patrik's OK; each with an English and a German name, shown in the app's language, an
+  icon and a colour; the kind decides how it counts):
+
+  | Group | Categories (English · German) |
+  |---|---|
+  | Everyday | Groceries · Lebensmittel; Drugstore · Drogerie; Eating out · Essen gehen; Coffee & snacks · Kaffee & Snacks |
+  | Home | Rent · Miete; Utilities · Nebenkosten; Internet & phone · Internet & Handy; Household · Haushalt; Pets · Haustiere |
+  | Getting around | Bus & train · Bus & Bahn; Car & fuel · Auto & Tanken; Taxi & sharing · Taxi & Sharing; Travel · Reisen |
+  | Health & care | Health · Gesundheit; Sports & fitness · Sport & Fitness; Personal care · Körperpflege |
+  | Free time | Going out · Ausgehen; Entertainment · Unterhaltung; Hobbies · Hobbys; Subscriptions · Abos |
+  | Shopping | Clothes · Kleidung; Electronics · Elektronik; Shopping · Shopping; Gifts · Geschenke |
+  | Study & work | Education · Bildung; Work · Arbeit |
+  | Money | Insurance · Versicherungen; Taxes · Steuern; Fees · Gebühren; Memberships · Mitgliedschaften; Donations · Spenden; Cash · Bargeld; Friends · Freunde; Savings & investing · Sparen & Anlegen (not counted as spending) |
+  | Income | Salary & side jobs · Gehalt & Nebenjob; BAföG & scholarships · BAföG & Stipendium; Parents & family · Eltern & Familie; Kindergeld · Kindergeld; Selling things · Verkäufe; Interest & dividends · Zinsen & Dividenden; Other income · Sonstige Einnahmen |
+  | Other | Other · Sonstiges |
+
+- **Two built in, not on the list** (Claude's addition, for Patrik's OK): **Own transfers** (money between one's own
+  accounts, never counted, so nothing is counted twice) and **Not sorted** (what nothing could sort yet, shown as a
+  to-do). Money back under a spending category counts as a refund, as today.
+- **Default categories follow the app's language** (stored by id); one's own keep the name as typed. Own categories
+  get an icon and colour picked automatically, changeable later.
+- **People change it later:** tick more, untick (its payments move to another category or to Not sorted), rename,
+  merge, pick icon and colour. Icons and colours are stored per category, not fixed by name in code.
+- **Splits** (version 2, with receipts): one payment divided into parts with their own category and amount.
+- Flat list, as today (no subcategories). Patrik's own categories in server mode stay as they are.
 
 ### 5. Sorting: three layers
 
 Every category shows where it came from (starter rule, learned, auto, you), as today's "via rule / llm / manual".
 
 1. **Starter rules:** a list shipped with the app: common German merchants and patterns (REWE, Aldi, Lidl → Groceries;
-   dm, Rossmann → Drugstore; DB, MVV, FlixBus → Transport; Spotify, Netflix → Subscriptions; salary and rent
-   patterns). The same for everyone, updated with the app.
+   dm, Rossmann → Drugstore; DB, MVV, FlixBus → Bus & train; Spotify, Netflix → Subscriptions; salary and rent
+   patterns). The same for everyone, updated with the app; a rule applies only when its category is on the person's
+   list.
 2. **Learned from their corrections:** when someone moves a payment to another category, the app remembers it for that
    merchant (the name cleaned of card numbers, cities and dates) and asks once: "Also the 12 other payments to
    REWE?". Future payments from that merchant follow. Own rules ("text contains …") as today. This layer should sort
    most payments, because a few merchants make up most of them (M2 checks this).
-3. **Auto-sort, one switch in Aresium's settings, off by default** (Patrik, 2026-10-26), for what 1 and 2 leave open:
-   - **Our server** calling an AI model and storing nothing: works on every iPhone (Patrik, 2026-10-26: not everyone
-     has Apple Intelligence or a phone that supports it). The payments it sorts pass through our server and the AI
-     provider, so the switch says so, and the privacy policy, a processing agreement with the provider and its location
-     (Groq is in the US) are settled before it opens. Only payments that layers 1 and 2 left open are sent, and only
-     their date, amount, text and counterparty.
-   - **Apple's on-device model** (measured too, M3): nothing leaves the phone, but it needs an iPhone 15 Pro or newer
-     with Apple Intelligence switched on. If it sorts about as well, the app uses it where it is available and our
-     server elsewhere. German is supported (checked on the MacBook's model list, 2026-10-26). (Apple's Private Cloud
-     Compute model, new in iOS 27, is a further option to check later; it most likely needs Apple Intelligence too.)
+3. **Auto-sort through our server, one switch in Aresium's settings, off by default** (Patrik, 2026-10-26: easier,
+   works on every iPhone, only a few friends will use it). For what layers 1 and 2 leave open:
+   - The app sends the person's category list and the open payments (date, amount, text, counterparty; a random
+     reference per payment, no bank ids) to a new Aresium route; the server asks the AI model, sends back one category
+     per payment from that list (or none), and **stores nothing**: no database row, no request body in any log.
+     Rate-limited per account; open to every account with the Aresium service, not only the owner list.
+   - **The AI provider:** Groq, as today (`llama-3.3-70b` unless M3 finds a better one). Its documentation says it
+     keeps no data from normal requests and keeps reliability and abuse logs for up to 30 days unless **Zero Data
+     Retention** is switched on in its Data Controls (checked 2026-10-26, console.groq.com/docs/your-data). Switch it
+     on before opening; Groq runs in the US, so the privacy policy names that transfer.
+   - **Before opening:** the switch says in one sentence what it does ("Payments that Aresium cannot sort by itself are
+     sent to our server and an AI to be sorted; nothing is stored"); the privacy policy explains it; the netcup
+     processing agreement (AVV) is updated (it says "no financial data" today); Groq's data processing terms are
+     accepted. Switching it on is the person's consent.
+   - Apple's on-device model is not used (Patrik, 2026-10-26: our server is easier and works on every phone).
 
 ### 6. Receipts (version 2)
 
@@ -173,8 +200,8 @@ and are read exactly.
 
 ### 7. Privacy, App Store, opening
 
-- Aresium's section in the privacy policy, in German and English: data on the phone; what auto-sort sends where (none,
-  Apple, or us); the account. App Store privacy label: only the account (email) is collected; no financial data.
+- Aresium's section in the privacy policy, in German and English: data on the phone; what auto-sort sends where (our
+  server and Groq, nothing stored); the account. App Store privacy label: only the account (email) is collected; no financial data.
 - Apple reviews an app before external testers get it: a demo account plus a made-up bank file for the reviewer
   (`empire-ios/docs/APP-STORE.md`).
 - Then Aresium goes from "coming soon" to open in the hub catalog; Patrik approves people as for every app.
@@ -197,7 +224,7 @@ My additions, each with what I would do. Several are in the parts above already.
 | 8 | **Category names in both languages**; today's mix | Now (part 4) |
 | 9 | **Face ID lock** for the app | Later, optional; the app-switcher cover (Open 12) comes first |
 | 10 | **Budgets, savings goals, shared bills with flatmates** | Later (already on the Aresium roadmap); splits make shared bills easier |
-| 11 | **An answer key for measuring:** 191 payments were sorted by the Groq AI or not at all, never checked | Patrik checks those once per merchant, about 15 minutes, **D7** |
+| 11 | **An answer key for measuring:** 191 payments were sorted by the Groq AI or not at all, never checked | Use the 1,055 known to be right (**D6**); the rest only if needed |
 | 12 | **Widgets in phone mode** | They read the phone's snapshot as today; small change |
 | 13 | **The website:** others have nothing on aresium.de | Say so on the site's login: "Aresium for others is the iPhone app" |
 | 14 | **Leaving or deleting** removes the phone's data | After offering an export (part 2) |
@@ -213,35 +240,33 @@ Answered by Patrik on 2026-10-26:
   places give the same numbers, and Patrik's server, website and scripts keep working. Rejected: a second copy in Swift
   (two copies that must stay identical, every change twice); moving Patrik to phone mode as well (one engine, but it
   changes his website imports, the Groq pass and the Telegram bot). **Condition:** M5 shows it runs fast enough on the
-  phone (apps get JavaScriptCore without its fastest mode); if not, a Swift copy with shared test files.
-- **D2 — Auto-sort route:** measure both; our server works for everyone, Apple's on-device model only where available
-  (part 5, layer 3).
-- **D3 — Auto-sort switch:** one switch, off by default.
-- **D4 — Receipt photos:** not kept.
-- **D5 — First people and banks:** not known yet → flexible reading with AI for unknown layouts (part 3).
-- **D6 — Receipts:** version 2, after the basics.
+  phone (apps get JavaScriptCore without its fastest mode); if not, a Swift copy with shared test files. M5 running as
+  `empire-ios/prompts/10-engine-test-run.md`.
+- **D2 — Auto-sort route:** our server only, with Groq (part 5, layer 3). One switch, off by default.
+- **D3 — Categories:** a default list to choose from, nothing preselected, own names typed in (part 4).
+- **D4 — Receipts:** version 2; photos not kept.
+- **D5 — First people and banks:** not known yet → flexible reading, with AI on the column names for unknown layouts
+  (part 3).
+- **D6 — Answer key for measuring:** the categories known to be right: the 1,003 set by Patrik's own keyword rules and
+  the 52 he set by hand (1,055 payments). The 123 the Groq pass set and the 68 without a category stay out; Patrik
+  checks them later only if a larger test set is needed. This set suits a new user well: without Patrik's rules,
+  auto-sort would see payments like these.
 
-Still open:
-
-- **D7 — The answer key for measuring.** The 1,246 payments' categories were set by Patrik's own keyword rules
-  (1,003), the Groq AI pass (123), by hand (52), or not at all (68) (counted 2026-10-26). The rules are Patrik's
-  choices, so they count as right; the 191 from the AI or without a category were never checked. Patrik checks those
-  once, grouped by merchant, plus a sample of rule-sorted ones to confirm the rules: about 15 minutes on a page Claude
-  prepares (on the Mac only; the corrections also fix Patrik's own dashboard).
-- **D8 — Apple Intelligence on the MacBook**, to measure Apple's model (Patrik agreed to measuring it): switch it on in
-  System Settings → Apple Intelligence & Siri (downloads the model, a few GB). Off on 2026-10-26.
+Still open: Patrik's OK on the default list and the two built-in categories (part 4).
 
 ## Measurements before choosing
 
 Patrik's transactions are exported from the server to a folder on the MacBook outside every repo, used for the
-measurements and never committed. The answer key comes from D7.
+measurements and never committed; only scripts tested on made-up data touch them, and only summary numbers are read
+back. The answer key is D6 (1,055 payments).
 
 - **M1 — Starter rules:** what share of payments they sort, and how many of those correctly.
 - **M2 — Learning from corrections:** replay Patrik's payments in date order as if he were a new user who fixes every
   wrong category; count the fixes needed (first month, first 100 payments, in total), with and without starter rules.
   This shows how much work a new user has.
-- **M3 — Auto-sort:** on what M1 and M2 leave open: correct share and time per payment, our server's model vs
-  Apple's on-device model; which categories get mixed up.
+- **M3 — Auto-sort:** correct share, time and cost per payment for the server route (Groq), both for a new user
+  (everything the starter rules leave open) and after learning (what M2 leaves open); which categories get mixed up;
+  with the default list and with a short custom list.
 - **M4 — Receipts (version 2):** 20–30 real receipts from different shops (REWE, Aldi, Lidl, Edeka, dm, Rossmann, a bakery, a
   restaurant), photographed by Patrik: items read correctly, totals that check out, items sorted correctly, seconds per
   receipt; whether the QR code is there and readable.
@@ -255,7 +280,7 @@ The results go into this file before the choices that depend on them.
 
 Rough sizes in focused work days (Claude with Codex), not counting Patrik's time.
 
-1. ~~**Decisions D1–D6**~~ (Patrik, 2026-10-26); D7 and D8 open.
+1. ~~**Decisions D1–D6**~~ (Patrik, 2026-10-26); the default list waits for his OK.
 2. **Measuring bench, answer key, M1–M2** (Codex: export and replay scripts; Claude checks). 1–2 days.
 3. **M5 engine test run**, then pull the engine out of the server into pure functions, with the server switching to it
    only after it gives identical numbers on the real data. 3–5 days.
@@ -267,7 +292,7 @@ Rough sizes in focused work days (Claude with Codex), not counting Patrik's time
 7. **Privacy policy (including the auto-sort route), App Store information, external TestFlight, hub open.** 1–2
    days, and Apple's approval of the developer account (pending since 2026-10-23).
 
-Version 1 in total: roughly four to five weeks of steady work. M5 (step 3) starts now; M1–M3 after D7 and D8.
+Version 1 in total: roughly four to five weeks of steady work. M5 (step 3) is running; M1–M3 can start now.
 
 **Version 2: receipts** (part 6): splits (server and phone), scanner, reading, checking, matching; M4 on real
 receipts. About 6–10 days.

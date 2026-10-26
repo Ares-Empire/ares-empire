@@ -207,3 +207,8 @@ unchanged.
 5. ~~**Backups.**~~ Done 2026-10-25: the one-off copies are deleted, the nightly backup runs ([BACKUP.md](BACKUP.md)),
    and the policy's section 9 (Speicherdauer / Storage period) names it and its periods (Patrik approved the text
    2026-10-25).
+6. **Aresium for other people, before it opens** ([ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md), decided
+   2026-10-26): the policy's Aresium section (data on the phone; the optional auto-sort sends the payments it cannot
+   sort to our server and Groq in the US, nothing stored, switching it on is consent); the netcup AVV no longer says
+   "no financial data" (payments pass through the server); Groq's data processing terms accepted and Zero Data
+   Retention switched on in its Data Controls; the Aresium route logs no request bodies.
