@@ -174,6 +174,11 @@
     {
       "at": "2026-10-26",
       "project": "empire",
+      "text": "Every Ares app on an iPhone now lets go of an account the moment it logs out in any of them: widgets drop its numbers, and notifications stop for all apps, not only the one used to log out. The app switcher shows each app's name instead of its screens. These were the last two checks before anyone but Patrik gets an app."
+    },
+    {
+      "at": "2026-10-26",
+      "project": "empire",
       "text": "The Empire's ring now shows every app an account has access to, and its \"+\" lists the other apps open to users: asking for one sends the request to Patrik, and the person is told when it is approved and it joins their ring, with an Install button when the app is not on the phone yet. Patrik keeps getting sign-ups and requests by email."
     },
     {

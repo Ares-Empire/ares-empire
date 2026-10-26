@@ -1,6 +1,6 @@
 # 03: Aresium for other people: privacy texts, the netcup AVV and Groq
 
-Status: draft
+Status: running (2026-10-26)
 Branch: `codex/03-aresium-privacy` · Worktree: `~/ares-empire-03-aresium-privacy` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
