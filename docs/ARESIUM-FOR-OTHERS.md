@@ -286,6 +286,11 @@ back. The answer key is D6 (1,055 payments).
     the shop rules leave open for a new user, 31% right with Patrik's own list, 38% with the default list. In the
     monthly replay, Groq saves 60–63 fixes over 14 months (263 → 203), about 4 a month. About 1 s per payment;
     about $0.01 for all.
+  - **M3 with NVIDIA (2026-10-27, `nvidia/nemotron-3-ultra-550b-a55b`, the best of the hub key's 85 models that
+    answered; Kimi K2.6 404, GLM-5.3 and DeepSeek V4.1 timed out):** new user 18% (own list, 5 of 16 batches timed
+    out) and 39% (default list) right; replay 263 → 226 and 263 → 206 fixes. Not better than Groq's gpt-oss-120b, slower
+    and less reliable. What the shop rules leave open is mostly what only the person knows (money from parents, own
+    tools, transfers), which no model can guess.
   - **Main error source in all layers:** Patrik imports both his bank and his PayPal export, so the bank's PayPal lines
     are transfers for him (`isPaypalBankFunding` on the server), while their text names the shop ("Ihr Einkauf bei
     Vinted"); learning and the AI put them under the shop's category (Transfer → Clothes 68 times in M3). The engine
