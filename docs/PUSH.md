@@ -117,30 +117,11 @@ and the account's `services` must contain the service of that app (table below).
 |---|---|---|---|
 | Arestemis | `de.ares-empire.arestemis` | the account whose hunt found it | a new match ([ARESTEMIS-APP.md](ARESTEMIS-APP.md)) |
 | Aresus | `de.ares-empire.aresus` | each owner (`EMPIRE_ALLOWED_USERS`) | an issue opens or is fixed, an Aresync run fails |
-| Account server (2026-10-25) | `de.ares-empire.empire` | every admin account | a new sign-up; an approved account asks for more apps |
 | Account server (2026-10-25) | `de.ares-empire.empire` | the account itself | it was approved, or given more apps |
 
-**The account server's notifications** (Patrik, 2026-10-25; `accounts/pb_hooks/lib/push.js`, sent from
-`accounts.pb.js` next to the emails, [ACCOUNTS.md → Notifications](ACCOUNTS.md#notifications-2026-10-25)). The admins
-are the users with `admin = true`; each gets its own `/send` with `to: {"user": <admin id>}`. A member never hears
-about another account.
-
-```json
-{"app": "de.ares-empire.empire", "to": {"user": "<admin id>"},
- "title": "New sign-up", "body": "Robin Vale asks for Arestemis",
- "localized": {"de": {"title": "Neue Anmeldung", "body": "Robin Vale möchte Arestemis nutzen"}},
- "category": "EMPIRE_REQUEST", "url": "empire://approvals/<account id>?apps=arestemis",
- "thread": "approvals", "collapse_id": "request-<account id>", "sound": true}
-```
-
-- An approved account asking for more apps: the same with `"title": "Access request"` (German "Zugangsanfrage").
-  `body` and `apps` name **every app it asks for now**, not only the newest: the notification replaces the account's
-  earlier one (`collapse_id`), and Approve on it decides exactly those (the decision's `requested`,
-  [API-EMPIRE.md](API-EMPIRE.md)).
-- The name, else the email address; several apps "Arestemis and Aresus" / "Arestemis und Aresus" (the names of
-  `NAMES` in `accounts/pb_hooks/lib/accounts.js`); `apps` the service ids joined with commas (empty for a sign-up that
-  asked for nothing, whose body is "<who> created an account").
-- `EMPIRE_REQUEST` is the Empire app's category with the Approve and Decline actions.
+**The account server's notification** (Patrik, 2026-10-25/26; `accounts/pb_hooks/lib/push.js`, sent from
+`accounts.pb.js` next to the email, [ACCOUNTS.md → Notifications](ACCOUNTS.md#notifications-2026-10-25)): only to an
+account about itself. Sign-ups and access requests reach Patrik by email, not as notifications (Patrik, 2026-10-26).
 
 ```json
 {"app": "de.ares-empire.empire", "to": {"user": "<account id>"},

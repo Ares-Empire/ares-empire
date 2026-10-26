@@ -13,9 +13,9 @@ in `empire-ios`, TestFlight) and [ACCOUNTS.md](ACCOUNTS.md) (Empire accounts in 
 4. **One login for all:** log in once in the Empire app; the province apps (Aresium) use the same login
    (shared Keychain between the apps).
 
-**iPhone features** ([IPHONE-APPS.md](IPHONE-APPS.md) → check for every app; Patrik, 2026-10-25): notifications —
-Patrik gets new sign-ups and access requests with Approve and Decline on the notification, everyone else gets told
-when a request is approved ("Whose ring shows what" below). Every app now logs in and asks for access itself, so the
+**iPhone features** ([IPHONE-APPS.md](IPHONE-APPS.md) → check for every app; Patrik, 2026-10-25): a notification
+when a request is approved ("Whose ring shows what" below). Patrik gets sign-ups and access requests by email and
+decides in Approvals, without notifications (Patrik, 2026-10-26). Every app now logs in and asks for access itself, so the
 Empire app is the launcher, the chronicle, getting more apps, and (Patrik) approvals.
 
 As for Aresium, the hub gets a **mobile website version first**: it is what phone browsers see and the template the
@@ -62,9 +62,9 @@ their ring. Tapping an app in the ring opens it when installed, else its website
 app's install link from the hub (a TestFlight public link while in testing, the App Store link later; the link is
 shown only to accounts that have the app).
 
-**Notifications** (Patrik, 2026-10-25, the Empire app's iPhone features): Patrik gets one for each new sign-up and
-each access request ("Robin Vale asks for Arestemis"), with Approve and Decline on the notification; everyone else
-gets one when a request is approved (they never see who asked for what). Sent by the account server through the push
+**Notifications** (Patrik, 2026-10-25/26, the Empire app's iPhone features): an account gets one when a request is
+approved ("Arestemis is ready"; they never see who asked for what). Patrik gets sign-ups and access requests by email,
+not as notifications. Sent by the account server through the push
 service; live once Apple's push key exists (the push service runs as a dry run until then).
 
 ## How it works underneath

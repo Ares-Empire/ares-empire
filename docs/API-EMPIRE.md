@@ -93,8 +93,7 @@ interface Decision {         // CONTRACT ADDITION (2026-10-25): the app needs no
 "Ask for access" does ([ACCOUNTS.md → Accounts in every app](ACCOUNTS.md#accounts-in-every-app)). The hub reads the
 account first (`services`, `requested`; the login check's copy may be a minute old), then sends
 `{"requested+": [slug]}`, so every other request stays, also one made meanwhile. The account server then tells Patrik
-(an email and a notification with Approve and Decline, [PUSH.md → Who sends what](PUSH.md#who-sends-what)); his
-approval grants it, the person gets a notification and an email, and the app joins their ring.
+by email (no notification: Patrik, 2026-10-26); his approval grants it, the person gets a notification and an email, and the app joins their ring.
 
 - `200`: the fresh `EmpireData`; the app is now in `addable` with `access: "requested"`.
 - Asking again for an app already asked for writes nothing and answers `200` the same way.

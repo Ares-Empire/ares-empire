@@ -56,7 +56,7 @@ AV-Vertrag).
 | **Where** | `/var/lib/empire-accounts/pb_data` (SQLite). |
 | **How long** | Until the account is deleted. Unapproved sign-ups stay until Patrik approves or deletes them (no automatic clean-up). |
 | **Emails** (Resend) | Confirmation link, password reset, "login from a new location" alert (PocketBase built-in), "approved" mail to the person; to the superusers an approval request naming the new account's email (`pb_hooks/accounts.pb.js`). |
-| **Notifications** (push service, since 2026-10-25) | To every admin account (Patrik): each new sign-up and access request, with the account's name (or its email when it has none) and the apps it asks for; to the account itself: that its apps are ready (`pb_hooks/lib/push.js`). Through Apple once the APNs key exists (push service below). |
+| **Notifications** (push service, since 2026-10-25) | To the account itself: that its apps are ready (none to Patrik about other accounts: he gets sign-ups and requests by email, 2026-10-26) (`pb_hooks/lib/push.js`). Through Apple once the APNs key exists (push service below). |
 | **Logs** | PocketBase's request log, with the visitor's IP (Caddy's `X-Forwarded-For`, `trustedProxy` in the first migration). Settings → Logs on the server (lead, 2026-10-24): `maxDays` 5, `logIP` true, `logAuthId` false, so 5 days, with IP, without the account. |
 | **New-location alerts** | `_authOrigins` rows: `collectionRef`, `recordRef` (the account), `fingerprint`, `created`, `updated`. PocketBase 0.40.6 (`apis/record_helpers.go`, `authAlert`): `fingerprint = MD5(ip + userAgent)`, the user agent cut to 200 characters; no plain IP is stored. Made or refreshed at each login (password, OTP, OAuth2; not at a token refresh); at most 5 per account (`maxAuthOrigins`, the oldest go); deleted when the password changes or the account is deleted (`core/auth_origin_model.go`). A login with a new fingerprint (not the first login) emails the person the time, IP and user agent. |
 | **Admins** | See the email, name, creation time, requested apps and whether the email is confirmed of accounts waiting for approval and of approved accounts that asked for another app, to decide them (`admin-visibility.pb.js`, hub `GET /api/empire/approvals`). |
@@ -186,10 +186,10 @@ Framework; its DPA also has the SCCs; stored data (sent-mail logs) is in the US 
 (`deploy/journald/retention.conf`), the address is filled in (his choice), the imprint's second contact route is the
 contact form.
 
-2026-10-25 (ring-access): section 5 of both policies changed in two places: the saved hub ring ("the applications
-selected in the hub" / "die im Hub ausgewählten Anwendungen") is gone from the list of account data, and the
-controller's notification about a sign-up or access request now names the email and the push notification (name or
-email address, the requested services). **Patrik reads both changes before they are merged.**
+2026-10-26 (ring-access): section 5 of both policies: the saved hub ring ("the applications selected in the hub" /
+"die im Hub ausgewählten Anwendungen") is gone from the list of account data, since it is no longer stored. The
+controller's notice about sign-ups and access requests stays an email (no push notification), so that passage is
+unchanged.
 
 ## To do (follow-up builds)
 

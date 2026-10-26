@@ -182,13 +182,10 @@ Next to three of the emails, `pb_hooks/accounts.pb.js` sends a notification to t
 
 | When | To | Says |
 |---|---|---|
-| Someone signs up (not a superuser in the admin UI) | every admin account (`admin = true`) | "New sign-up", "<name or email> asks for <apps>", with Approve and Decline |
-| An approved account asks for more apps | every admin account | "Access request", "<name or email> asks for <every app it asks for now>", with Approve and Decline |
 | Approved for the first time, or given more apps | the account | "<apps> is/are ready", "Open the Empire app to start." |
 
-English with German in `localized.de` (the push service picks per device). The admins are the accounts with
-`admin = true`, not the superusers who get the emails: a notification goes to an account's devices. A member never
-learns anything about another account. A notification that fails (the push service down, refusing, slow) is logged
+English with German in `localized.de` (the push service picks per device). Sign-ups and access requests reach Patrik
+by email only, not as notifications (Patrik, 2026-10-26). A member never learns anything about another account. A notification that fails (the push service down, refusing, slow) is logged
 (`push failed`, with the thread and the account id, never the texts) and never fails or undoes the request. Until
 Apple's push key exists the push service runs as a dry run and only keeps them in its outbox.
 

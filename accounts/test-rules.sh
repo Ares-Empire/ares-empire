@@ -327,18 +327,6 @@ def no_push(mark):
     return len(pushes()) == mark
 
 
-def by_recipient(sent):
-    return sorted(sent, key=lambda message: message['to']['user'])
-
-
-def to_admins(account, title, de_title, body, de_body, apps):
-    """What every admin account gets about `account` waiting for approval, sorted like by_recipient()."""
-    return by_recipient([{
-        'app': 'de.ares-empire.empire', 'to': {'user': admin_id}, 'title': title, 'body': body,
-        'localized': {'de': {'title': de_title, 'body': de_body}}, 'category': 'EMPIRE_REQUEST',
-        'url': f'empire://approvals/{account}?apps={apps}', 'thread': 'approvals', 'collapse_id': 'request-' + account,
-        'sound': True} for admin_id in ADMINS])
-
 
 def ready(account, title, de_title):
     """What an account gets when it was approved or given more apps."""
@@ -400,9 +388,6 @@ try:
     must('POST', '/api/collections/_superusers/records', {
         'email': OWNER, 'password': password, 'passwordConfirm': password}, bootstrap)
     admin = create('admin@example.com', approved=True, verified=True, services=['empire'], admin=True)
-    # A second administrator: every admin account gets the notifications about accounts waiting for approval.
-    second_admin = create('admin-two@example.com', approved=True, verified=True, services=['empire'], admin=True)
-    ADMINS = sorted([admin['id'], second_admin['id']])
     normal = create('user@example.com', approved=True, verified=True, services=['empire'])
     pending = create('pending@example.com')
     declined = create('decline@example.com')
@@ -510,10 +495,7 @@ try:
     check('a sign-up is mailed to Patrik with the apps it asked for and its language', len(new) == 1 and
           new[0]['To'] == OWNER and subjects(new) == ['New Ares account: app-signup@example.com asks for Arestemis']
           and 'Language: German' in html(new[0]) and 'recordId=' + signed.get('id', '?') in html(new[0]))
-    check('a sign-up is pushed to every admin account, with Approve and Decline (EMPIRE_REQUEST)',
-          by_recipient(new_pushes(push_mark, 2)) == to_admins(
-              signed.get('id', '?'), 'New sign-up', 'Neue Anmeldung', 'Fictional Person asks for Arestemis',
-              'Fictional Person möchte Arestemis nutzen', 'arestemis'))
+    check('a sign-up is not pushed (Patrik gets the email; 2026-10-26)', no_push(push_mark))
     push_mark = len(pushes())
     for label, body in [('its record id', {'id': 'chosenaccount01'}), ('an unknown app', {'requested': ['nope']}),
                         ('an unknown language', {'language': 'fr'})]:
@@ -530,10 +512,7 @@ try:
     status, website = call('POST', '/api/collections/users/records', {
         'email': 'website@example.com', 'password': password, 'passwordConfirm': password, 'requested': ['empire'],
         'language': 'en'})
-    check('a sign-up without a name is pushed with its email address', status == 200 and
-          by_recipient(new_pushes(push_mark, 2)) == to_admins(
-              website.get('id', '?'), 'New sign-up', 'Neue Anmeldung', 'website@example.com asks for Ares Empire',
-              'website@example.com möchte Ares Empire nutzen', 'empire'))
+    check('a sign-up on the website is not pushed either', status == 200 and no_push(push_mark))
     new_mails(mark, 1)
     mark = len(mails())
     push_mark = len(pushes())
@@ -574,9 +553,7 @@ try:
     check('an access request is mailed to Patrik', len(new) == 1 and new[0]['To'] == OWNER and
           subjects(new) == ['Ares access request: user@example.com asks for Arestemis'] and
           'Has: Ares Empire' in html(new[0]) and 'Language: German' in html(new[0]))
-    check('an access request is pushed to every admin account', by_recipient(new_pushes(push_mark, 2)) == to_admins(
-          normal['id'], 'Access request', 'Zugangsanfrage', 'Renamed asks for Arestemis', 'Renamed möchte Arestemis nutzen',
-          'arestemis'))
+    check('an access request is not pushed (Patrik gets the email)', no_push(push_mark))
     mark = len(mails())
     push_mark = len(pushes())
     status, _ = call('PATCH', '/api/collections/users/records/' + normal['id'],
@@ -654,32 +631,22 @@ try:
     check('leaving an app it does not have changes nothing', status == 200 and again == left)
     check('leaving is not mailed', quiet(mark))
 
-    # Notifications: an access request names everything the account asks for (it replaces the earlier one on Patrik's
-    # phone); a push service that refuses or does not answer never fails the request; members hear only about
-    # themselves.
+    # Notifications: only "your apps are ready", to the account itself (Patrik gets sign-ups and requests by email,
+    # 2026-10-26); a push service that refuses or does not answer never fails the request.
     asking = create('asking@example.com', approved=True, verified=True, services=['empire'], name='')
     asking_token = login('users', 'asking@example.com')
     push_mark = len(pushes())
     must('PATCH', '/api/collections/users/records/' + asking['id'], {'requested': ['arestemis', 'aresus']}, asking_token)
-    check('an access request for two apps names both, by the email address when there is no name',
-          by_recipient(new_pushes(push_mark, 2)) == to_admins(
-              asking['id'], 'Access request', 'Zugangsanfrage', 'asking@example.com asks for Arestemis and Aresus',
-              'asking@example.com möchte Arestemis und Aresus nutzen', 'arestemis,aresus'))
-    push_mark = len(pushes())
     must('PATCH', '/api/collections/users/records/' + asking['id'], {'requested+': ['aresium']}, asking_token)
-    check('a further request names every open one', by_recipient(new_pushes(push_mark, 2)) == to_admins(
-          asking['id'], 'Access request', 'Zugangsanfrage',
-          'asking@example.com asks for Arestemis, Aresus and Aresium',
-          'asking@example.com möchte Arestemis, Aresus und Aresium nutzen', 'arestemis,aresus,aresium'))
+    check('access requests are not pushed', no_push(push_mark))
     for answer in (503, 'close'):
         fake_status('push', answer)
-        push_mark = len(pushes())
-        status, _ = call('PATCH', '/api/collections/users/records/' + asking['id'], {'name': 'Asking ' + str(answer),
-                         'requested+': ['arestoteles']}, asking_token)
+        status, _ = call('PATCH', '/api/collections/users/records/' + asking['id'], {'services+': ['arestoteles']},
+                         admin_token)
         fake_status('push', 204)
-        check(f'a push service that answers {answer} does not fail the request', status == 200 and
-              'arestoteles' in user(asking['id'])['requested'])
-        must('PATCH', '/api/collections/users/records/' + asking['id'], {'requested-': ['arestoteles']}, admin_token)
+        check(f'a push service that answers {answer} does not fail the approval', status == 200 and
+              'arestoteles' in user(asking['id'])['services'])
+        must('PATCH', '/api/collections/users/records/' + asking['id'], {'services-': ['arestoteles']}, admin_token)
     check('a failed push is logged', logged('push failed'))
     push_mark = len(pushes())
     must('PATCH', '/api/collections/users/records/' + asking['id'],
@@ -687,8 +654,7 @@ try:
     check('granting three apps at once: one notification naming them', new_pushes(push_mark, 1) == ready(
           asking['id'], 'Arestemis, Aresus and Aresium are ready', 'Arestemis, Aresus und Aresium sind bereit'))
     sent = pushes()
-    check('only admin accounts hear about other accounts; a member only that its own apps are ready', sent and all(
-          message['to']['user'] in ADMINS if message['thread'] == 'approvals' else
+    check('every notification tells an account only that its own apps are ready', sent and all(
           message['thread'] == 'access' and message['collapse_id'] == 'ready-' + message['to']['user']
           for message in sent))
     check('every notification is for the Empire app, in English and German', all(
