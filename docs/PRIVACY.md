@@ -207,4 +207,8 @@ unchanged.
 5. ~~**Backups.**~~ Done 2026-10-25: the one-off copies are deleted, the nightly backup runs ([BACKUP.md](BACKUP.md)),
    and the policy's section 9 (Speicherdauer / Storage period) names it and its periods (Patrik approved the text
    2026-10-25).
-6. placeholder
+6. **Aresium for other people, before it opens** ([ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md); route decided
+   2026-10-26: no server sorting in version 1): the policy's Aresium section, German and English: the bank data,
+   categories and sorting stay on the person's iPhone and never reach our servers; only the Ares account is ours.
+   The netcup AVV needs no change for this. The legal check of the server route (AVV entries, Groq, transfers,
+   Art. 9, Art. 30, DPIA) is kept on branch `codex/03-aresium-privacy` in case server sorting comes back.
