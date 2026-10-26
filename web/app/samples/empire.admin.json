@@ -172,6 +172,11 @@
   "addable": [],
   "chronicle": [
     {
+      "at": "2026-10-26",
+      "project": "empire",
+      "text": "The Empire's ring now shows every app an account has access to, and its \"+\" lists the other apps open to users: asking for one sends the request to Patrik, and the person is told when it is approved and it joins their ring, with an Install button when the app is not on the phone yet. Patrik keeps getting sign-ups and requests by email."
+    },
+    {
       "at": "2026-10-25",
       "project": "empire",
       "text": "The Empire app was reviewed by three independent reviewers before its first TestFlight build, and their fixes are in: the apps that hold only Patrik's data (Aresium, Arestoteles, Aresus) now let in only him, so approving a request can no longer open them; the hub's answers and errors follow one checked shape; tapping a province always opens something; and every website links the privacy policy and imprint."
