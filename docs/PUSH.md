@@ -60,6 +60,13 @@ and the account's `services` must contain the service of that app (table below).
   app's service (else an account that lost access could not remove its device), and it removes the device only while
   it is registered to that account (a later account keeps a token it took over). A login that is already invalid
   cannot remove it: that device stays until another account registers it or the 60-day clean-up.
+- **Central logout (2026-10-26, `empire-ios` brief 09):** each app records its accepted device in the shared App Group
+  (`empire.push.devices`: bundle id → APNs device token, never an Empire token). When a person logs out in any app,
+  that app removes **every** recorded app's device with the login that just ended (the same account for all apps), so
+  notifications stop also for apps that are not running. An app following a logout made elsewhere removes its own.
+  **Limit:** one try per device; a failed removal (offline, 5xx) is logged and dropped from the record, so that device
+  stays registered until another account registers it or the 60-day clean-up. A logout because the login was refused
+  sends no removals (the token is invalid).
 - Errors: `401` token rejected, `403` the account lacks the app's service, `400` bad body, `503` account server down.
 
 ## Internal API (province services on the same host)
