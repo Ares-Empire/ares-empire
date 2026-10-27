@@ -12,12 +12,13 @@ served while it contains `[lead to confirm]` or `[ADDRESS]` (`webauth/legal.py`)
 ## What the public pages cover (Patrik, 2026-10-25)
 
 This file is the full internal inventory. The public policy covers only processing that concerns people other than
-Patrik, as a normal, neutral German policy (statements and "Sie", no "ich"/"du"; English the same with "you"):
+Patrik, as a normal, neutral German policy: impersonal statements ("Daten werden gespeichert", "die App fragt ab"), as few pronouns as possible, no "ich"/"du"; "Sie" only where the reader has to act, as in the rights section (Patrik, 2026-10-27); English the same:
 visiting the websites (server logs), Empire accounts (sign-up, approval,
 emails, login notices, logs), the website contact form, and in the apps only login, contact & support and push
 registration; recipients, third-country transfers, storage periods, rights, BayLDA. Provinces that hold only Patrik's
-data (Aresium, Arestemis, Aresus, Arestoteles, Aresync; checked 2026-10-25: the account server has only Patrik's two
-accounts with a province service) are documented below and named nowhere in the public pages.
+data (Arestemis, Aresus, Arestoteles, Aresync; checked 2026-10-25: the account server has only Patrik's two accounts
+with a province service) are documented below and named nowhere in the public pages. Aresium is named for other
+people's use (phone mode, section 6 → "Aresium"); Patrik's own server data stays out of the public pages.
 
 **Rule:** when a province is opened to other accounts (its service given to anyone but Patrik, or `open` in the hub
 catalog), its section is added to the public policy, in German and English, **before** that happens; if it brings a new
@@ -136,8 +137,28 @@ AV-Vertrag).
 - Manual scripts only (`npm run ai`, `npm run places`, not the import route): transactions (description,
   counterparty, amount, date, place) to Groq for categories; merchant name + city to OpenStreetMap Nominatim.
 - Telegram bot and reminders (`src/bot/`) talk only to Patrik's chat (`TELEGRAM_CHAT_ID`).
-- Personal use by one person (Art. 2(2)(c) GDPR); listed in the policy so nobody wonders. Becomes a full section
-  once Aresium is multi-user (EMPIRE.md → Open 5).
+- The above is Patrik's own data (server mode, the owner list): personal use by one person (Art. 2(2)(c) GDPR), not
+  described in the public pages.
+- **Everyone else: phone mode, no account** (built 2026-10-27, briefs 15, 18, 22; D7 in
+  [ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md); `empire-ios/CLAUDE.md` → "Aresium phone mode"). Aresium opens without
+  a login. The bank files and everything read from them (payments with the bank's original row, the other party's
+  IBAN, balances), the chosen categories, learned rules and confirmed column layouts are read, sorted and stored on
+  the iPhone: SwiftData, one store per iPhone (`Application Support/Aresium/local/`), file protection complete, not
+  excluded from the person's device backups. Sorting uses the bundled shop list and the person's corrections; no AI,
+  no network. Only when a login with the `aresium` service exists does the app ask `GET /api/mode` (the token checked
+  with the account server; no cache entry, no log line); the server keeps nothing about anyone but Patrik.
+- The data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and deleting the Ares account
+  never touch it. Deleted by Settings → "Delete Aresium data on this iPhone" (also any older per-account store left by
+  the move-over), the lock's "Forgot the code?", removing the app. Widgets: the current month's totals in the App
+  Group container, deleted with the data; with the lock on none are kept. Known gap: removing Aresium while other Ares
+  apps stay leaves the widget totals in the App Group until the last Ares app goes. Export and restore: one JSON file
+  through the share sheet; where it goes is the person's choice.
+- The lock (optional): Face ID is checked by iOS (the app gets only the result); the own 6-digit code only as a salted
+  PBKDF2 hash in Aresium's own Keychain item, this device only.
+- Contact & support without a login goes to the `contact` collection (as the website's form), with a footer naming
+  the app, its version, iOS and the topic. Sharing a bank's format: "Bank formats shared from Aresium" below.
+- Public policy: section 6 → "Aresium" (German and English). No change to the netcup AVV: no financial data of
+  anyone but Patrik reaches the server.
 
 ### Arestoteles (`arestoteles.service`, `~/Arestoteles`; vault `carlsenares/opinions`)
 
@@ -240,6 +261,11 @@ contact form.
 controller's notice about sign-ups and access requests stays an email (no push notification), so that passage is
 unchanged.
 
+2026-10-27 (Aresium): section 6 → "Aresium" added to both policies (Patrik approved the text with his notes); section
+5's first sentence names Aresium as usable without an account; section 7's Resend line names bank formats and bank
+names; section 11 names Aresium's contact form. Published by merging to main; the account server's bank_formats and
+bank_requests inboxes and the "[Aresium]" contact email were deployed the same day.
+
 ## To do (follow-up builds)
 
 1. ~~**Delete your account** in every app.~~ Done 2026-10-25 (briefs F1/F2): every app creates, leaves and deletes the
@@ -256,11 +282,13 @@ unchanged.
 5. ~~**Backups.**~~ Done 2026-10-25: the one-off copies are deleted, the nightly backup runs ([BACKUP.md](BACKUP.md)),
    and the policy's section 9 (Speicherdauer / Storage period) names it and its periods (Patrik approved the text
    2026-10-25).
-6. **Aresium for other people, before it opens** ([ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md); route decided
-   2026-10-26: no server sorting in version 1): the policy's Aresium section, German and English: the bank data,
-   categories and sorting stay on the person's iPhone and never reach our servers; only the Ares account is ours.
-   It also names sharing a bank's format (section "Bank formats shared from Aresium" above, 2026-10-27) and asking for
-   a missing bank (section "Bank requests from Aresium" above, 2026-10-27): what is sent, that no payment or account
-   is in it, the IP in the logs for 5 days, kept at most 12 months.
-   The netcup AVV needs no change for this. The legal check of the server route (AVV entries, Groq, transfers,
-   Art. 9, Art. 30, DPIA) is kept on branch `codex/03-aresium-privacy` in case server sorting comes back.
+6. ~~**Aresium for other people, before it opens**~~: done 2026-10-27. The public policy's section 6 → "Aresium"
+   (German and English, approved by Patrik with his notes: no PayPal, no "no AI", no account talk): the bank data,
+   categories and sorting stay on the iPhone and never reach our servers; deleting, export and device backups, the
+   lock, sending a bank's format or a missing bank's name ("Bank formats" and "Bank requests" sections above), and
+   contact through the contact form's route. Section 5 says Aresium works without an account. The netcup AVV needs no
+   change. **Rule that keeps the text true:** the `aresium` service stays with Patrik's own accounts (the hub catalog
+   has Aresium as "coming-soon", so nobody can ask for it). If anyone else ever gets it, the app asks `GET /api/mode`
+   for them, and the policy must name that request again before. The legal check of the server route (AVV entries,
+   Groq, transfers, Art. 9, Art. 30, DPIA) is kept on branch `codex/03-aresium-privacy` in case server sorting comes
+   back.
