@@ -204,7 +204,11 @@ and are read exactly.
   server and Groq, nothing stored); the account. App Store privacy label: only the account (email) is collected; no financial data.
 - Apple reviews an app before external testers get it: a demo account plus a made-up bank file for the reviewer
   (`empire-ios/docs/APP-STORE.md`).
-- Then Aresium goes from "coming soon" to open in the hub catalog; Patrik approves people as for every app.
+- ~~Then Aresium goes from "coming soon" to open in the hub catalog; Patrik approves people as for every app.~~
+  Dropped (Patrik, 2026-10-27): without an account (D7) friends need no hub, no Ares account and no approval; they get
+  the TestFlight link from Patrik. Opening Aresium in the hub would give accounts the `aresium` service, which the
+  privacy text rules out (`PRIVACY.md` → To do 6). The hub keeps it as coming soon; at most it later becomes a plain
+  download link.
 - When a file cannot be read, Contact & support offers to send only the bank's name and the file's header line, never
   payments.
 
@@ -276,6 +280,14 @@ comes later), a tour over made-up data that highlights the real buttons, an unkn
 payments and asks "Does this look right?" (several readings from the engine, brief 20), and sending an unknown bank's
 format (never a payment) to us in two taps so Claude can add the bank for everyone (engine: brief 20; the inbox on the
 account server: brief 21). Fixed on the way: "Not sorted" counted money coming in as negative spending (brief 20).
+
+**After Patrik's second test (2026-10-27):** a first screen ("No data yet", Import data, Start tour) in place of
+made-up data, a lighter tour that also shows the lock and Contact & support, "my bank is missing" in the guide
+(brief 25, merged). Then: Import data opens the file first and the category picker follows the import while no
+category is chosen, so people see their own payments land while they tick (until then the picker came first;
+Patrik, 2026-10-27), with each category's count in the picker, nothing preselected (brief 27); the payment page in
+plain words (brief 28). The hub step is dropped (part 7). The language follows the iPhone (German iPhone: German,
+any other: English), as in every app.
 
 ## Measurements before choosing
 
@@ -382,7 +394,7 @@ Since then (all running 2026-10-27): briefs 19–22 (see D7 and the paragraph af
 with Send, the tour and the bank-steps screen; the policy text without an account.
 
 Left before friends get it (as of the morning of 2026-10-27): brief 18; the privacy policy's Aresium section (phone-only text, PRIVACY.md → To do 6);
-Apple's approval and external TestFlight (Apple reviews it); hub catalog `open`. Known limits to decide later: an
+Apple's approval and external TestFlight (Apple reviews it). Known limits to decide later: an
 account deleted from another app leaves Aresium's store on that iPhone (only Aresium can delete it); offering an export
 before leaving; ZIP files.
 
@@ -399,7 +411,7 @@ Rough sizes in focused work days (Claude with Codex), not counting Patrik's time
    aresium.de. 5–8 days.
 5. **Categories you can edit, learned sorting, starter rules, flexible bank reading** (part 3). 5–8 days.
 6. **Auto-sort** after M3. 2–3 days.
-7. **Privacy policy (including the auto-sort route), App Store information, external TestFlight, hub open.** 1–2
+7. **Privacy policy (including the auto-sort route), App Store information, external TestFlight.** 1–2
    days, and Apple's approval of the developer account (pending since 2026-10-23).
 
 Version 1 in total: roughly four to five weeks of steady work. M5 done (one engine confirmed); M1–M3 can start now.

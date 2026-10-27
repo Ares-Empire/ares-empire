@@ -24,8 +24,9 @@ made-up data: `empire-ios/showcase/`. Nothing is on a phone yet: Apple's develop
 2026-10-23.
 
 **Next up (2026-10-27):** Aresium for other people is built (phone mode: their data on their iPhone, 25 banks, 2,815
-known shops, no AI; [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) → Progress). Before friends get it: the
-privacy policy's Aresium section, Apple's approval and external TestFlight, then Aresium `open` in the hub.
+known shops, no AI; [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) → Progress). Privacy policy section live
+(2026-10-27). Before friends get it: the payment page in plain words and import-first (briefs 27–28, running), then
+Apple's approval and external TestFlight; friends get the TestFlight link directly (no account, no hub step).
 
 **The big steps, in this order** (Patrik, 2026-10-25):
 
