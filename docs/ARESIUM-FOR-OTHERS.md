@@ -285,8 +285,8 @@ account server: brief 21). Fixed on the way: "Not sorted" counted money coming i
 made-up data, a lighter tour that also shows the lock and Contact & support, "my bank is missing" in the guide
 (brief 25, merged). Then: Import data opens the file first and the category picker follows the import while no
 category is chosen, so people see their own payments land while they tick (until then the picker came first;
-Patrik, 2026-10-27), with each category's count in the picker, nothing preselected (brief 27); the payment page in
-plain words (brief 28). The hub step is dropped (part 7). The language follows the iPhone (German iPhone: German,
+Patrik, 2026-10-27), with each category's count in the picker, nothing preselected (brief 27, merged); the payment page in
+plain words (brief 28, merged). The hub step is dropped (part 7). The language follows the iPhone (German iPhone: German,
 any other: English), as in every app.
 
 ## Measurements before choosing
