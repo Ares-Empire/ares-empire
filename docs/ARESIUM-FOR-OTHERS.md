@@ -174,8 +174,9 @@ bank file) shows them and the category the shop list gives. No photo is kept, on
   "waiting for the bank statement", and joins its payment when the bank file comes in (the same rules; asked when
   unsure).
 - **Cash:** withdrawals (the shop list's cash rule: Geldautomat, Bargeldauszahlung, …) make a pool; a cash receipt
-  counts in its own category on its day and takes its amount out of the withdrawals before it (the oldest first), so
-  "Cash" shows only what has no receipt. A cash receipt bigger than what is left counts the rest as spending of its
+  counts in its own category on its day and takes its amount out of the withdrawals before it (the latest first, at
+  most about three months back; "the oldest first" was changed 2026-10-28: most cash never gets a receipt, so it would
+  pile today's receipts onto months long past), so "Cash" shows only what has no receipt. A cash receipt bigger than what is left counts the rest as spending of its
   own (cash from elsewhere).
 - **Card or cash not on the receipt (or not read):** never guessed silently (a wrong guess counts twice or empties the
   cash): the check window asks, with Card chosen when a matching bank payment exists.
