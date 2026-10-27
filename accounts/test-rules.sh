@@ -797,6 +797,12 @@ try:
     check('a German message without a name: subject "Kontakt", cut on a word; the name is "–"', status == 200 and
           german['Subject'] == '[Website] Kontakt: ' + ' '.join(['Eine erfundene Frage'] * 2) + ' Eine erfundene…'
           and 'Name:     –' in german.get_body(('plain',)).get_content())
+    before = len(mails())
+    status, _ = call('POST', CONTACT, contact(message='Can I import two banks?\n\n— Aresium 1.0 (12) · iOS 27.0 · iPhone · Question'))
+    app_mail = mails(at_least=before + 1)[-1]
+    check('a message from Aresium without a login (its footer) is named so in the subject and the text', status == 200 and
+          app_mail['Subject'] == '[Aresium] Contact: Can I import two banks?'
+          and "A message from Aresium's Contact & support, sent without a login" in app_mail.get_body(('plain',)).get_content())
     check('a logged-in visitor can send it too', call('POST', CONTACT, contact(), user_token)[0] == 200)
     before = len(mails())
     check('the honeypot filled in is refused, and nothing is mailed',
