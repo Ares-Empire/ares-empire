@@ -332,6 +332,12 @@ The results go into this file before the choices that depend on them.
 8. Santander/Openbank, Advanzia, Hanseatic and the Targobank credit card have no public header: their files go to the
    layout guess. Changing a profile's columns later changes its ids, so profiles change with care.
 
+**From brief 13 (shop list, 2026-10-27):** 288 → 2,815 names. Measured on Patrik's payments: share sorted unchanged
+(64%; his leftovers are personal), share right 95.2% → 93.8%, mostly the PayPal double import (handled by the
+structural rule once the bench runs it, brief 16) plus two real weaknesses fixed in brief 17 (direction of the money,
+branch numbers). Licence: name-suggestion-index is BSD-3-Clause; its notice goes on the apps' Fonts & licences page
+(after brief 15 merges).
+
 ## Order of work and rough size
 
 Rough sizes in focused work days (Claude with Codex), not counting Patrik's time.
