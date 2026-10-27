@@ -343,6 +343,22 @@ structural rule once the bench runs it, brief 16) plus two real weaknesses fixed
 branch numbers). Licence: name-suggestion-index is BSD-3-Clause; its notice goes on the apps' Fonts & licences page
 (after brief 15 merges).
 
+## Progress (2026-10-27)
+
+Built and merged, all by Claude agents (Patrik, 2026-10-27), each checked by Claude:
+- The engine: dashboard source, PayPal and own-transfer rules (parity on the real data: identical), `/api/mode` (live),
+  25 bank layouts plus CAMT/MT940 and a guessed layout for unknown CSVs, the default categories with their look, 2,815
+  known shops with directions and branch numbers (M1 98.4% right, M2 51 fixes in 14 months).
+- Income without own transfers (live on aresium.de, Patrik agreed).
+- The app's phone mode (brief 15): the engine in JavaScriptCore, storage per account, import, sorting, learning,
+  categories, export/restore, the data lifecycle; server mode unchanged.
+- Running: brief 18, the look of the new screens and their German.
+
+Left before friends get it: brief 18; the privacy policy's Aresium section (phone-only text, PRIVACY.md → To do 6);
+Apple's approval and external TestFlight (Apple reviews it); hub catalog `open`. Known limits to decide later: an
+account deleted from another app leaves Aresium's store on that iPhone (only Aresium can delete it); offering an export
+before leaving; ZIP files.
+
 ## Order of work and rough size
 
 Rough sizes in focused work days (Claude with Codex), not counting Patrik's time.
