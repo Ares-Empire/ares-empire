@@ -311,18 +311,26 @@ back. The answer key is D6 (1,055 payments).
 
 The results go into this file before the choices that depend on them.
 
-## Engine follow-ups (from brief 12, 2026-10-27)
+## Engine follow-ups (from briefs 12 and 14, 2026-10-27)
 
 1. **Own transfers between accounts pair too easily:** equal opposite amounts within 3 days on two accounts can be
    unrelated (a 20.00 purchase and a friend's 20.00). Require the counterparty's IBAN to be the person's other account
    (the bank readers of brief 14 deliver IBANs), or leave the pair unsorted.
-2. **Income counts incoming own transfers** (an old behaviour of the dashboard, on aresium.de too): spending leaves
-   transfer categories out, income does not, so money moved back from Tagesgeld counts as income. Fixing it changes
-   Patrik's numbers: asked him (2026-10-27).
+2. ~~**Income counts incoming own transfers**~~: fixed and live 2026-10-27 (Patrik agreed): transfer categories count
+   as neither spending nor income; on Patrik's data total income 37,566 → 26,664, spending unchanged.
 3. **The bench sorts one payment at a time,** so the new structural rules never run in it; switch it to one
    `sortPayments` call over all payments, then measure M1–M2 again (also for the bigger shop list, brief 13).
 4. **English PayPal exports:** their funding rows ("Bank Deposit to PP Account") are not left out yet; only the German
    wording is. Add it (Patrik's numbers do not change; check with the parity script idea).
+
+**From brief 14 (bank readers, 2026-10-27):**
+
+5. **ZIP files** (Sparkasse sends CAMT as a ZIP) and Excel files are not read; the app has to unzip first (iOS has no
+   ZIP API in Foundation: a small reader in the app, or ask the person to unzip).
+6. **PayPal's tab-separated export** is not handled.
+7. **The same period as CSV and as CAMT** still gives different ids (duplicates); not solved yet.
+8. Santander/Openbank, Advanzia, Hanseatic and the Targobank credit card have no public header: their files go to the
+   layout guess. Changing a profile's columns later changes its ids, so profiles change with care.
 
 ## Order of work and rough size
 
