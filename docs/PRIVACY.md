@@ -139,19 +139,24 @@ AV-Vertrag).
 - Telegram bot and reminders (`src/bot/`) talk only to Patrik's chat (`TELEGRAM_CHAT_ID`).
 - The above is Patrik's own data (server mode, the owner list): personal use by one person (Art. 2(2)(c) GDPR), not
   described in the public pages.
-- **Everyone else: phone mode** (built 2026-10-27; `empire-ios/CLAUDE.md` → "Aresium phone mode",
-  [ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md)). The bank files and everything read from them (payments with the
-  bank's original row, the other party's IBAN, balances), the chosen categories, learned rules and confirmed column
-  layouts are read, sorted and stored on the person's iPhone: SwiftData, one store per account id in the app's
-  Application Support, file protection complete, not excluded from the person's device backups. Sorting uses the
-  bundled shop list and the person's corrections; no AI, no network. The only request to Aresium's server is
-  `GET /api/mode` after a login (the token checked with the account server; no cache entry, no log line), so the
-  server holds nothing about these people. Widgets: the current month's totals in the App Group container, deleted at
-  logout and with the data.
-- Deleted by: Settings → "Delete Aresium data on this iPhone", Leave Aresium, Delete Ares account in Aresium, removing
-  the app. Known gaps: deleting the account in another app leaves the store on the phone until Aresium is removed;
-  removing Aresium while logged in leaves the widget totals in the App Group until the last Ares app goes. Export and
-  restore: one JSON file through the share sheet; where it goes is the person's choice.
+- **Everyone else: phone mode, no account** (built 2026-10-27, briefs 15, 18, 22; D7 in
+  [ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md); `empire-ios/CLAUDE.md` → "Aresium phone mode"). Aresium opens without
+  a login. The bank files and everything read from them (payments with the bank's original row, the other party's
+  IBAN, balances), the chosen categories, learned rules and confirmed column layouts are read, sorted and stored on
+  the iPhone: SwiftData, one store per iPhone (`Application Support/Aresium/local/`), file protection complete, not
+  excluded from the person's device backups. Sorting uses the bundled shop list and the person's corrections; no AI,
+  no network. Only when a login with the `aresium` service exists does the app ask `GET /api/mode` (the token checked
+  with the account server; no cache entry, no log line); the server keeps nothing about anyone but Patrik.
+- The data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and deleting the Ares account
+  never touch it. Deleted by Settings → "Delete Aresium data on this iPhone" (also any older per-account store left by
+  the move-over), the lock's "Forgot the code?", removing the app. Widgets: the current month's totals in the App
+  Group container, deleted with the data; with the lock on none are kept. Known gap: removing Aresium while other Ares
+  apps stay leaves the widget totals in the App Group until the last Ares app goes. Export and restore: one JSON file
+  through the share sheet; where it goes is the person's choice.
+- The lock (optional): Face ID is checked by iOS (the app gets only the result); the own 6-digit code only as a salted
+  PBKDF2 hash in Aresium's own Keychain item, this device only.
+- Contact & support without a login goes to the `contact` collection (as the website's form), with a footer naming
+  the app, its version, iOS and the topic. Sharing a bank's format: "Bank formats shared from Aresium" below.
 - Public policy: section 6 → "Aresium" (German and English). No change to the netcup AVV: no financial data of
   anyone but Patrik reaches the server.
 
@@ -255,7 +260,8 @@ unchanged.
 5. ~~**Backups.**~~ Done 2026-10-25: the one-off copies are deleted, the nightly backup runs ([BACKUP.md](BACKUP.md)),
    and the policy's section 9 (Speicherdauer / Storage period) names it and its periods (Patrik approved the text
    2026-10-25).
-6. **Aresium for other people, before it opens**: text written 2026-10-27 (branch `claude/aresium-privacy`: section 6
+6. **Aresium for other people, before it opens**: text written 2026-10-27, rewritten the same day for no account, the
+   lock, contact without a login and sharing a bank's format (branch `claude/aresium-privacy`: section 6
    → "Aresium" in both policies, this file's Aresium entry), live once Patrik approves it, before anyone else gets
    the `aresium` service. The plan ([ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md); route decided
    2026-10-26: no server sorting in version 1): the policy's Aresium section, German and English: the bank data,
