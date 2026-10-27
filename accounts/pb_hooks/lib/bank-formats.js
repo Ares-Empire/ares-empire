@@ -6,37 +6,15 @@
 // A format is the engine's `CsvLayout` (aresium `src/engine/readers/types.ts`) as `shareableLayout` returns it: no
 // `name` or `profile`, and nothing in it that looks like personal data. The app checks that before it sends; this is
 // the second check, so a format is refused here even when the app has a bug. It looks at the shape and at every text,
-// not at what the format means (Claude reviews that when adding the bank).
+// not at what the format means (Claude reviews that when adding the bank). What looks like personal data, and the
+// refusal of a bank's name, are in lib/personal-data.js (the bank requests use them too).
 
 const MAX_BYTES = 8192; // the layout as PocketBase stores it (JSON text); the field's maxSize is the same
+// A person's name cannot be told from a column's name; these limits on the header keep a whole row of data out.
 const MAX_CELLS = 80; // header cells, and the items of any list; column numbers are below it
 const MAX_TEXT = 80; // characters in any text of the layout
 const MAX_FIELDS = 40; // fields of any object (a CsvLayout has 16, its columns 19)
-const MAX_BANK = 100; // the bank field's own limit, which PocketBase checks after this hook
 const SEPARATORS = [",", ";", "\t", "|"];
-
-// What personal data would look like in a header cell, a status word or the bank's name. A person's name cannot be
-// told from a column's name, so it is not looked for; the limits on the header keep a whole row of data out.
-const PERSONAL = [
-  /[^\s@]+@[^\s@]+\.[^\s@]+/, // an email address
-  /\d{5,}/, // 5+ digits in a row: an account, card, customer or phone number, a date without separators
-  /\d(?:[ .\/-]?\d){7,}/, // 8+ digits in groups: "4111 1111 1111 1111", "+49 151 234 567 89"
-  /\b\d{1,4}[.\/-]\d{1,2}[.\/-]\d{2,4}\b/, // a date: 27.10.2026, 27.10.26, 2026-10-27, 10/27/2026
-  // a date with the month's name: 27 Oct 2026, 27. Okt. 26, 3-Jan-2026
-  /\b\d{1,2}\.?[ -]?(?:jan|feb|m[aä]r|apr|ma[iy]|jun|jul|aug|sep|o[ck]t|nov|de[cz])[a-zä]*\.?[ -]?\d{2,4}\b/i,
-  /\d[.,]\d{2}(?!\d)/, // an amount: 12,34 · 1.234,56 · -0.99
-  /(?:[€$£]|\b(?:EUR|USD|GBP|CHF)\b) ?[-+]?\d|\d ?(?:[€$£]|(?:EUR|USD|GBP|CHF)\b)/i, // an amount with its currency
-];
-
-// An IBAN, compact or in groups of four ("DE89 3704 0044 0532 0130 00"): two letters, two check digits, then 11 to 30
-// letters or digits, with at least 8 digits in all (so "MT940 Buchungstext" is not one).
-const IBAN = /\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]){11,30}/gi;
-
-function looksPersonal(text) {
-  const value = String(text);
-  if (PERSONAL.some((pattern) => pattern.test(value))) return true;
-  return (value.match(IBAN) || []).some((found) => (found.match(/\d/g) || []).length >= 8);
-}
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -82,34 +60,32 @@ function utf8Bytes(text) {
 }
 
 /**
- * The first reason to refuse a shared format, or null when it may be kept: {field: "bank" | "layout", code}.
- * `bank` is the name the person typed, `stored` the layout as PocketBase stored it (JSON text). Codes: personal_data,
- * too_big, not_object, name, version, separator, header, columns, shape.
+ * The first reason to refuse a shared layout, or null when it may be kept: a code. `stored` is the layout as
+ * PocketBase stored it (JSON text). Codes: personal_data, too_big, not_object, name, version, separator, header,
+ * columns, shape. (The bank's name is checked by lib/personal-data.js's refuseBankName.)
  */
-function problem(bank, stored) {
-  // A longer name is refused by the field itself; the patterns only ever look at short texts.
-  if (String(bank).length <= MAX_BANK && looksPersonal(bank)) return { field: "bank", code: "personal_data" };
-  if (utf8Bytes(stored) > MAX_BYTES) return { field: "layout", code: "too_big" };
+function problem(stored) {
+  if (utf8Bytes(stored) > MAX_BYTES) return "too_big";
   let layout = null;
   try {
     layout = JSON.parse(stored);
   } catch (err) {
     layout = null;
   }
-  const refuse = (code) => ({ field: "layout", code: code });
-  if (!isObject(layout)) return refuse("not_object");
-  if (layout.name != null || layout.profile != null) return refuse("name");
-  if (layout.version !== 1) return refuse("version");
-  if (SEPARATORS.indexOf(layout.separator) < 0) return refuse("separator");
+  if (!isObject(layout)) return "not_object";
+  if (layout.name != null || layout.profile != null) return "name";
+  if (layout.version !== 1) return "version";
+  if (SEPARATORS.indexOf(layout.separator) < 0) return "separator";
   if (!Array.isArray(layout.header) || layout.header.length > MAX_CELLS ||
-    !layout.header.every((cell) => typeof cell === "string" && cell.length <= MAX_TEXT)) return refuse("header");
+    !layout.header.every((cell) => typeof cell === "string" && cell.length <= MAX_TEXT)) return "header";
   const columns = layout.columns;
   if (!isObject(columns) || !Object.keys(columns).every((name) => isColumn(columns[name]) ||
     (Array.isArray(columns[name]) && columns[name].length <= MAX_CELLS && columns[name].every(isColumn)))) {
-    return refuse("columns");
+    return "columns";
   }
-  if (!shapeOk(layout, 0)) return refuse("shape");
-  if (texts(layout, []).some(looksPersonal)) return refuse("personal_data");
+  if (!shapeOk(layout, 0)) return "shape";
+  const personal = require(`${__hooks}/lib/personal-data.js`);
+  if (texts(layout, []).some((text) => personal.looksPersonal(text))) return "personal_data";
   return null;
 }
 
@@ -122,12 +98,6 @@ const SENTENCES = {
     de: "Das Format enthält etwas, das wie persönliche Daten aussieht (eine IBAN, eine E-Mail-Adresse, ein Datum, " +
       "einen Betrag oder eine lange Zahl), deshalb wurde es nicht angenommen.",
   },
-  bank: {
-    en: "The bank's name looks like personal data (an IBAN, an email address, a date, an amount or a long number). " +
-      "Type only the bank's name.",
-    de: "Der Name der Bank sieht wie persönliche Daten aus (eine IBAN, eine E-Mail-Adresse, ein Datum, ein Betrag " +
-      "oder eine lange Zahl). Gib nur den Namen der Bank ein.",
-  },
   tooBig: {
     en: "The format is too big to send.",
     de: "Das Format ist zu groß zum Senden.",
@@ -138,8 +108,8 @@ const SENTENCES = {
   },
 };
 
+// The detail of each code; personal_data's is lib/personal-data.js's DETAIL, shared with the bank requests.
 const DETAILS = {
-  personal_data: "Something looks like personal data (an IBAN, an email address, a date, an amount or 5+ digits).",
   too_big: "The layout must be at most " + MAX_BYTES + " bytes as JSON.",
   not_object: "The layout must be a JSON object.",
   name: "The layout carries no name or profile; the bank's name goes in bank.",
@@ -151,18 +121,19 @@ const DETAILS = {
     MAX_CELLS + " items, field names letters only, nothing nested deeper than columns.text.",
 };
 
-/** In the create request `e`: throws a 400 when the format may not be kept (see problem()). */
+/**
+ * In the create request `e`: throws a 400 when the format may not be kept, the bank's name first
+ * (lib/personal-data.js), then the layout (see problem()).
+ */
 function refuseUnsafe(e) {
-  const found = problem(e.record.getString("bank"), e.record.getString("layout"));
-  if (!found) return;
-  // A record request event has no `e.request` in hooks; requestInfo() has the headers, lower case with "_" for "-".
-  const headers = e.requestInfo().headers || {};
-  const language = require(`${__hooks}/lib/accounts.js`).requestLanguage(headers["accept_language"]);
-  const kind = found.field === "bank" ? "bank"
-    : found.code === "personal_data" ? "personal" : found.code === "too_big" ? "tooBig" : "shape";
-  const data = {};
-  data[found.field] = new ValidationError(found.code, DETAILS[found.code]);
-  throw new BadRequestError(SENTENCES[kind][language], data);
+  const personal = require(`${__hooks}/lib/personal-data.js`);
+  personal.refuseBankName(e);
+  const code = problem(e.record.getString("layout"));
+  if (!code) return;
+  const language = require(`${__hooks}/lib/accounts.js`).recordRequestLanguage(e);
+  const kind = code === "personal_data" ? "personal" : code === "too_big" ? "tooBig" : "shape";
+  const detail = code === "personal_data" ? personal.DETAIL : DETAILS[code];
+  throw new BadRequestError(SENTENCES[kind][language], { layout: new ValidationError(code, detail) });
 }
 
 // ── The email to Patrik ──────────────────────────────────────────────────────
@@ -209,4 +180,4 @@ function email(app, record) {
   };
 }
 
-module.exports = { MAX_BYTES, problem, looksPersonal, refuseUnsafe, profileId, shellWord, email };
+module.exports = { MAX_BYTES, problem, refuseUnsafe, profileId, shellWord, email };

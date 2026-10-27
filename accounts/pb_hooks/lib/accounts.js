@@ -95,9 +95,21 @@ function requestLanguage(header) {
   return best;
 }
 
+/**
+ * The language of a record request event `e` (onRecordCreateRequest and the like), "de" or "en", by the rule of
+ * requestLanguage(). Such an event has no `e.request` in hooks; requestInfo() has the headers, lower case with "_"
+ * for "-".
+ */
+function recordRequestLanguage(e) {
+  const headers = e.requestInfo().headers || {};
+  return requestLanguage(headers["accept_language"]);
+}
+
 /** A sentence of ANSWERS in the language of the request event `e`. */
 function answer(e, key) {
   return ANSWERS[key][requestLanguage(e.request.header.get("Accept-Language"))];
 }
 
-module.exports = { NAMES, values, without, union, services, settle, language, names, requestLanguage, answer };
+module.exports = {
+  NAMES, values, without, union, services, settle, language, names, requestLanguage, recordRequestLanguage, answer,
+};

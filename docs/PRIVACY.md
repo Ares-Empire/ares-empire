@@ -206,7 +206,7 @@ AV-Vertrag).
   read it ([ACCOUNTS.md](ACCOUNTS.md) → Bank formats shared from Aresium).
 - No personal data in the record: the app refuses to send a format whose header or status words look like an IBAN or
   account number, an email address, a date, an amount or 5+ digits, and the server refuses the same again, also in the
-  bank's name (`pb_hooks/lib/bank-formats.js`). A person's name in a column's name cannot be detected; header cells are
+  bank's name (`pb_hooks/lib/bank-formats.js`, `pb_hooks/lib/personal-data.js`). A person's name in a column's name cannot be detected; header cells are
   limited to 80 characters.
 - A hook mails each format through Resend to `REDACTED-EMAIL` (IONOS), without a Reply-To.
 - IP address: in the account server's request log for 5 days (as every request), and in PocketBase's in-memory rate
@@ -214,6 +214,23 @@ AV-Vertrag).
 - Kept until the bank is added to Aresium, at most 12 months; deleted by hand (the record in the admin UI and the
   email). The nightly backup keeps copies as for all account data (Backups below).
 - Basis: Art. 6(1)(f) for the IP address in the logs and the rate limit (security); the format itself is no personal
+  data. The public policy names it in its Aresium section before Aresium opens (To do 6).
+
+### Bank requests from Aresium (brief 26, 2026-10-27)
+
+- Anyone using Aresium, no account needed (the app sends no login). When their bank is not in Aresium's bank guide,
+  they can send its name so Patrik knows which banks to add: the bank's name they type, the app's version and
+  language (optional), created. No file, payment or account. Collection `bank_requests` on the account server;
+  superusers only can read it ([ACCOUNTS.md](ACCOUNTS.md) → Bank requests from Aresium).
+- No personal data in the record: the app refuses to send a name that looks like an IBAN or account number, an email
+  address, a date, an amount or 5+ digits, and the server refuses the same again (`pb_hooks/lib/personal-data.js`,
+  the check of a bank format's name). A person's name typed instead of the bank's cannot be detected.
+- A hook mails each request through Resend to `REDACTED-EMAIL` (IONOS), without a Reply-To.
+- IP address: in the account server's request log for 5 days (as every request), and in PocketBase's in-memory rate
+  limiter (5 per hour per address); not stored with the request.
+- Kept until handled (the bank added to Aresium, or decided against), at most 12 months; deleted by hand (the record
+  in the admin UI and the email). The nightly backup keeps copies as for all account data (Backups below).
+- Basis: Art. 6(1)(f) for the IP address in the logs and the rate limit (security); the request itself is no personal
   data. The public policy names it in its Aresium section before Aresium opens (To do 6).
 
 ### Resend (email)
@@ -266,7 +283,8 @@ unchanged.
    the `aresium` service. The plan ([ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md); route decided
    2026-10-26: no server sorting in version 1): the policy's Aresium section, German and English: the bank data,
    categories and sorting stay on the person's iPhone and never reach our servers; only the Ares account is ours.
-   It also names sharing a bank's format (section "Bank formats shared from Aresium" above, 2026-10-27): what is sent,
-   that no payment or account is in it, the IP in the logs for 5 days, kept at most 12 months.
+   It also names sharing a bank's format (section "Bank formats shared from Aresium" above, 2026-10-27) and asking for
+   a missing bank (section "Bank requests from Aresium" above, 2026-10-27): what is sent, that no payment or account
+   is in it, the IP in the logs for 5 days, kept at most 12 months.
    The netcup AVV needs no change for this. The legal check of the server route (AVV entries, Groq, transfers,
    Art. 9, Art. 30, DPIA) is kept on branch `codex/03-aresium-privacy` in case server sorting comes back.
