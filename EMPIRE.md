@@ -23,11 +23,9 @@ rebuilt is backed up every night to the MacBook ([docs/BACKUP.md](docs/BACKUP.md
 made-up data: `empire-ios/showcase/`. Nothing is on a phone yet: Apple's developer enrollment has been pending since
 2026-10-23.
 
-**Next up (2026-10-26):** the plan for Aresium for other people (step 3) is drafted:
-[docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) (phone mode, imports, categories, three sorting layers,
-receipts as version 2). Agreed with Patrik the same evening: one engine shared by server and app (confirmed by
-measurement M5), auto-sort only through our server, categories picked from a default list. Next: measurements M1–M3,
-then phone mode.
+**Next up (2026-10-27):** Aresium for other people is built (phone mode: their data on their iPhone, 25 banks, 2,815
+known shops, no AI; [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) → Progress). Before friends get it: the
+privacy policy's Aresium section, Apple's approval and external TestFlight, then Aresium `open` in the hub.
 
 **The big steps, in this order** (Patrik, 2026-10-25):
 
