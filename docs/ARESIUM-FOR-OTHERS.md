@@ -291,6 +291,11 @@ back. The answer key is D6 (1,055 payments).
     out) and 39% (default list) right; replay 263 → 226 and 263 → 206 fixes. Not better than Groq's gpt-oss-120b, slower
     and less reliable. What the shop rules leave open is mostly what only the person knows (money from parents, own
     tools, transfers), which no model can guess.
+  - **After briefs 13, 16 and 17 (2026-10-27; the shop list of 2,815 names with directions and branch numbers, the
+    structural rules for PayPal and own transfers, one sortPayments call over all payments):** day one 75.7% sorted,
+    98.4% right; 315 payments (30%) found as own transfers, 100% right. A new user fixes **51 payments in 14 months**
+    (was 158): 9 in the first month, 13 in the first 100, then about 3 a month. Learning alone would be 377. What stays
+    unsorted on day one is personal (money from parents, own tools, private PayPal sellers).
   - **Main error source in all layers:** Patrik imports both his bank and his PayPal export, so the bank's PayPal lines
     are transfers for him (`isPaypalBankFunding` on the server), while their text names the shop ("Ihr Einkauf bei
     Vinted"); learning and the AI put them under the shop's category (Transfer → Clothes 68 times in M3). The engine
