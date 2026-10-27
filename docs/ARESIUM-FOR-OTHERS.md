@@ -159,7 +159,34 @@ Every category shows where it came from (starter rule, learned, auto, you), as t
      accepted. Switching it on is the person's consent.
    - Apple's on-device model is not used (Patrik, 2026-10-26: our server is easier and works on every phone).
 
-### 6. Receipts (version 2)
+### 6. Receipts
+
+**Version 1 (Patrik, 2026-10-27: "lets do it"; D8, briefs 30–31).** The import button becomes Apple's usual menu:
+Choose file, Scan receipt (Apple's document scanner), Choose photo. The iPhone reads the receipt (Vision, on the phone;
+the register's QR code when there is one); the engine (`readReceipt`) picks out the shop, date, total, currency and
+card or cash, in the common European languages and English; a check window ("Does this look right?", like an unknown
+bank file) shows them and the category the shop list gives. No photo is kept, only the read lines (D4). Then:
+
+- **Card:** the engine looks for the bank payment (same amount, the receipt's day to 7 days later, a similar shop).
+  Exactly one: the receipt joins it and only the bank payment counts (its page shows the receipt; a payment Not sorted
+  takes the receipt's category). Several, an amount that differs (cash back at the till, a tip) or another currency:
+  the app asks "Is this the same payment?" with the candidates. None yet: the receipt counts on its own, marked
+  "waiting for the bank statement", and joins its payment when the bank file comes in (the same rules; asked when
+  unsure).
+- **Cash:** withdrawals (the shop list's cash rule: Geldautomat, Bargeldauszahlung, …) make a pool; a cash receipt
+  counts in its own category on its day and takes its amount out of the withdrawals before it (the oldest first), so
+  "Cash" shows only what has no receipt. A cash receipt bigger than what is left counts the rest as spending of its
+  own (cash from elsewhere).
+- **Card or cash not on the receipt (or not read):** never guessed silently (a wrong guess counts twice or empties the
+  cash): the check window asks, with Card chosen when a matching bank payment exists.
+- **Other languages and currencies:** Vision reads many languages by itself; the engine knows the total, card and cash
+  words and the number and date styles of German, English, French, Italian, Spanish, Dutch and Portuguese. A receipt in
+  another currency is never joined by itself (its bank payment is in euros); paid in cash, the check window asks for
+  the amount in euros.
+- Phone mode first; Patrik's server mode gets it once the server has a place for receipts (the engine's code is
+  shared). The privacy policy gets one sentence before friends see it.
+
+**Version 2 (the original idea below):** the items, splitting a receipt into categories.
 
 **What it does:** take a photo of a receipt → the app reads the items and the total → finds the payment (a card
 payment usually reaches the account one to three days later) → splits it into categories (REWE €47.83 → Groceries
@@ -274,6 +301,10 @@ open Aresium or reset the code (Patrik agreed, 2026-10-27); a forgotten code mea
 through the shared Ares login of the other apps. Who can use Aresium is then simply who has the TestFlight link, which
 costs nothing on our side. The other apps keep accounts: they keep data on our server or cost money per person
 (Arestemis's AI checks). Brief 22.
+
+**D8 — Receipts, version 1 (Patrik, 2026-10-27).** Shop, date, total and card or cash, matched to the bank payment
+so nothing counts twice; asked when the amounts differ ("smart to ask", Patrik); cash taken out of the withdrawals;
+no photo kept; items later (part 6).
 
 **After Patrik's first test (2026-10-27):** a guide per bank on how to get the file (brief 19: the steps; the screen
 comes later), a tour over made-up data that highlights the real buttons, an unknown-file window that shows the first
