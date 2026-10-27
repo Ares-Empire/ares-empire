@@ -40,11 +40,16 @@
   const HOLD_MS = 350;
 
   function Ring({ projects, onOpen, risingSlug, addSlot, onFront, onHold }) {
-    const tabs = addSlot ? [...(projects || []), { slug: "__add", add: true, name: addSlot.label }] : (projects || []);
+    const real = addSlot ? [...(projects || []), { slug: "__add", add: true, name: addSlot.label }] : (projects || []);
+    // The wheel has at least six places, so its tabs sit as close as six would. Three to five tabs repeat round it, so
+    // it turns all the way round (drag, scroll, arrows never stop) with a tab on either side of the front from the
+    // start (Patrik, 2026-10-27). One or two (one province and the "+" place) keep their places and stop at both ends:
+    // repeated, a tab would meet itself.
+    const short = real.length < 3;
+    const copies = short ? 1 : Math.ceil(6 / real.length);
+    const tabs = [];
+    for (let c = 0; c < copies; c++) real.forEach((tab) => tabs.push(c ? { ...tab, copyKey: tab.slug + "~" + c } : tab));
     const count = Math.max(tabs.length, 1);
-    // A short ring (fewer than 6, e.g. one province plus the "+" place) keeps its tabs as close as six would be and
-    // stops at both ends; spread over the whole wheel, the second tab would sit out of sight on the far side.
-    const short = count < 6;
     const step = 360 / Math.max(count, 6);
     const clampRot = (r) => short ? Math.max(-(count - 1) * step, Math.min(0, r)) : r;
 
@@ -145,7 +150,7 @@
             const opacity = hidden ? 0 : 1 - 0.84 * off;
             const blur = off * 3.2;
             return (
-              <div key={tab.slug}
+              <div key={tab.copyKey || tab.slug}
                    className={"ring-tab" + (i === frontIndex ? " is-front" : "") + (tab.add ? " ring-tab-add" : "") + (tab.slug === risingSlug ? " rising" : "") + (pressed === tab.slug ? " is-pressed" : "")}
                    style={{ transform: `translate(calc(-50% + ${x.toFixed(1)}px), calc(-50% + ${y.toFixed(1)}px)) scale(${scale.toFixed(3)})`,
                             opacity: opacity.toFixed(3), filter: blur > 0.2 ? `blur(${blur.toFixed(1)}px)` : "none",

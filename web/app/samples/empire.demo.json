@@ -83,10 +83,67 @@
       "app": "arestoteles://",
       "install": "https://www.ares-empire.de/contact",
       "access": "granted"
+    },
+    {
+      "slug": "aresus",
+      "name": "Aresus",
+      "url": "",
+      "logo": "brand/zeus.webp",
+      "status": "CONQUERED",
+      "domain": "",
+      "blurb": "Digital infrastructure at a glance.",
+      "detail": {
+        "about": "Aresus checks every app and service around the clock, shows the sync status of every machine and sends an alert the moment something breaks.",
+        "features": [
+          "Every app and service checked around the clock",
+          "Sync status of every machine",
+          "An alert the moment something breaks"
+        ],
+        "setup": "",
+        "wip": [],
+        "ideas": [],
+        "changelog": []
+      },
+      "state": "open",
+      "live": null,
+      "app": "aresus://",
+      "install": null,
+      "access": "granted"
+    },
+    {
+      "slug": "aresync",
+      "name": "Aresync",
+      "url": "",
+      "logo": "brand/janus.webp",
+      "status": "CONQUERED",
+      "domain": "",
+      "blurb": "Every repository on every machine, in sync.",
+      "detail": {
+        "about": "Aresync keeps every Git repository in step across laptops and the server: it commits, rebases and pushes on its own and reports each run to Aresus.",
+        "features": [
+          "Commit, rebase and push on its own",
+          "Every repository on every machine",
+          "Each run reported to Aresus"
+        ],
+        "setup": "",
+        "wip": [],
+        "ideas": [],
+        "changelog": []
+      },
+      "state": "open",
+      "live": null,
+      "app": null,
+      "install": null,
+      "access": "granted"
     }
   ],
   "addable": [],
   "chronicle": [
+    {
+      "at": "2026-10-25",
+      "project": "aresus",
+      "text": "Aresus is finished: every app and service watched, with an alert the moment something breaks."
+    },
     {
       "at": "2026-10-24",
       "project": "aresium",
@@ -103,6 +160,11 @@
       "text": "Arestemis is finished: an instant alert for every matching listing."
     },
     {
+      "at": "2026-10-02",
+      "project": "aresync",
+      "text": "Aresync is finished: every repository in step on every machine, each run reported to Aresus."
+    },
+    {
       "at": "2026-09-30",
       "project": "arestoteles",
       "text": "Arestoteles started: a personal wiki for positions and the evidence behind them."
@@ -113,9 +175,19 @@
       "text": "Arestemis started: a flat finder that checks every new listing against one search."
     },
     {
+      "at": "2026-09-05",
+      "project": "aresus",
+      "text": "Aresus started: a watchtower for the empire's apps, services and machines."
+    },
+    {
       "at": "2026-08-28",
       "project": "aresium",
       "text": "Aresium joined the empire: personal finance, from bank exports to clear charts."
+    },
+    {
+      "at": "2026-08-14",
+      "project": "aresync",
+      "text": "Aresync started: one sync for every repository on every machine."
     }
   ],
   "ideas": [],

@@ -525,16 +525,17 @@ def build(seed: dict | None = None) -> dict[str, object]:
 
 # ── The public demo (www.ares-empire.de/demo) ─────────────────────────────────
 # The hub for anyone, without an account (webauth/server.py serves it; web/app/empire-api.js loads these two files on
-# /demo). A made-up guest has the three apps other people can have (Aresium, Arestemis, Arestoteles; Aresus and Aresync
-# stay Patrik's own and are left out), with texts written for strangers and a made-up chronicle: when each app was
-# started and finished (Patrik, 2026-10-27). Nothing of the real seed's content goes into it: only its words (name,
-# tagline, STATUS) and the three provinces' logos.
+# /demo). A made-up guest has the apps on the ring, with texts written for strangers and a made-up chronicle: when each
+# was started and finished (Patrik, 2026-10-27). Aresium links its own demo, Arestemis and Arestoteles the request form;
+# Aresus and Aresync, Patrik's own tools, are shown without a link or an install button. Nothing of the real seed's
+# content goes into it: only its words (name, tagline, STATUS) and the provinces' logos.
 DEMO_FILE = "empire.demo.json"
 DEMO_WORDS_FILE = "demo-empire.js"          # window.EMPIRE on the demo page, in place of app/empire-data.js
 DEMO_TOKEN = "sample-demo-token"
 DEMO_REQUEST = "https://www.ares-empire.de/contact"   # where a guest asks for an app (the contact form for now)
 ACCOUNTS[DEMO_TOKEN] = {"id": "sampledemo00001", "name": "Guest", "admin": False, "approved": True, "verified": True,
-                        "services": ["empire", "aresium", "arestemis", "arestoteles"], "requested": []}
+                        "services": ["empire", "aresium", "arestemis", "arestoteles", "aresus", "aresync"],
+                        "requested": []}
 DEMO_PROVINCES = {   # slug → what the demo says about it; the ring keeps this order
     "aresium": {
         "url": "https://aresium.de/demo", "domain": "aresium.de", "blurb": "Personal finance, understood.",
@@ -553,20 +554,40 @@ DEMO_PROVINCES = {   # slug → what the demo says about it; the ring keeps this
                  "searchable by meaning on every device.",
         "features": ["Positions with the evidence behind them", "RAG search across all notes",
                      "Edits synced across devices"]},
+    "aresus": {
+        "url": "", "domain": "", "blurb": "Digital infrastructure at a glance.", "install": False,
+        "about": "Aresus checks every app and service around the clock, shows the sync status of every machine and "
+                 "sends an alert the moment something breaks.",
+        "features": ["Every app and service checked around the clock", "Sync status of every machine",
+                     "An alert the moment something breaks"]},
+    "aresync": {
+        "url": "", "domain": "", "blurb": "Every repository on every machine, in sync.", "install": False,
+        "about": "Aresync keeps every Git repository in step across laptops and the server: it commits, rebases and "
+                 "pushes on its own and reports each run to Aresus.",
+        "features": ["Commit, rebase and push on its own", "Every repository on every machine",
+                     "Each run reported to Aresus"]},
 }
 DEMO_CHRONICLE = [   # newest first, as the hub shows it
+    {"at": "2026-10-25", "project": "aresus", "text": "Aresus is finished: every app and service watched, with an alert "
+                                                      "the moment something breaks."},
     {"at": "2026-10-24", "project": "aresium", "text": "Aresium's iPhone app is finished: categories, charts and "
                                                        "receipts, right on the phone."},
     {"at": "2026-10-21", "project": "arestoteles", "text": "Arestoteles is finished: positions, evidence and RAG "
                                                            "search on every device."},
     {"at": "2026-10-18", "project": "arestemis", "text": "Arestemis is finished: an instant alert for every matching "
                                                          "listing."},
+    {"at": "2026-10-02", "project": "aresync", "text": "Aresync is finished: every repository in step on every machine, "
+                                                       "each run reported to Aresus."},
     {"at": "2026-09-30", "project": "arestoteles", "text": "Arestoteles started: a personal wiki for positions and the "
                                                            "evidence behind them."},
     {"at": "2026-09-12", "project": "arestemis", "text": "Arestemis started: a flat finder that checks every new "
                                                          "listing against one search."},
+    {"at": "2026-09-05", "project": "aresus", "text": "Aresus started: a watchtower for the empire's apps, services and "
+                                                      "machines."},
     {"at": "2026-08-28", "project": "aresium", "text": "Aresium joined the empire: personal finance, from bank exports "
                                                        "to clear charts."},
+    {"at": "2026-08-14", "project": "aresync", "text": "Aresync started: one sync for every repository on every "
+                                                       "machine."},
 ]
 
 
@@ -582,9 +603,10 @@ def demo_seed() -> dict:
 
 
 def _demo_apps():
-    """The committed apps.json, with the guest's way to get each app (the request form)."""
+    """The committed apps.json, with the guest's way to get each app (the request form; none for Patrik's own tools)."""
     apps = _load_committed_apps()
-    return {slug: {**apps.get(slug, {"scheme": None}), "install": DEMO_REQUEST} for slug in DEMO_PROVINCES}
+    return {slug: {**apps.get(slug, {"scheme": None}), "install": DEMO_REQUEST if says.get("install", True) else None}
+            for slug, says in DEMO_PROVINCES.items()}
 
 
 def build_demo() -> object:

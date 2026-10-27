@@ -12,7 +12,7 @@
     const band = document.createElement("div");
     band.className = "demo-band";
     band.innerHTML = '<span class="demo-dot"></span><span><b>Demo</b> · a made-up account to look around</span>' +
-      '<a href="/login">Log in</a>';
+      '<a href="https://www.ares-empire.de/contact" target="_blank" rel="noopener">Get the app</a>';   // DEMO_REQUEST
     document.body.appendChild(band);
   }
   // ?as=… picks the preview account: admin (the default), member, new-member or requested.

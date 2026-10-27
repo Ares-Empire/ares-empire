@@ -252,7 +252,7 @@
           items={items} expanded={expanded} admin={admin}
           onOpen={(item) => expanded ? open({ type: "idea", item }) : launch(item)}
           onHold={(item) => open({ type: expanded ? "idea" : "province", item })}
-          onAdd={admin ? null : () => open({ type: "add" })} />
+          onAdd={admin || API.demoMode ? null : () => open({ type: "add" })} />
           : <p className="em-empty">No expansions yet.</p>}
         {!expanded && <Timeline title={admin ? "Chronicle" : "What's new"} entries={data.chronicle} projects={data.projects} />}
         <footer className="em-home-footer">

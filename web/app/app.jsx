@@ -130,7 +130,7 @@
               <window.CardGrid items={projects} kind="project" onBack={() => setSpread(false)} onOpen={openDetail} />
             ) : (
               <window.Ring projects={projects} onOpen={goTo} risingSlug={rising}
-                           addSlot={member ? { label: "More apps", onAdd: () => setMore({ asking: null, error: null }) } : undefined} />
+                           addSlot={member && !window.EmpireData.demoMode ? { label: "More apps", onAdd: () => setMore({ asking: null, error: null }) } : undefined} />
             )}
           </section>
 
