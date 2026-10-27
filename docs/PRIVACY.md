@@ -12,7 +12,7 @@ served while it contains `[lead to confirm]` or `[ADDRESS]` (`webauth/legal.py`)
 ## What the public pages cover (Patrik, 2026-10-25)
 
 This file is the full internal inventory. The public policy covers only processing that concerns people other than
-Patrik, as a normal, neutral German policy (statements and "Sie", no "ich"/"du"; English the same with "you"):
+Patrik, as a normal, neutral German policy: impersonal statements ("Daten werden gespeichert", "die App fragt ab"), as few pronouns as possible, no "ich"/"du"; "Sie" only where the reader has to act, as in the rights section (Patrik, 2026-10-27); English the same:
 visiting the websites (server logs), Empire accounts (sign-up, approval,
 emails, login notices, logs), the website contact form, and in the apps only login, contact & support and push
 registration; recipients, third-country transfers, storage periods, rights, BayLDA. Provinces that hold only Patrik's
