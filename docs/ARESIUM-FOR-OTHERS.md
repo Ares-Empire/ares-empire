@@ -265,7 +265,8 @@ switch. The Groq client stays in `aresium/src/sort/` (also usable for Patrik's o
 **D7 — No account for phone mode (Patrik, 2026-10-27, after trying the first run).** Phone mode needs no Ares account:
 the account gave a friend nothing (their data never leaves the phone) and cost them a sign-up, an email confirmation
 and waiting for approval; Apple's guideline 5.1.1(v) also asks apps without account features to work without a login.
-Instead an optional lock: Face ID and/or an own 6-digit code. One store per phone. Patrik's server mode stays,
+Instead an optional lock: Face ID and/or an own 6-digit code. With an own code set, the iPhone's code cannot
+open Aresium or reset the code (Patrik agreed, 2026-10-27); a forgotten code means deleting Aresium's data. One store per phone. Patrik's server mode stays,
 through the shared Ares login of the other apps. Who can use Aresium is then simply who has the TestFlight link, which
 costs nothing on our side. The other apps keep accounts: they keep data on our server or cost money per person
 (Arestemis's AI checks). Brief 22.
