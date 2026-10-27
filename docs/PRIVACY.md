@@ -261,6 +261,11 @@ contact form.
 controller's notice about sign-ups and access requests stays an email (no push notification), so that passage is
 unchanged.
 
+2026-10-27 (Aresium): section 6 → "Aresium" added to both policies (Patrik approved the text with his notes); section
+5's first sentence names Aresium as usable without an account; section 7's Resend line names bank formats and bank
+names; section 11 names Aresium's contact form. Published by merging to main; the account server's bank_formats and
+bank_requests inboxes and the "[Aresium]" contact email were deployed the same day.
+
 ## To do (follow-up builds)
 
 1. ~~**Delete your account** in every app.~~ Done 2026-10-25 (briefs F1/F2): every app creates, leaves and deletes the
@@ -277,14 +282,13 @@ unchanged.
 5. ~~**Backups.**~~ Done 2026-10-25: the one-off copies are deleted, the nightly backup runs ([BACKUP.md](BACKUP.md)),
    and the policy's section 9 (Speicherdauer / Storage period) names it and its periods (Patrik approved the text
    2026-10-25).
-6. **Aresium for other people, before it opens**: text written 2026-10-27, rewritten the same day for no account, the
-   lock, contact without a login and sharing a bank's format (branch `claude/aresium-privacy`: section 6
-   → "Aresium" in both policies, this file's Aresium entry), live once Patrik approves it, before anyone else gets
-   the `aresium` service. The plan ([ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md); route decided
-   2026-10-26: no server sorting in version 1): the policy's Aresium section, German and English: the bank data,
-   categories and sorting stay on the person's iPhone and never reach our servers; only the Ares account is ours.
-   It also names sharing a bank's format (section "Bank formats shared from Aresium" above, 2026-10-27) and asking for
-   a missing bank (section "Bank requests from Aresium" above, 2026-10-27): what is sent, that no payment or account
-   is in it, the IP in the logs for 5 days, kept at most 12 months.
-   The netcup AVV needs no change for this. The legal check of the server route (AVV entries, Groq, transfers,
-   Art. 9, Art. 30, DPIA) is kept on branch `codex/03-aresium-privacy` in case server sorting comes back.
+6. ~~**Aresium for other people, before it opens**~~: done 2026-10-27. The public policy's section 6 → "Aresium"
+   (German and English, approved by Patrik with his notes: no PayPal, no "no AI", no account talk): the bank data,
+   categories and sorting stay on the iPhone and never reach our servers; deleting, export and device backups, the
+   lock, sending a bank's format or a missing bank's name ("Bank formats" and "Bank requests" sections above), and
+   contact through the contact form's route. Section 5 says Aresium works without an account. The netcup AVV needs no
+   change. **Rule that keeps the text true:** the `aresium` service stays with Patrik's own accounts (the hub catalog
+   has Aresium as "coming-soon", so nobody can ask for it). If anyone else ever gets it, the app asks `GET /api/mode`
+   for them, and the policy must name that request again before. The legal check of the server route (AVV entries,
+   Groq, transfers, Art. 9, Art. 30, DPIA) is kept on branch `codex/03-aresium-privacy` in case server sorting comes
+   back.
