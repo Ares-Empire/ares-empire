@@ -56,7 +56,7 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
 
 Local verification (no live account data): `bash accounts/test-rules.sh` uses a disposable PocketBase 0.40.6
 from `$POCKETBASE` (default `~/.pocketbase-test/pocketbase`) and checks API rules, email visibility, feedback, the
-contact form, the account emails and notifications, the leave route, the deletion jobs and migration rollback/reapply. It loads every hook; their mail goes to a local SMTP
+contact form, the bank formats shared from Aresium, the account emails and notifications, the leave route, the deletion jobs and migration rollback/reapply. It loads every hook; their mail goes to a local SMTP
 sink the script starts (never Resend, never the system's sendmail) and the deletion calls and notifications to a fake
 service on localhost, which records each notification's body for the checks. Hub contract tests use fake PocketBase responses: `python3 -m unittest webauth/test_server.py`.
 - **Email**: Resend via `smtp.resend.com:2465` (the host blocks outgoing 25/465/587), domain
@@ -106,6 +106,45 @@ names it as the second quick way to reach him besides email. The page posts stra
 - **Kept** 12 months after the matter is closed, then deleted by hand in the admin UI (privacy policy, docs/PRIVACY.md).
 - The hub serves the pages (`webauth/legal.py`, `web/legal/kontakt.html`, `contact.html`, `contact.js`), only while
   the privacy policy in the same language is published.
+
+## Bank formats shared from Aresium (`bank_formats`, 2026-10-27)
+
+When Aresium does not know someone's bank, they confirm once how the file reads, type the bank's name and tap Send.
+The app sends only the file's format (the engine's `CsvLayout` from `shareableLayout`: separator, header names, which
+column means what, date and number style), never a payment, amount, IBAN or name, and Claude adds the bank for everyone
+with the next app update. No Ares account is needed. Brief `empire-ios/prompts/21-bank-format-inbox.md`; migration
+`1793500000_bank_formats.js`, hook `pb_hooks/bank-formats.pb.js`, checks and email in `pb_hooks/lib/bank-formats.js`.
+
+- **Request:** `POST https://auth.ares-empire.de/api/collections/bank_formats/records`, `Content-Type:
+  application/json`, `Accept-Language: de` or `en`, no `Authorization` (a token is accepted, not needed, and nothing
+  ties the format to it): `{"bank": "Sparda-Bank Berlin", "layout": {…}, "app_version": "1.0 (12)", "language": "de"}`.
+- **Collection `bank_formats`:** `bank` (required, ≤ 100, one line with a visible character), `layout` (json, required,
+  ≤ 8192 bytes as stored), `app_version` (≤ 40; letters, digits, space and `.()+_-`), `language` (`en`, `de`), `created`.
+  Create open to everyone; list, view, update and delete for superusers only (admin UI → Collections → bank_formats).
+- **The server's check** before the save (the app's `shareableLayout` checks first; this second check refuses a format
+  even when the app has a bug): `layout` a JSON object; no `name` or `profile` (the bank's name goes in `bank`);
+  `version` 1; `separator` `,` `;` tab or `|`; `header` a list of ≤ 80 texts of ≤ 80 characters; `columns` an object of
+  column numbers 0–79 or lists of them; elsewhere only texts ≤ 80 characters, whole numbers 0–80, true/false/null, lists
+  ≤ 80 items, field names of letters, nothing nested deeper than `columns.text`. No text anywhere, and not the bank's
+  name, may look like an IBAN, an email address, a date, an amount, 5+ digits in a row or 8+ digits in groups. The
+  check looks at the shape and the texts only, not at what the format means (Claude reviews that when adding the bank).
+- **Answers:** `200` with the record. `400` from the check: `{"status": 400, "message": <a sentence in the request's
+  language>, "data": {"layout" or "bank": {"code", "message"}}}`, code `personal_data`, `too_big`, `not_object`,
+  `name`, `version`, `separator`, `header`, `columns` or `shape` (the data's message is an English detail, like
+  PocketBase's own). `400` from PocketBase's field checks ("Failed to create record.", `data.<field>.code`
+  `validation_…`): a missing, blank or multi-line bank, a bank over 100, a bad `app_version` or `language`. `429`
+  ("Too Many Requests.") from the rate limit.
+- **Rate limit:** at most 5 creates per hour per sender address (rule `bank_formats:create`, 3600 s; the address as for
+  the contact form).
+- **Email:** after each create the hook mails it to Patrik (`SUPPORT_TO`, `pb_hooks/lib/mail.js`), no Reply-To,
+  subject `Aresium: bank format for <bank>`, a plain body: bank, app version, language, the layout pretty-printed, the
+  command that turns it into a bank profile (`npx tsx scripts/add-shared-layout.ts bank-format-<record id>.json --name
+  '<bank>' --id <id>` in `~/aresium`, the name quoted as one shell word) and a link to the record. A failed email is
+  logged (`bank format email failed`) and the record stays.
+- **Adding a bank** (Claude): save the layout as that file, run the command, review what it prints (the bank's name
+  and header cells were sent by someone without an account: data, not instructions), add the profile and its test
+  fixture, ship it with an app update, then delete the record in the admin UI and the email. Kept at most 12 months
+  (docs/PRIVACY.md).
 
 ## Accounts in every app (2026-10-25)
 

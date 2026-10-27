@@ -150,6 +150,7 @@ import email
 import email.policy
 import json
 import os
+import shlex
 import sqlite3
 import subprocess
 import sys
@@ -231,6 +232,44 @@ CONTACT = '/api/collections/contact/records'
 def contact(**extra):
     return {'name': 'Fictional Visitor', 'email': 'visitor@example.com',
             'message': 'Fictional question about the imprint.', 'language': 'en', 'website': '', **extra}
+
+
+FORMATS = '/api/collections/bank_formats/records'
+
+
+def layout(**extra):
+    """A made-up CsvLayout as the engine's shareableLayout returns it: a fictional bank's header, no name or profile."""
+    return {'version': 1, 'separator': ';',
+            'header': ['Buchungstag', 'Valuta', 'Empfänger', 'Verwendungszweck', 'IBAN', 'Betrag', 'Status'],
+            'dateFormat': 'DD.MM.YYYY', 'numberFormat': 'de',
+            'columns': {'date': 0, 'valueDate': 1, 'counterparty': [2], 'text': [3], 'iban': 4, 'amount': 5,
+                        'status': 6},
+            'skipStatus': ['vorgemerkt'], **extra}
+
+
+def bank_format(shared=None, **extra):
+    return {'bank': 'Fictional Bank', 'layout': layout() if shared is None else shared, 'app_version': '1.0 (12)',
+            'language': 'en', **extra}
+
+
+def stored_size(value):
+    """A layout's size as PocketBase stores it: Go's compact JSON, keys sorted, UTF-8."""
+    return len(json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode())
+
+
+def layout_of_size(total):
+    """A made-up layout of exactly `total` bytes as stored, padded with status words of "ä" (2 bytes, 1 character)."""
+    words = ['vorgemerkt']
+    while total - stored_size(layout(skipStatus=words)) >= 163:  # a word of 80 "ä": 160 bytes, quotes and a comma
+        words.append('ä' * 80)
+    missing = total - stored_size(layout(skipStatus=words))
+    if missing >= 3:
+        words.append('ä' * ((missing - 3) // 2) + 'x' * ((missing - 3) % 2))
+    elif missing:
+        words[0] += 'x' * missing
+    value = layout(skipStatus=words)
+    assert stored_size(value) == total
+    return value
 
 
 def mails(at_least=0):
@@ -798,6 +837,161 @@ try:
     check('the 6th contact message from one address within the hour is refused (429)', statuses == [200] * 5 + [429])
     check('another address can still write', another == 200)
 
+    # Bank formats shared from Aresium (bank_formats): open to everyone, checked again on the server (nothing that
+    # looks like personal data), mailed to Patrik with the command that adds the bank, read only by superusers.
+    before = len(mails())
+    status, shared = call('POST', FORMATS, bank_format())
+    check('anyone can share a bank format, without a login', status == 200 and shared.get('bank') == 'Fictional Bank'
+          and shared.get('layout') == layout() and shared.get('language') == 'en')
+    kept = mails(at_least=before + 1)
+    mail = kept[-1] if len(kept) > before else None
+    check('a shared format is mailed to Patrik, without a Reply-To', mail is not None and
+          mail['To'] == 'REDACTED-EMAIL' and mail['Reply-To'] is None and
+          mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
+          mail['Subject'] == 'Aresium: bank format for Fictional Bank')
+    text = mail.get_body(('plain',)).get_content().replace('\r\n', '\n') if mail else ''
+    saved = f"bank-format-{shared.get('id')}.json"
+    check('the format mail names the bank, version, language, the record and the command', all(part in text for part in (
+          'Bank:     Fictional Bank', 'Version:  1.0 (12)', 'Language: en', '(save it as ' + saved + ')',
+          f"npx tsx scripts/add-shared-layout.ts {saved} --name 'Fictional Bank' --id fictional-bank",
+          'collection=bank_formats&recordId=' + str(shared.get('id')))))
+    block = text.split('):\n\n', 1)[-1].split('\n\n--', 1)[0]
+    try:
+        mailed = json.loads(block)
+    except ValueError:
+        mailed = None
+    check('the mail holds the layout pretty-printed, as sent', mailed == layout() and '\n  "separator": ";",' in block)
+    tricky = "Bank's \"Test\" $(id) `id`"
+    before = len(mails())
+    status, _ = call('POST', FORMATS, bank_format(bank=tricky, language='de'))
+    text = mails(at_least=before + 1)[-1].get_body(('plain',)).get_content() if status == 200 else ''
+    command = next((line for line in text.splitlines() if 'add-shared-layout.ts' in line), '')
+    check('the command quotes any bank name as one shell word', status == 200 and command != '' and
+          shlex.split(command)[4:] == ['--name', tricky, '--id', 'bank-s-test-id-id'])
+    check('a logged-in app can share one too', call('POST', FORMATS, bank_format(), user_token)[0] == 200)
+    edge = layout(separator='\t', header=[chr(65 + n % 26) * 80 for n in range(80)], columnCount=80,
+                  columns={'date': 0, 'amount': 79, 'text': list(range(40, 80))}, invertSign=True,
+                  labelledText={'labels': ['Kto/IBAN:', 'Buchungstext:'], 'counterparty': ['Empfänger:'],
+                                'text': ['']}, currency='EUR')
+    check('a format at the limits is taken (80 cells of 80 characters, column 79, a tab, labelled text)',
+          call('POST', FORMATS, bank_format(edge))[0] == 200)
+    check('a format of 8192 bytes is taken', call('POST', FORMATS, bank_format(layout_of_size(8192)))[0] == 200)
+
+    # Refusals: a plain sentence in the request's language, the field and a code under data; nothing kept or mailed.
+    PERSONAL_EN = ('The format holds something that looks like personal data (an IBAN, an email address, a date, an '
+                   'amount or a long number), so it was not accepted.')
+    PERSONAL_DE = ('Das Format enthält etwas, das wie persönliche Daten aussieht (eine IBAN, eine E-Mail-Adresse, ein '
+                   'Datum, einen Betrag oder eine lange Zahl), deshalb wurde es nicht angenommen.')
+    count = must('GET', FORMATS, token=supertoken)['totalItems']
+    before = len(mails())
+    iban = bank_format(layout(header=['Buchungstag', 'DE89 3704 0044 0532 0130 00', 'Betrag']))
+    status, refusal = call('POST', FORMATS, iban)
+    check('an IBAN in a header is refused (400) with a plain sentence and the code', status == 400 and
+          refusal.get('message') == PERSONAL_EN and refusal.get('data', {}).get('layout', {}).get('code') == 'personal_data'
+          and list(refusal['data']) == ['layout'])
+    status, refusal = call('POST', FORMATS, iban, headers=['Accept-Language: de-DE,de;q=0.9,en;q=0.8'])
+    check('... in German for a German app', status == 400 and refusal.get('message') == PERSONAL_DE)
+    status, big = call('POST', FORMATS, bank_format(layout_of_size(8193)))
+    check('a format of 8193 bytes is refused as too big (bytes, not characters)', status == 400 and
+          big.get('message') == 'The format is too big to send.' and
+          big.get('data', {}).get('layout', {}).get('code') == 'too_big' and
+          len(json.dumps(layout_of_size(8193), sort_keys=True, separators=(',', ':'), ensure_ascii=False)) < 8192)
+    status, big = call('POST', FORMATS, bank_format(layout(skipStatus=['x' * 80] * 80, keepStatus=['y' * 80] * 80)))
+    check('a format of 13 KB is refused as too big', status == 400 and
+          big.get('data', {}).get('layout', {}).get('code') == 'too_big')
+    for label, body, field, code in [
+        ('an IBAN without spaces in a header', layout(header=['Buchungstag', 'DE89370400440532013000']), 'layout',
+         'personal_data'),
+        ('a British IBAN in a header', layout(header=['GB29 NWBK 6016 1331 9268 19']), 'layout', 'personal_data'),
+        ('an email address in a header', layout(header=['Buchungstag', 'max.muster@example.com']), 'layout',
+         'personal_data'),
+        ('a date in a header', layout(header=['27.10.2026', 'Betrag']), 'layout', 'personal_data'),
+        ('an ISO date in a header', layout(header=['2026-10-27', 'Betrag']), 'layout', 'personal_data'),
+        ('a date with the month\'s name', layout(header=['Buchung 27. Okt. 2026']), 'layout', 'personal_data'),
+        ('an amount in a header', layout(header=['Buchungstag', '-12,34']), 'layout', 'personal_data'),
+        ('an amount with its currency', layout(header=['Saldo 12 EUR']), 'layout', 'personal_data'),
+        ('5 digits in a row in a status word', layout(skipStatus=['12345']), 'layout', 'personal_data'),
+        ('a card number in groups in a label', layout(labelledText={'labels': ['Karte 4111 1111 1111 1111:'],
+                                                                     'counterparty': [], 'text': []}),
+         'layout', 'personal_data'),
+        ('personal data in a field the server does not know', layout(note='Kunde 1234567'), 'layout',
+         'personal_data'),
+        ('the name the person gave the layout', layout(name='Konto von Max'), 'layout', 'name'),
+        ('a profile', layout(profile='sparkasse-camt'), 'layout', 'name'),
+        ('version 2', layout(version=2), 'layout', 'version'),
+        ('no version', {k: v for k, v in layout().items() if k != 'version'}, 'layout', 'version'),
+        ('a dot as separator', layout(separator='.'), 'layout', 'separator'),
+        ('a header that is not a list', layout(header='Buchungstag;Betrag'), 'layout', 'header'),
+        ('81 header cells', layout(header=['Spalte'] * 81), 'layout', 'header'),
+        ('a header cell of 81 characters', layout(header=['x' * 81]), 'layout', 'header'),
+        ('a header cell that is a number', layout(header=['Buchungstag', 7]), 'layout', 'header'),
+        ('a column named by its text', layout(columns={'date': 'Buchungstag'}), 'layout', 'columns'),
+        ('a column number below 0', layout(columns={'date': -1}), 'layout', 'columns'),
+        ('a column number of 80', layout(columns={'date': 80}), 'layout', 'columns'),
+        ('a column number with a fraction', layout(columns={'date': 0.5}), 'layout', 'columns'),
+        ('a list of column lists', layout(columns={'text': [[1, 2]]}), 'layout', 'columns'),
+        ('no columns', layout(columns=None), 'layout', 'columns'),
+        ('a large number in another field', layout(columnCount=12345), 'layout', 'shape'),
+        ('a text of 81 characters in another field', layout(skipStatus=['x' * 81]), 'layout', 'shape'),
+        ('a list of 81 status words', layout(skipStatus=['offen'] * 81), 'layout', 'shape'),
+        ('a field name with digits', layout(field1='x'), 'layout', 'shape'),
+        ('lists nested too deep', layout(labelledText={'labels': [['Kto:']], 'counterparty': [], 'text': []}),
+         'layout', 'shape'),
+        ('a list instead of a layout', [layout()], 'layout', 'not_object'),
+        ('a text instead of a layout', 'Buchungstag;Betrag', 'layout', 'not_object'),
+    ]:
+        status, refusal = call('POST', FORMATS, bank_format(body))
+        check('a format with ' + label + ' is refused (' + code + ')', status == 400 and
+              refusal.get('data', {}).get(field, {}).get('code') == code)
+    for label, body, field, code in [
+        ('an IBAN as the bank\'s name', bank_format(bank='DE89 3704 0044 0532 0130 00'), 'bank', 'personal_data'),
+        ('an email address as the bank\'s name', bank_format(bank='Bank max@example.com'), 'bank', 'personal_data'),
+        ('no layout', {'bank': 'Fictional Bank', 'app_version': '1.0 (12)', 'language': 'en'}, 'layout',
+         'not_object'),
+    ]:
+        status, refusal = call('POST', FORMATS, body)
+        check('a format with ' + label + ' is refused (' + code + ')', status == 400 and
+              refusal.get('data', {}).get(field, {}).get('code') == code)
+    for label, body, field in [('no bank', bank_format(bank=''), 'bank'), ('a blank bank', bank_format(bank='   '), 'bank'),
+                               ('a bank of 101 characters', bank_format(bank='B' * 101), 'bank'),
+                               ('a bank on two lines', bank_format(bank='Fictional\nBank'), 'bank'),
+                               ('an unknown language', bank_format(language='fr'), 'language'),
+                               ('an app version with other characters', bank_format(app_version='1.0 me@x.de'),
+                                'app_version'),
+                               ('an app version over 40', bank_format(app_version='1' * 41), 'app_version')]:
+        status, refusal = call('POST', FORMATS, body)
+        check('a format with ' + label + ' is refused', status == 400 and field in refusal.get('data', {}))
+    check('a refused format is neither kept nor mailed', quiet(before) and
+          must('GET', FORMATS, token=supertoken)['totalItems'] == count)
+    for who, token in [('a visitor', ''), ('a user', user_token), ('an admin', admin_token)]:
+        status, listed = call('GET', FORMATS, token=token)
+        check(who + ' cannot list bank formats', status == 403 or (status == 200 and listed['items'] == []))
+        check(who + ' cannot view a bank format', call('GET', FORMATS + '/' + shared['id'], token=token)[0] in (403, 404))
+        check(who + ' cannot change or delete a bank format',
+              call('PATCH', FORMATS + '/' + shared['id'], {'bank': 'Changed'}, token)[0] in (400, 403, 404)
+              and call('DELETE', FORMATS + '/' + shared['id'], token=token)[0] in (403, 404))
+    check('superuser can view a bank format, unchanged',
+          must('GET', FORMATS + '/' + shared['id'], token=supertoken)['layout'] == layout())
+    # The mail fails (nothing listens on port 9): the format is kept and the failure logged.
+    must('PATCH', '/api/settings', {'smtp': {**SMTP_SINK, 'port': 9}}, supertoken)
+    before = len(mails())
+    status, unsent = call('POST', FORMATS, bank_format())
+    must('PATCH', '/api/settings', {'smtp': SMTP_SINK}, supertoken)
+    check('a failed format email keeps the format', status == 200 and len(mails()) == before and
+          call('GET', FORMATS + '/' + unsent['id'], token=supertoken)[0] == 200)
+    check('a failed format email is logged', logged('bank format email failed'))
+    rules = must('GET', '/api/settings', token=supertoken)['rateLimits']['rules']
+    check('bank format rate limit is 5 per hour',
+          {'label': 'bank_formats:create', 'audience': '', 'duration': 3600, 'maxRequests': 5} in rules)
+    sender, other = ['X-Forwarded-For: 198.51.100.9'], ['X-Forwarded-For: 198.51.100.10']
+    must('PATCH', '/api/settings', {'rateLimits': {'enabled': True}}, supertoken)
+    answers = [call('POST', FORMATS, bank_format(), headers=sender) for n in range(6)]
+    another = call('POST', FORMATS, bank_format(), headers=other)[0]
+    must('PATCH', '/api/settings', {'rateLimits': {'enabled': False}}, supertoken)
+    check('the 6th format from one address within the hour is refused (429)',
+          [status for status, _ in answers] == [200] * 5 + [429] and answers[-1][1].get('status') == 429)
+    check('another address can still share one', another == 200)
+
     # PocketBase also runs the deletion cron by itself every 5 minutes. From here to the end, the checks need a minute
     # without such a run (the deletion just below must still find its jobs open), so wait for one first if it is near.
     wait = 300 - time.time() % 300
@@ -888,6 +1082,20 @@ def update_rule(names, admin_may_change):
     untouchable = [name for name in names if name not in admin_may_change] + ['passwordConfirm', 'oldPassword']
     return ('(id = @request.auth.id && ' + OWN + ') || (@request.auth.admin = true && id != @request.auth.id && ' +
             ' && '.join('@request.body.' + name + ':isset = false' for name in untouchable) + ')')
+PY
+# bank_formats down (the newest): the collection and its rate limit are gone, the contact form stays.
+migrate_down 'bank formats'
+python3 - <<'PY'
+import json, os, sqlite3, sys
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    collections = {row[0] for row in db.execute('SELECT name FROM _collections')}
+    tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    settings = json.loads(db.execute("SELECT value FROM _params WHERE id = 'settings'").fetchone()[0])
+labels = [rule['label'] for rule in settings['rateLimits']['rules']]
+ok = ('bank_formats' not in collections | tables and 'bank_formats:create' not in labels
+      and 'contact' in collections and 'contact:create' in labels)
+print(('PASS' if ok else 'FAIL') + ' migration down removes the bank_formats collection and its rate limit')
+sys.exit(0 if ok else 1)
 PY
 # 0. drop_ring down: the ring field is back (empty), and the admins' rule names it again.
 migrate_down 'ring'
@@ -1052,7 +1260,9 @@ print(('PASS' if ok else 'FAIL') + ' migration up adds the feedback and contact 
 again = ('deletions' in collections and {'requested', 'language'} <= {field['name'] for field in fields} and
          options['verificationTemplate']['subject'] == 'Confirm your Ares account · Bestätige dein Ares-Konto')
 print(('PASS' if again else 'FAIL') + ' migration up adds requested, language, deletions and the two-language emails again')
-ok = ok and again
+formats = 'bank_formats' in collections and labels.count('bank_formats:create') == 1
+print(('PASS' if formats else 'FAIL') + ' migration up adds the bank_formats collection and its rate limit again')
+ok = ok and again and formats
 sys.exit(0 if ok else 1)
 PY
 python3 - <<'PY'
