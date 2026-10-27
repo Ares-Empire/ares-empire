@@ -351,6 +351,15 @@ The results go into this file before the choices that depend on them.
 7. **The same period as CSV and as CAMT** still gives different ids (duplicates); not solved yet.
 8. Santander/Openbank, Advanzia, Hanseatic and the Targobank credit card have no public header: their files go to the
    layout guess. Changing a profile's columns later changes its ids, so profiles change with care.
+9. **Trade Republic** (brief 19): one CSV holds the securities account and the cash account; check that share
+   purchases are not read as spending.
+10. **PayPal** (brief 19): two different CSV reports exist, and "Auswirkung auf Guthaben" is not a default column;
+    the reader needs that column and "Typ", so the result depends on the report chosen. The guide says which one;
+    the reader should say plainly when the column is missing.
+11. **VR banks' MT940** (brief 19) can save as `.mta`, which the app's file picker and share sheet do not list (the
+    guide recommends CSV).
+12. **comdirect** (brief 19): a file with several accounts is read only in its first section (the guide says to
+    export one account at a time).
 
 **From brief 13 (shop list, 2026-10-27):** 288 → 2,815 names. Measured on Patrik's payments: share sorted unchanged
 (64%; his leftovers are personal), share right 95.2% → 93.8%, mostly the PayPal double import (handled by the
