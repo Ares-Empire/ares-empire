@@ -118,7 +118,9 @@ app only receives the result. The own code is stored only as a hash in the iPhon
 together with the bank's name as entered, so that Aresium recognises it in future. Only the column headings and their
 meaning, the separator, the date and number format, the bank's name and the app's version and language are sent; no
 transactions, amounts, names or account numbers. A format that appears to contain such information is neither sent
-nor accepted. The information is stored on the account server and forwarded to the controller by email. The IP
+nor accepted. Likewise, the name of a bank that Aresium does not know yet can be sent voluntarily; only the name as
+entered and the app's version and language are sent. The information is stored on the account server and forwarded
+to the controller by email. The IP
 address is processed as described in section 2 and is also used to limit the number of submissions. The legal basis
 is Art. 6(1)(f) GDPR; the legitimate interest lies in supporting further bank formats and in protection against
 misuse. The information is deleted once the format has been added to Aresium, at the latest after 12 months.</p>
@@ -129,7 +131,7 @@ contact form (section 4); the type of message, the app version and the iOS versi
 <ul>
   <li>netcup GmbH, Karlsruhe, Germany: operation of the server (processing on behalf under Art. 28 GDPR),</li>
   <li>Resend, Inc., USA: sending emails (confirmation, approval, password, login notices, forwarding of messages and of
-    submitted bank formats),</li>
+    submitted bank formats and bank names),</li>
   <li>IONOS SE, Montabaur, Germany: the controller's email mailbox,</li>
   <li>Apple Distribution International Ltd., Ireland, and Apple Inc., USA: delivery of push notifications,</li>
 </ul>
