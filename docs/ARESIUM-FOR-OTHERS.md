@@ -262,6 +262,21 @@ shop rules, learning and the PayPal rule; nothing about payments leaves the phon
 policy's Aresium section says the data stays on the iPhone. Apple's on-device model can come later as the optional
 switch. The Groq client stays in `aresium/src/sort/` (also usable for Patrik's own server).
 
+**D7 — No account for phone mode (Patrik, 2026-10-27, after trying the first run).** Phone mode needs no Ares account:
+the account gave a friend nothing (their data never leaves the phone) and cost them a sign-up, an email confirmation
+and waiting for approval; Apple's guideline 5.1.1(v) also asks apps without account features to work without a login.
+Instead an optional lock: Face ID and/or an own 6-digit code. With an own code set, the iPhone's code cannot
+open Aresium or reset the code (Patrik agreed, 2026-10-27); a forgotten code means deleting Aresium's data. One store per phone. Patrik's server mode stays,
+through the shared Ares login of the other apps. Who can use Aresium is then simply who has the TestFlight link, which
+costs nothing on our side. The other apps keep accounts: they keep data on our server or cost money per person
+(Arestemis's AI checks). Brief 22.
+
+**After Patrik's first test (2026-10-27):** a guide per bank on how to get the file (brief 19: the steps; the screen
+comes later), a tour over made-up data that highlights the real buttons, an unknown-file window that shows the first
+payments and asks "Does this look right?" (several readings from the engine, brief 20), and sending an unknown bank's
+format (never a payment) to us in two taps so Claude can add the bank for everyone (engine: brief 20; the inbox on the
+account server: brief 21). Fixed on the way: "Not sorted" counted money coming in as negative spending (brief 20).
+
 ## Measurements before choosing
 
 Patrik's transactions are exported from the server to a folder on the MacBook outside every repo, used for the
@@ -336,6 +351,15 @@ The results go into this file before the choices that depend on them.
 7. **The same period as CSV and as CAMT** still gives different ids (duplicates); not solved yet.
 8. Santander/Openbank, Advanzia, Hanseatic and the Targobank credit card have no public header: their files go to the
    layout guess. Changing a profile's columns later changes its ids, so profiles change with care.
+9. **Trade Republic** (brief 19): one CSV holds the securities account and the cash account; check that share
+   purchases are not read as spending.
+10. **PayPal** (brief 19): two different CSV reports exist, and "Auswirkung auf Guthaben" is not a default column;
+    the reader needs that column and "Typ", so the result depends on the report chosen. The guide says which one;
+    the reader should say plainly when the column is missing.
+11. **VR banks' MT940** (brief 19) can save as `.mta`, which the app's file picker and share sheet do not list (the
+    guide recommends CSV).
+12. **comdirect** (brief 19): a file with several accounts is read only in its first section (the guide says to
+    export one account at a time).
 
 **From brief 13 (shop list, 2026-10-27):** 288 → 2,815 names. Measured on Patrik's payments: share sorted unchanged
 (64%; his leftovers are personal), share right 95.2% → 93.8%, mostly the PayPal double import (handled by the
@@ -354,7 +378,10 @@ Built and merged, all by Claude agents (Patrik, 2026-10-27), each checked by Cla
   categories, export/restore, the data lifecycle; server mode unchanged.
 - Running: brief 18, the look of the new screens and their German.
 
-Left before friends get it: brief 18; the privacy policy's Aresium section (phone-only text, PRIVACY.md → To do 6);
+Since then (all running 2026-10-27): briefs 19–22 (see D7 and the paragraph after it). Then the app's new import window
+with Send, the tour and the bank-steps screen; the policy text without an account.
+
+Left before friends get it (as of the morning of 2026-10-27): brief 18; the privacy policy's Aresium section (phone-only text, PRIVACY.md → To do 6);
 Apple's approval and external TestFlight (Apple reviews it); hub catalog `open`. Known limits to decide later: an
 account deleted from another app leaves Aresium's store on that iPhone (only Aresium can delete it); offering an export
 before leaving; ZIP files.
