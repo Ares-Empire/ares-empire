@@ -259,6 +259,7 @@ My additions, each with what I would do. Several are in the parts above already.
 | 12 | **Widgets in phone mode** | They read the phone's snapshot as today; small change |
 | 13 | **The website:** others have nothing on aresium.de | Say so on the site's login: "Aresium for others is the iPhone app" |
 | 14 | **Leaving or deleting** removes the phone's data | After offering an export (part 2) |
+| 15 | **Currencies other than the euro: not supported yet** (Patrik, 2026-10-27) | Looked at once the first person with a non-euro account wants Aresium. Today the readers keep each payment's currency, but the dashboard adds amounts as plain numbers and the app writes every amount in euros: a CHF or GBP account shows "€", and two currencies at once are added together. Fine already: card payments abroad on a euro account (the bank books euros) and PayPal's foreign purchases (its conversion rows). The fix when needed: the main currency from the bank files shown everywhere and other currencies kept apart (about half a day), then converting at the ECB's daily rates into one chosen currency (1–2 days; the rates download needs a sentence in the privacy policy) |
 
 ## Decisions
 
