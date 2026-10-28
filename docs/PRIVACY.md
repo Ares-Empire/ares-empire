@@ -155,6 +155,11 @@ AV-Vertrag).
   through the share sheet; where it goes is the person's choice.
 - The lock (optional): Face ID is checked by iOS (the app gets only the result); the own 6-digit code only as a salted
   PBKDF2 hash in Aresium's own Keychain item, this device only.
+- Receipts (brief 31, 2026-10-28): photographed with the camera (VisionKit's document scanner) or picked from the
+  photo library (PhotosPicker, no library permission); read on the iPhone with Vision (text and the register's QR
+  code); the image is never written to disk and is released after reading. Stored in the same store: the read rows,
+  shop, date, time, total, currency, card or cash, category, the joined payment. Nothing leaves the phone.
+  `NSCameraUsageDescription` says what the camera is for.
 - Contact & support without a login goes to the `contact` collection (as the website's form), with a footer naming
   the app, its version, iOS and the topic. Sharing a bank's format: "Bank formats shared from Aresium" below.
 - Public policy: section 6 → "Aresium" (German and English). No change to the netcup AVV: no financial data of
@@ -265,6 +270,9 @@ unchanged.
 5's first sentence names Aresium as usable without an account; section 7's Resend line names bank formats and bank
 names; section 11 names Aresium's contact form. Published by merging to main; the account server's bank_formats and
 bank_requests inboxes and the "[Aresium]" contact email were deployed the same day.
+
+2026-10-28 (Aresium receipts): section 6 → "Aresium", one paragraph on receipts in both policies (camera or photo
+library, read on the iPhone, photo discarded, what is stored, nothing transmitted); Patrik approved the text.
 
 ## To do (follow-up builds)
 
