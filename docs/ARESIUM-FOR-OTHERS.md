@@ -308,6 +308,17 @@ costs nothing on our side. The other apps keep accounts: they keep data on our s
 so nothing counts twice; asked when the amounts differ ("smart to ask", Patrik); cash taken out of the withdrawals;
 no photo kept; items later (part 6).
 
+**D9 — Cash beyond the bank, and correcting receipts (Patrik, 2026-10-28, after trying receipts).** Cash that never
+came from the bank (a gift, money from selling something) is entered by hand, both ways: cash spent works like a cash
+receipt without a photo; cash received counts as income in its category and is a source that cash spending can come
+from, like a withdrawal. Where a cash payment came from can be chosen per receipt or entry (automatic otherwise: the
+latest source before it, at most about three months back). One **Cash** page lists every cash movement from the
+wallet's side (withdrawals and cash received plus, receipts and entries minus, the rest not accounted for); it is a
+view and never counts in the totals. The default category holding the withdrawals is renamed "Cash withdrawals" /
+"Abhebungen", so "Bargeld" is the page. The receipt's check window shows every field as editable (shop, date, total,
+card or cash, category), also after saving; a corrected shop name is remembered for the next receipt read the same
+way, the category per shop as a Switch; totals and card or cash are not learned. Briefs 32 (engine) and 33 (app).
+
 **After Patrik's first test (2026-10-27):** a guide per bank on how to get the file (brief 19: the steps; the screen
 comes later), a tour over made-up data that highlights the real buttons, an unknown-file window that shows the first
 payments and asks "Does this look right?" (several readings from the engine, brief 20), and sending an unknown bank's
