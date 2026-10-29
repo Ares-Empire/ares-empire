@@ -12,7 +12,7 @@ province is added or its state changes, update *both* this file and the manifest
 > On the name: "Ares" is Patrik's long-standing handle. The war-god association is
 > treated as *aesthetic* — marble, gold, command, gravitas — never devotional.
 
-## Now and next (updated 2026-10-26)
+## Now and next (updated 2026-10-29)
 
 **Where things stand:** five iPhone apps (Empire, Aresium, Arestemis, Aresus, Arestoteles) run on the simulator, all
 on the shared standard (Settings, English/German with an in-app switch, light and dark, one Ares account run from every
@@ -20,13 +20,13 @@ app). The Empire app was reviewed before its first TestFlight build (council 202
 every app an account has and "+" asks for more ([docs/EMPIRE-APP.md](docs/EMPIRE-APP.md)). The privacy policy and
 imprint are live and linked from every site, the websites load nothing from other hosts, and the data that cannot be
 rebuilt is backed up every night to the MacBook ([docs/BACKUP.md](docs/BACKUP.md)). Showcase images of every app with
-made-up data: `empire-ios/showcase/`. Nothing is on a phone yet: Apple's developer enrollment has been pending since
-2026-10-23.
+made-up data: `empire-ios/showcase/`. Apple approved the developer account on 2026-10-29 (team `WQN8SHAH9B`): Aresium
+is on Patrik's iPhone through internal TestFlight; the other four apps follow the same way (`empire-ios/scripts/testflight.sh`).
 
 **Next up (2026-10-27):** Aresium for other people is built (phone mode: their data on their iPhone, 25 banks, 2,815
 known shops, no AI; [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) → Progress). Privacy policy section live
 (2026-10-27). The payment page in plain words and import-first are
-merged (briefs 27–28). Before friends get it: Apple's approval and external TestFlight; friends get the TestFlight link directly (no account, no hub step).
+merged (briefs 27–28). On Patrik's iPhone since 2026-10-29 (internal TestFlight). Before friends get it: external TestFlight, which Apple reviews; friends get the TestFlight link directly (no account, no hub step).
 
 **The big steps, in this order** (Patrik, 2026-10-25):
 
@@ -141,7 +141,7 @@ repo as a top-level folder, and live services and data volumes depend on their p
 
 | Province | Login | iPhone app | Repo |
 |---|---|---|---|
-| **Aresium** | **Empire login** (website, hub hand-off and API for the app) | **built** (simulator; TestFlight pending) | `aresium` |
+| **Aresium** | **Empire login** (website, hub hand-off and API for the app) | **on Patrik's iPhone** (internal TestFlight, 2026-10-29) | `aresium` |
 | **Arestemis** | **Empire login** (API for the app, no website) | **built** (simulator; TestFlight pending): [docs/ARESTEMIS-APP.md](docs/ARESTEMIS-APP.md) | `Arestemis` |
 | **Aresus** (+ Aresync) | **Empire login** (API for the app, no website; Aresync reports with machine tokens) | **built** (simulator; TestFlight pending): [docs/ARESUS-APP.md](docs/ARESUS-APP.md) | `aresus`, `aresync` |
 | **Arestoteles** | **Empire login** (API for the app); the website keeps its own login | **built** (simulator; TestFlight pending): [docs/ARESTOTELES-APP.md](docs/ARESTOTELES-APP.md) | `Arestoteles`, vault `carlsenares/opinions` |
@@ -195,6 +195,7 @@ Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 After adding a line to `web/app/empire-data.js`, run `python3 tools/empire_samples.py --web` (the website's
 previews are generated from it; a test checks they are current).
 
+- **2026-10-29 · aresium** — Aresium is on Patrik's iPhone: Apple approved the developer account, all five apps are signed with its team, and the first build went through TestFlight to the phone. It is for Patrik only so far, so Apple did not need to review it. Later builds reach the phone the same way, uploaded with one command from the MacBook.
 - **2026-10-28 · aresium** — Aresium reads receipts: a photo or a scan of a receipt is read on the iPhone into shop, date, total and card or cash, and every field can be corrected. A card receipt joins its bank payment so nothing counts twice, and Aresium asks when the amounts differ; a cash receipt comes out of the withdrawal it was paid from. Cash that never came from the bank, such as a gift, can be entered by hand, and a Cash page shows every cash movement in one place. The photo is never kept.
 - **2026-10-27 · aresium** — Aresium now opens without an account: a friend installs it and starts with Import data or a tour over made-up data that points at each real button. An optional lock with Face ID or a code of its own protects it. For an unknown bank the app shows the first payments and asks whether they look right, and with two taps the bank's file format (never a payment) or the name of a missing bank reaches Patrik, so Aresium can learn it for everyone. A guide shows how to get the file from 16 banks and PayPal. The privacy policy now has its Aresium section.
 - **2026-10-27 · empire** — The hub got a public demo at www.ares-empire.de/demo: a made-up guest with Aresium, Arestemis and Arestoteles on the ring and a made-up chronicle, for anyone without an account; Aresium opens its own demo, the others the request form. The real provinces, plans and chronicle stay behind the login, and the privacy policy now names aresium.de and every demo page.
