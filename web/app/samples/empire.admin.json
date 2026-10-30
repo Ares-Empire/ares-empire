@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-10-30",
+      "project": "aresium",
+      "text": "Aresium after its fourth round: a payment is renamed where its name stands (a tap on the name or its pen) and its category is changed from the chip, Settings' switches read clearly in dark mode, and turning on Face ID or messages no longer flashes the cover. One shop under changing names is now one shop (Vinted's old and new company, dm's spellings, Apple's four names) for grouping, renaming and \"also the others\", and payments of one name can be added up into one row in a category's list: by a swipe, for a whole category, or everywhere."
+    },
+    {
+      "at": "2026-10-30",
       "project": "empire",
       "text": "The four other iPhone apps got the comfort items Patrik chose before TestFlight. Arestemis: a dismissed listing comes back with Undo, the Hunt tab's latest listings take a long press to save or dismiss, Search keeps unsaved changes and offers Save at the top, and Listings loads older listings as you scroll. Aresus: the run report has a close button, a province's page opens its app or website, and the Aresync tab has Settings. Arestoteles asks before throwing away typed text, keeps the tab bar on notes, has a + for a new position and Undo after Done. The Empire app's approvals can be refreshed, and Create account keeps what was typed. The push key is in place, so notifications now reach iPhones. Arestemis went to the phone through TestFlight."
     },
