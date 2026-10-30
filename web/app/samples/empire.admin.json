@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-10-30",
+      "project": "empire",
+      "text": "The four other iPhone apps got the comfort items Patrik chose before TestFlight. Arestemis: a dismissed listing comes back with Undo, the Hunt tab's latest listings take a long press to save or dismiss, Search keeps unsaved changes and offers Save at the top, and Listings loads older listings as you scroll. Aresus: the run report has a close button, a province's page opens its app or website, and the Aresync tab has Settings. Arestoteles asks before throwing away typed text, keeps the tab bar on notes, has a + for a new position and Undo after Done. The Empire app's approvals can be refreshed, and Create account keeps what was typed. The push key is in place, so notifications now reach iPhones. Arestemis went to the phone through TestFlight."
+    },
+    {
+      "at": "2026-10-30",
       "project": "aresium",
       "text": "Aresium after its third round: payments can be renamed to names one remembers (Aresium keeps the bank's name for sorting, so new imports get the name too), and all payments of one name are added up on a page of their own, reached by a swipe to the left, a long press or a line on the payment's page. The graph is a setting now and stays on; the header lost its sun and graph buttons. Aresium's messages come from the app itself instead of Telegram: a reminder to import new statements and a review of last month, both made on the iPhone and off until turned on. Build 4 went to the phone through TestFlight."
     },
