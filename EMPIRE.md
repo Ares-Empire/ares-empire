@@ -21,7 +21,8 @@ every app an account has and "+" asks for more ([docs/EMPIRE-APP.md](docs/EMPIRE
 imprint are live and linked from every site, the websites load nothing from other hosts, and the data that cannot be
 rebuilt is backed up every night to the MacBook ([docs/BACKUP.md](docs/BACKUP.md)). Showcase images of every app with
 made-up data: `empire-ios/showcase/`. Apple approved the developer account on 2026-10-29 (team `WQN8SHAH9B`): Aresium
-is on Patrik's iPhone through internal TestFlight; the other four apps follow the same way (`empire-ios/scripts/testflight.sh`).
+is on Patrik's iPhone through internal TestFlight; the other four apps follow the same way (`empire-ios/scripts/testflight.sh`),
+each after the comfort items Patrik approved for it on 2026-10-30 (`empire-ios/CLAUDE.md` → Open 15).
 
 **Next up (2026-10-27):** Aresium for other people is built (phone mode: their data on their iPhone, 25 banks, 2,815
 known shops, no AI; [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) → Progress). Privacy policy section live
