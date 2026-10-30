@@ -172,6 +172,11 @@
   "addable": [],
   "chronicle": [
     {
+      "at": "2026-10-30",
+      "project": "aresium",
+      "text": "Aresium learned from its first day on Patrik's iPhone: nothing counts twice any more (a PayPal purchase moved with its shop, money moved from PayPal to the bank, the same payment from two file formats), it sorts far more by itself (on Patrik's real files the payments left unsorted went from 400 to 280; card payments and Vinted now sort, and one correction covers a shop), ticking categories is instant, each own category gets an icon of its own, and an open app follows the iPhone switching between light and dark."
+    },
+    {
       "at": "2026-10-29",
       "project": "aresium",
       "text": "Aresium is on Patrik's iPhone: Apple approved the developer account, all five apps are signed with its team, and the first build went through TestFlight to the phone. It is for Patrik only so far, so Apple did not need to review it. Later builds reach the phone the same way, uploaded with one command from the MacBook."
