@@ -50,6 +50,12 @@ Patrik keeps **server mode** (as today). Everyone else gets **phone mode**: the 
 calculations on the phone. The Aresium server tells the app which mode an account has (the owner list decides) and
 serves no data to anyone else.
 
+**Changed 2026-10-31:** Patrik moved his data to the phone too (he imported his bank files in phone mode, and the
+phone has what server mode lacks: renaming, adding up, Mitteilungen). Logging in to another Ares app had switched his
+Aresium to server mode and hid the phone's data. Now the server answers `phone` for every account, his too; an
+owner-list account gets `server` only when its id is in `APP_SERVER_MODE_USERS` on the server (empty). The website
+and its data stay as they are. Server mode stays in the app, unused.
+
 The screens already show a ready-made dashboard computed elsewhere. In phone mode the phone must compute that same
 dashboard, run the imports and sort. That logic exists today only in the server's TypeScript (about 1,000 lines:
 parsers, duplicates, rules, dashboard, recurring payments). **D1** decides how the phone gets it.
