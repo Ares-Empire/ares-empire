@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-10-31",
+      "project": "aresium",
+      "text": "Aresium makes a new category where one is chosen: the window that changes a payment's category, the receipt window and Bargeld eintragen offer \"Neue Kategorie\". The name is typed once, the category gets its own icon and colour and is already picked, so a payment no longer needs a detour through Settings. Build 8 went to the phone through TestFlight."
+    },
+    {
+      "at": "2026-10-31",
       "project": "aresus",
       "text": "Aresus, with its Aresync tab, was uploaded to TestFlight for Patrik's iPhone. It now also watches each of Arestemis's search portals and tells only Patrik when one is blocked or failing: only after an hour without a break, as a normal notification that does not break through Focus, and silently if it comes back within six hours; the \"running again\" note replaces the alert. Short blocks no longer send anything, and a crash during such a problem still alerts at once. The false alarm about Aresium's retired Telegram bot is gone."
     },
