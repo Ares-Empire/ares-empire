@@ -22,8 +22,8 @@ imprint are live and linked from every site, the websites load nothing from othe
 rebuilt is backed up every night to the MacBook ([docs/BACKUP.md](docs/BACKUP.md)). Showcase images of every app with
 made-up data: `empire-ios/showcase/`. Apple approved the developer account on 2026-10-29 (team `WQN8SHAH9B`): Aresium
 is on Patrik's iPhone through internal TestFlight. The comfort items Patrik approved for the other four apps are built
-(2026-10-30, briefs 49–52), the push key is live, and Arestemis is on Patrik's iPhone (push works there, its Telegram copy is off since 2026-10-31); Aresus, Arestoteles and the Empire app
-follow with `empire-ios/scripts/testflight.sh` (their App Store Connect records exist).
+(2026-10-30, briefs 49–52), the push key is live, and Arestemis is on Patrik's iPhone (push works there, its Telegram copy is off since 2026-10-31); Aresus (with Aresync) was uploaded on 2026-10-31; Arestoteles and the
+Empire app follow with `empire-ios/scripts/testflight.sh` (their App Store Connect records exist).
 
 **Next up (2026-10-27):** Aresium for other people is built (phone mode: their data on their iPhone, 25 banks, 2,815
 known shops, no AI; [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) → Progress). Privacy policy section live
