@@ -63,6 +63,11 @@
   ],
   "chronicle": [
     {
+      "at": "2026-10-31",
+      "project": "arestemis",
+      "text": "Arestemis is on Patrik's iPhone, and its notifications arrive by push, so its Telegram copy is switched off. After his first look its sentences no longer mention the AI (the search fields are “filled in automatically”), and the hunt's start button says “Suche starten”; both reach the phone with the next build."
+    },
+    {
       "at": "2026-10-24",
       "project": "arestemis",
       "text": "Arestemis's search got simpler: flat or WG, how many move in, sizes, cold and warm rent ranges, dates, portals and extras, each field optional on its own; a sentence can fill in the fields."
