@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-10-31",
+      "project": "aresium",
+      "text": "Aresium got its own contact page at aresium.de/contact (German: /kontakt) instead of the hub's general form: one form for asking for the iPhone app and for questions, problems and ideas, laid out like Contact & support in the apps, in Aresium's look (dark, or light once the website is switched) and in words that address no one. \"Get the iPhone app\" on aresium.de, the demo, patrikbreeck.com and the hub's demo open it on Get the app. Patrik's emails now name the app and the topic (\"[Aresium] Get the app: …\"), and the privacy policy covers the new form."
+    },
+    {
+      "at": "2026-10-31",
       "project": "arestemis",
       "text": "Arestemis is on Patrik's iPhone, and its notifications arrive by push, so its Telegram copy is switched off. After his first look its sentences no longer mention the AI (the search fields are “filled in automatically”), and the hunt's start button says “Suche starten”; both reach the phone with the next build."
     },
