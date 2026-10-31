@@ -24,8 +24,10 @@ Aresus, the watchtower province, combined with Aresync in one **iPhone app** (no
   Aresis) is **Inactive**; meant to run but failing is an **Issue**. A check must fail twice in a row (about 2 minutes)
   before it counts, so a restart does not wake anyone.
 - **Arestemis's outages go to Patrik through Aresus** (Patrik, 2026-10-31: its Telegram bot is retired and its users
-  never get outage messages). Aresus reads each portal from Arestemis's `/health` (`field` checks); the AI check and a
-  stuck scan follow with Arestemis brief 65, ImmoScout24 once it is live. **They must not overdo it** (the old bot sent
+  never get outage messages). Aresus reads from Arestemis's `/health` (`field` checks) each portal (four with
+  ImmoScout24), the AI check (`ai`) and whether scans still finish (`scan`: late after 20 minutes without one; 20 more
+  minutes before a push, since a slow but working scan takes up to about 50 minutes; Arestemis brief 65, 2026-11-01).
+  `ok: false` stays for "the scan loop stopped" and pushes urgently. **They must not overdo it** (the old bot sent
   "blocked" and ten minutes later "not blocked anymore"): a portal problem counts after 60 minutes, is over only after
   30 minutes fine, pushes as a normal notification (not through Focus), silently if the province's last incident ended
   less than 6 hours ago, and the quiet "running again" note replaces the alert (collapse id). An urgent check that
