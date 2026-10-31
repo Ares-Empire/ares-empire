@@ -99,6 +99,10 @@ for every new app:
   (`aresus/checks.yaml`); the server's Aresync `REPOS` and a deploy hook.
 - **Privacy:** its row in [PRIVACY.md](PRIVACY.md), and its section in the public policy before anyone but Patrik gets
   it.
+- **Its contact form on the web**, once others can get it: one form for asking for the app and for questions, in the
+  app's look, on its website (as Aresium's aresium.de/contact; [ACCOUNTS.md](ACCOUNTS.md) → Website contact form → A
+  new app's form); then its "get the app" links (patrikbreeck.com `content/apps.json` → `request`, the hub's demo)
+  point there.
 
 
 - A new build stays installable for 90 days. We ship updates far more often than that while

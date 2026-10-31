@@ -161,7 +161,8 @@ AV-Vertrag).
   shop, date, time, total, currency, card or cash, category, the joined payment. Nothing leaves the phone.
   `NSCameraUsageDescription` says what the camera is for.
 - Contact & support without a login goes to the `contact` collection (as the website's form), with a footer naming
-  the app, its version, iOS and the topic. Sharing a bank's format: "Bank formats shared from Aresium" below.
+  the app, its version, iOS and the topic (the collection has fields for them since 2026-10-30, `app`, `app_version`,
+  `system`, `kind`, which a later build can send instead; the account server reads the footer either way). Sharing a bank's format: "Bank formats shared from Aresium" below.
 - Public policy: section 6 → "Aresium" (German and English). No change to the netcup AVV: no financial data of
   anyone but Patrik reaches the server.
 
@@ -190,12 +191,18 @@ AV-Vertrag).
 - Kept 12 months after the matter is closed (in the collection and the mailbox), earlier with the account.
 - Basis: Art. 6(1)(b) for questions about the service, otherwise 6(1)(f).
 
-### Website contact form (brief E7, `/kontakt`, `/contact`)
+### Website contact forms (brief E7, `/kontakt`, `/contact`; Aresium's own since 2026-10-30)
 
-- Anyone, no account. The page (served by the hub, `web/legal/kontakt.html`, `contact.html`) posts from the browser
-  straight to the account server's `contact` collection: name (optional, ≤ 100), email, message (≤ 5000), the page's
-  language, and the honeypot `website` (always empty from people), created. Superusers only can read it. The page
-  loads nothing from other hosts; it is served only while the privacy policy in its language is.
+- Anyone, no account. The hub's page (`web/legal/kontakt.html`, `contact.html`) and Aresium's own form
+  (aresium.de/contact and /kontakt, `aresium` `src/web/contact-page.ts`, also where people ask for the app) post from
+  the browser straight to the account server's `contact` collection: name (optional, ≤ 100), email, message (≤ 5000;
+  may be empty when asking for the app), the page's language, and the honeypot `website` (always empty from people),
+  created; Aresium's form also the app (`aresium`) and the topic (`kind`: get the app, question, problem, idea, other).
+  Superusers only can read it. The pages load nothing from other hosts; the hub's is served only while the privacy
+  policy in its language is, Aresium's must be named in the policy before it goes live (To do 7).
+- Asking for Aresium: the email address is used to send the link for installing the app (a TestFlight link Patrik
+  sends himself). If Patrik instead invites people by email in App Store Connect, their address goes to Apple: the
+  policy must name that first.
 - A hook mails each message through Resend to `REDACTED-EMAIL` (IONOS), Reply-To the given address.
 - IP address: in the account server's request log for 5 days (as every request), and in PocketBase's in-memory rate
   limiter (5 per hour per address); not stored with the message.
@@ -300,3 +307,8 @@ library, read on the iPhone, photo discarded, what is stored, nothing transmitte
    for them, and the policy must name that request again before. The legal check of the server route (AVV entries,
    Groq, transfers, Art. 9, Art. 30, DPIA) is kept on branch `codex/03-aresium-privacy` in case server sorting comes
    back.
+7. **Aresium's own contact form (aresium.de/contact, /kontakt), before it goes live:** drafted 2026-10-30 on branch
+   `contact-form`, **needs Patrik's OK**. Section 4 of both policies ("Contact forms and email" / "Kontaktformulare und
+   E-Mail") names the form on aresium.de, the chosen topic (for example a request for the app) and that the email
+   address is used to send the install link; section 11 says "contact forms". Set "Last updated" / "Stand" to the
+   day it is published. No new recipient, no change to the netcup AVV (the same collection, server and mailbox).

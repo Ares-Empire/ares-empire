@@ -56,7 +56,7 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
 
 Local verification (no live account data): `bash accounts/test-rules.sh` uses a disposable PocketBase 0.40.6
 from `$POCKETBASE` (default `~/.pocketbase-test/pocketbase`) and checks API rules, email visibility, feedback, the
-contact form, the bank formats shared from Aresium, the bank requests from Aresium, the account emails and notifications, the leave route, the deletion jobs and migration rollback/reapply. It loads every hook; their mail goes to a local SMTP
+contact forms (the hub's, an app's with app and kind, Aresium's old footer), the bank formats shared from Aresium, the bank requests from Aresium, the account emails and notifications, the leave route, the deletion jobs and migration rollback/reapply. It loads every hook; their mail goes to a local SMTP
 sink the script starts (never Resend, never the system's sendmail) and the deletion calls and notifications to a fake
 service on localhost, which records each notification's body for the checks. Hub contract tests use fake PocketBase responses: `python3 -m unittest webauth/test_server.py`.
 - **Email**: Resend via `smtp.resend.com:2465` (the host blocks outgoing 25/465/587), domain
@@ -88,24 +88,46 @@ account server, and Patrik gets it by email. Migration `1793100000_feedback.js`,
 ## Website contact form (`contact`, 2026-10-25)
 
 Anyone can write to Patrik without an account at www.ares-empire.de/kontakt (German) or /contact (English); the imprint
-names it as the second quick way to reach him besides email. The page posts straight to the account server
-(`POST /api/collections/contact/records`, no login; PocketBase allows cross-origin requests). Migration
-`1793200000_contact.js`, hook `pb_hooks/contact.pb.js`.
+names it as the second quick way to reach him besides email. Since 2026-10-30 an app can have its own form on its
+website, in its own look, which is also where people ask for the app: Aresium's at aresium.de/contact and /kontakt
+(`aresium` `src/web/contact-page.ts`; "Get the app" is `?topic=access`). The pages post straight from the browser to
+the account server (`POST /api/collections/contact/records`, no login; PocketBase allows cross-origin requests), so the
+rate limit counts the visitor; never proxy them. Aresium's Contact & support without a login (empire-ios) posts here
+too. Migrations `1793200000_contact.js`, `1793700000_contact_app_kind.js`; hook `pb_hooks/contact.pb.js`, checks and
+email in `pb_hooks/lib/contact.js`.
 
 - **Collection `contact`:** `name` (optional, ≤ 100), `email` (required, checked as an email address), `message`
-  (1–5000 characters, not only blanks), `language` (`en`, `de`), `website` (the honeypot: the form hides it from
-  people, any text in it is refused), `created`.
+  (≤ 5000 characters, not only blanks; needed unless `kind` is `access`), `language` (`en`, `de`), `website` (the
+  honeypot: the form hides it from people, any text in it is refused), `created`. Since 2026-10-30, all optional:
+  `app` (as feedback's: `empire`, `aresium`, `arestemis`, `aresus`, `arestoteles`; empty for the hub's general form),
+  `kind` (`access` = get the app, `question`, `problem`, `idea`, `other`), `app_version` (≤ 40, the characters of a
+  version) and `system` (≤ 80, one line) for an iPhone app.
+- **The hook's checks** (before the save, PocketBase's own 400 shape, `data.<field>.code` `validation_required`): a
+  message without text is refused unless `kind` is `access` (an email address is all Patrik needs to send the install
+  link); `access` needs `app`.
 - **Rules:** create open to everyone; list, view, update and delete for superusers only. Patrik reads them in the admin
   UI (Collections → contact).
-- **Rate limit:** at most 5 creates per hour per visitor address (rule `contact:create`, 3600 s). The address is the
-  visitor's: Caddy's `X-Forwarded-For`, trusted since the first migration (`trustedProxy`, rightmost entry).
-- **Email:** after each create the hook mails it to Patrik (`SUPPORT_TO`, `pb_hooks/lib/mail.js`) from the server's sender, `Reply-To`
-  the given address, subject `[Website] Kontakt: <first words>` (German page) or `[Website] Contact: …`, a plain body
-  (name, email, language, the message, a link to the record). A failed email is logged (`contact email failed`) and
-  the record stays.
+- **Rate limit:** at most 5 creates per hour per visitor address (rule `contact:create`, 3600 s), shared by every form
+  that posts here. The address is the visitor's: Caddy's `X-Forwarded-For`, trusted since the first migration
+  (`trustedProxy`, rightmost entry).
+- **Email:** after each create the hook mails it to Patrik (`SUPPORT_TO`, `pb_hooks/lib/mail.js`) from the server's
+  sender, `Reply-To` the given address, a plain body (kind, app, name, email, language, version and system when given,
+  the message or "(no message)", a link to the record). Subject: `[Website] Kontakt: <first words>` (the hub's German
+  page) or `[Website] Contact: …`; with an app, as feedback's: `[Aresium] Question: <first words>`, and for asking for
+  the app `[Aresium] Get the app: <first words, or the address>` with a line on sending the install link. A failed
+  email is logged (`contact email failed`) and the record stays.
+- **Aresium's iPhone builds** without these fields end the message with a footer, "— Aresium 1.0 (12) · iOS 27.0 ·
+  iPhone · Problem" (empire-ios `Shared/Support/SupportMessage.swift`); the hook reads it as `app`, `app_version`,
+  `system` and `kind` and leaves it out of the mail's message. A later build can send the fields instead; keep reading
+  the footer while builds that send it are installed.
 - **Kept** 12 months after the matter is closed, then deleted by hand in the admin UI (privacy policy, docs/PRIVACY.md).
-- The hub serves the pages (`webauth/legal.py`, `web/legal/kontakt.html`, `contact.html`, `contact.js`), only while
-  the privacy policy in the same language is published.
+- The hub serves its pages (`webauth/legal.py`, `web/legal/kontakt.html`, `contact.html`, `contact.js`), only while
+  the privacy policy in the same language is published. An app's form must be named in the policy's section 4 before
+  it goes live (PRIVACY.md → To do 7).
+- **A new app's form:** copy Aresium's `web/public/forms/contact-form.js` as it is (it knows no app or language; the
+  page's data attributes drive it), write the page in the app's look with its words in both languages, set `data-app`,
+  give the page a Content-Security-Policy with `connect-src https://auth.ares-empire.de`, and add the app to the
+  policy's section 4.
 
 ## Bank formats shared from Aresium (`bank_formats`, 2026-10-27)
 

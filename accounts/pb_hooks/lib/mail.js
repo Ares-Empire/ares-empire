@@ -5,8 +5,8 @@
 // Not a hook itself: only files ending in .pb.js are loaded as hooks.
 //
 // Patrik is reached two ways, on purpose:
-// - SUPPORT_TO, for what people write to him: the apps' contact & support (feedback.pb.js) and the website's contact
-//   form (contact.pb.js). Plain text, Reply-To the writer: sendSupport().
+// - SUPPORT_TO, for what people write to him: the apps' contact & support (feedback.pb.js) and the contact forms on
+//   the websites (contact.pb.js, lib/contact.js). Plain text, Reply-To the writer: sendSupport().
 // - superusers(), for account administration: sign-ups, access requests, a stuck deletion (accounts.pb.js,
 //   lib/deletions.js). Every superuser's address except placeholders (example.com): whoever can approve in the admin
 //   UI. sendToSuperusers().

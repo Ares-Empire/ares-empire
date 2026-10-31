@@ -107,7 +107,9 @@ class GeneratorTests(unittest.TestCase):
         demo, seed = samples.build_demo(), samples.read_seed()
         self.assertEqual(demo["me"]["admin"], False)
         self.assertEqual([p["slug"] for p in demo["projects"]], ["aresium", "arestemis", "arestoteles", "aresus", "aresync"])
-        self.assertEqual([p["install"] is None for p in demo["projects"]], [False, False, False, True, True])
+        self.assertEqual([p["install"] for p in demo["projects"]],
+                         ["https://aresium.de/contact?topic=access", "https://www.ares-empire.de/contact",
+                          "https://www.ares-empire.de/contact", None, None])
         self.assertEqual(demo["chronicle"], samples.DEMO_CHRONICLE)
         self.assertEqual((demo["ideas"], demo["addable"], demo["pending"]), ([], [], 0))
         real = {c["text"] for c in seed["chronicle"]} | {p["blurb"] for p in seed["projects"]}

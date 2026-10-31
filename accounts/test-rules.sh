@@ -808,9 +808,68 @@ try:
     before = len(mails())
     status, _ = call('POST', CONTACT, contact(message='Can I import two banks?\n\n— Aresium 1.0 (12) · iOS 27.0 · iPhone · Question'))
     app_mail = mails(at_least=before + 1)[-1]
+    app_text = app_mail.get_body(('plain',)).get_content()
     check('a message from Aresium without a login (its footer) is named so in the subject and the text', status == 200 and
-          app_mail['Subject'] == '[Aresium] Contact: Can I import two banks?'
-          and "A message from Aresium's Contact & support, sent without a login" in app_mail.get_body(('plain',)).get_content())
+          app_mail['Subject'] == '[Aresium] Question: Can I import two banks?'
+          and "A message from Aresium's Contact & support, sent without a login" in app_text)
+    check('the footer is read into kind, app, version and system, and left out of the message', all(part in app_text for part in (
+          'Kind:     Question', 'App:      Aresium', 'Version:  1.0 (12)', 'System:   iOS 27.0 · iPhone',
+          'Can I import two banks?')) and '— Aresium' not in app_text)
+    # A later Aresium build sends the same as fields, without a footer.
+    before = len(mails())
+    status, _ = call('POST', CONTACT, contact(message='Fictional problem: the import stops.', app='aresium', kind='problem',
+                                              app_version='1.0 (14)', system='iOS 27.0 · iPhone'))
+    fields_mail = mails(at_least=before + 1)[-1]
+    fields_text = fields_mail.get_body(('plain',)).get_content()
+    check('an app sending app, kind, version and system as fields: the same subject and lines as with the footer',
+          status == 200 and fields_mail['Subject'] == '[Aresium] Problem: Fictional problem: the import stops.'
+          and "A message from Aresium's Contact & support, sent without a login (English)" in fields_text
+          and all(part in fields_text for part in ('Kind:     Problem', 'Version:  1.0 (14)', 'System:   iOS 27.0 · iPhone')))
+
+    # An app's own form on its website (aresium.de/contact): app and kind, no version or system.
+    before = len(mails())
+    status, asked = call('POST', CONTACT, contact(message='Fictional question: does it read Sparkasse files?',
+                                                  app='aresium', kind='question'))
+    site_mail = mails(at_least=before + 1)[-1]
+    site_text = site_mail.get_body(('plain',)).get_content()
+    check("Aresium's website form: subject \"[Aresium] Question: …\", the app and kind in the text", status == 200
+          and asked.get('app') == 'aresium' and asked.get('kind') == 'question'
+          and site_mail['Subject'] == '[Aresium] Question: Fictional question: does it read Sparkasse files?'
+          and site_mail['Reply-To'] == 'visitor@example.com'
+          and "A message from Aresium's website (English page)" in site_text
+          and all(part in site_text for part in ('Kind:     Question', 'App:      Aresium', 'Name:     Fictional Visitor'))
+          and 'Version:' not in site_text and 'System:' not in site_text)
+    # Asking for the app: an email address is enough; the message may stay empty.
+    before = len(mails())
+    status, wish = call('POST', CONTACT, contact(message='', name='', app='aresium', kind='access', language='de'))
+    access_mail = mails(at_least=before + 1)[-1]
+    access_text = access_mail.get_body(('plain',)).get_content()
+    check('asking for the app without a message is taken; the subject names the address', status == 200
+          and wish.get('kind') == 'access' and wish.get('message') == ''
+          and access_mail['Subject'] == '[Aresium] Get the app: visitor@example.com'
+          and access_mail['Reply-To'] == 'visitor@example.com')
+    check('the request mail says what it is and how to answer', all(part in access_text for part in (
+          'Someone asks for Aresium on its website (German page)', 'Kind:     Get the app', 'Language: de',
+          '(no message)', 'To send the install link, reply to this email: it goes to visitor@example.com.')))
+    before = len(mails())
+    status, _ = call('POST', CONTACT, contact(message='Fictional note: a friend sent me.', app='aresium', kind='access'))
+    check('asking for the app with a note: the note sums up the subject', status == 200 and
+          mails(at_least=before + 1)[-1]['Subject'] == '[Aresium] Get the app: Fictional note: a friend sent me.')
+    for label, body, field in [
+            ('an empty message that does not ask for the app', {'message': '', 'app': 'aresium', 'kind': 'question'}, 'message'),
+            ('an empty message without app or kind (the hub\'s form)', {'message': ''}, 'message'),
+            ('asking for the app without the app', {'message': '', 'kind': 'access'}, 'app'),
+            ('asking for the app with a message of blanks', {'message': '   ', 'app': 'aresium', 'kind': 'access'}, 'message'),
+            ('an unknown kind', {'app': 'aresium', 'kind': 'spam'}, 'kind'),
+            ('an unknown app', {'app': 'facebook', 'kind': 'question'}, 'app'),
+            ('a version with a line break', {'app_version': '1.0\nBcc: x@example.com'}, 'app_version'),
+            ('a version over 40', {'app_version': '1' * 41}, 'app_version'),
+            ('a system with a line break', {'system': 'iOS 27.0\nBcc: x@example.com'}, 'system'),
+            ('a system over 80', {'system': 's' * 81}, 'system')]:
+        before = len(mails())
+        status, refused_answer = call('POST', CONTACT, contact(**body))
+        check('contact with ' + label + ' is refused (400 on ' + field + ') and nothing is mailed', status == 400
+              and field in (refused_answer.get('data') or {}) and len(mails()) == before)
     check('a logged-in visitor can send it too', call('POST', CONTACT, contact(), user_token)[0] == 200)
     before = len(mails())
     check('the honeypot filled in is refused, and nothing is mailed',
@@ -1206,7 +1265,22 @@ def update_rule(names, admin_may_change):
     return ('(id = @request.auth.id && ' + OWN + ') || (@request.auth.admin = true && id != @request.auth.id && ' +
             ' && '.join('@request.body.' + name + ':isset = false' for name in untouchable) + ')')
 PY
-# bank_requests down (the newest): the collection and its rate limit are gone, the bank formats stay.
+# contact_app_kind down (the newest): the contact form's app, kind, version and system are gone, a message needs text
+# again, and the messages already sent stay.
+migrate_down 'contact app and kind'
+python3 - <<'PY'
+import json, os, sqlite3, sys
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    fields = json.loads(db.execute('SELECT fields FROM _collections WHERE name = ?', ('contact',)).fetchone()[0])
+    kept = db.execute('SELECT count(*) FROM contact').fetchone()[0]
+names = {field['name'] for field in fields}
+message = next(field for field in fields if field['name'] == 'message')
+ok = (not {'app', 'kind', 'app_version', 'system'} & names and message['required'] is True and message['min'] == 1
+      and kept > 0)
+print(('PASS' if ok else 'FAIL') + ' migration down removes app, kind, version and system from contact and requires a message again')
+sys.exit(0 if ok else 1)
+PY
+# bank_requests down: the collection and its rate limit are gone, the bank formats stay.
 migrate_down 'bank requests'
 python3 - <<'PY'
 import json, os, sqlite3, sys
@@ -1401,7 +1475,14 @@ formats = 'bank_formats' in collections and labels.count('bank_formats:create') 
 print(('PASS' if formats else 'FAIL') + ' migration up adds the bank_formats collection and its rate limit again')
 requests = 'bank_requests' in collections and labels.count('bank_requests:create') == 1
 print(('PASS' if requests else 'FAIL') + ' migration up adds the bank_requests collection and its rate limit again')
-ok = ok and again and formats and requests
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    contact = json.loads(db.execute('SELECT fields FROM _collections WHERE name = ?', ('contact',)).fetchone()[0])
+message = next(field for field in contact if field['name'] == 'message')
+kinds = next((field['values'] for field in contact if field['name'] == 'kind'), None)
+app_kind = ({'app', 'kind', 'app_version', 'system'} <= {field['name'] for field in contact}
+            and message['required'] is False and kinds == ['access', 'question', 'problem', 'idea', 'other'])
+print(('PASS' if app_kind else 'FAIL') + ' migration up adds app, kind, version and system to contact again')
+ok = ok and again and formats and requests and app_kind
 sys.exit(0 if ok else 1)
 PY
 python3 - <<'PY'
