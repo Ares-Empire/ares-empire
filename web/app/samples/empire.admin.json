@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-11-01",
+      "project": "aresium",
+      "text": "Aresium lets every category have a side: one's own categories now work for money in too, and a spending category that also gets money back (Freunde, when a friend pays back) can be offered for money in from the change window, without cluttering the menus. Every payment now counts once, as it happened: money out as Ausgaben, money in as Einnahmen, each under its own category. Build 9 went to the phone through TestFlight."
+    },
+    {
+      "at": "2026-11-01",
       "project": "arestemis",
       "text": "Arestemis now searches ImmoScout24, Germany's biggest flat portal, in every town, and Immowelt in every town it knows instead of only München. Kleinanzeigen changed its list pages on the evening of 31 October; Arestemis missed its new listings for part of the evening until the fix went live. In Settings, Bewerbung became three rows like the others: a switch for automatic texts, a page with one's own text or with notes every automatic text includes, and About you; the automatic text is now written from the facts about the person and those notes. Build 3 went to the phone through TestFlight."
     },
