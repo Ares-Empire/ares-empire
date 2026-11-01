@@ -112,7 +112,7 @@ AV-Vertrag).
 |---|---|
 | **Data** | About Patrik's server and machines, not about app users: check results, incidents (30 days after resolved), uptime per day (14 days), server vitals, last deploy per repo (commit hash, subject, date), Aresync run reports per machine (machine name, OS, times, counts, log lines with repo names and commits, problems, alerts; 30 days). Machine tokens only as SHA-256. |
 | **Users** | Accounts with the `aresus` service (Patrik decides). Their account and push data are covered above. |
-| **Telegram** | Aresync's own alerts go to Patrik's chat until push works (`TG_*` in each Aresync config). |
+| **Telegram** | None since 2026-11-01: Aresync's alerts reach Patrik as Aresus pushes (its Telegram copy retired). |
 | **Logs** | uvicorn access log with IP, without the query string, as Arestemis. |
 
 ### Demo pages (`aresium.de/demo`, `www.ares-empire.de/demo`; Patrik, 2026-10-27)

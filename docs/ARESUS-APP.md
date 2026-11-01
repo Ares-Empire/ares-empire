@@ -15,7 +15,7 @@ Aresus, the watchtower province, combined with Aresync in one **iPhone app** (no
   A province with an issue also sends a push. Tap a box for its checks, last deploy and recent incidents. A small
   server line (disk, memory, uptime) sits above the list.
 - **Aresync:** the sync runs of every machine (MacBook, Windows laptop, server) and whether they worked. A failed sync
-  sends a push; Aresync's Telegram alerts retire once push works on the phone.
+  sends a push; Aresync's Telegram alerts retired on 2026-11-01, once push worked on the phone (aresync e10dc07).
 
 ## Decisions
 
@@ -37,7 +37,7 @@ Aresus, the watchtower province, combined with Aresync in one **iPhone app** (no
   expiry, and the deployed commit (and whether GitHub is ahead). The server itself: disk, memory, load, uptime.
   Backups: the timer check "Backups" in the Empire province ([BACKUP.md](BACKUP.md) → Alerts).
 - **Push:** when an issue opens (time-sensitive) and when it is fixed (quiet). Aresync pushes exactly when its Telegram
-  alert would fire today: immediately for a rebase conflict, a failed deploy hook or the privacy guard; for network-type
+  alert used to fire (Telegram retired 2026-11-01): immediately for a rebase conflict, a failed deploy hook or the privacy guard; for network-type
   failures only once they have lasted an hour. The app shows every failed run in red right away.
 - **Aresync reports every run** to Aresus (`POST /api/aresus/sync/runs`, one token per machine, never failing the
   sync itself). The server syncs every 5 minutes, so the tab shows the machines first and then only runs that did
