@@ -63,7 +63,7 @@ html[data-theme="light"] {
   /* antique gold: the same polish, deeper, so it reads on ivory */
   --gold-text: linear-gradient(176deg, #c9a050 0%, #b4893a 19%, #9c7428 38%, #7d5818 55%, #8e6620 72%, #b08440 88%, #5e3f0e 100%);
   --bust: url("/brand/head_transparent_real.webp");
-  --bust-opacity: 0.13;
+  --bust-opacity: 0.2;
 }
 
 /* the name in gold, tracked capitals, as the app's header (THE EMPIRE) */

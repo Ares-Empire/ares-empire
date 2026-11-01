@@ -52,7 +52,7 @@ html[data-theme="light"] {
   --glow1: radial-gradient(72% 52% at 50% -12%, rgba(106, 79, 224, 0.11), transparent 60%);
   --glow2: radial-gradient(58% 50% at 90% 120%, rgba(106, 79, 224, 0.05), transparent 56%);
   --bust: url("/brand/artemis-profile.webp");
-  --bust-opacity: 0.11;
+  --bust-opacity: 0.18;
   --highlight: #6a4fe0;
   --focus: rgba(106, 79, 224, 0.55);
   --soft-fill: rgba(106, 79, 224, 0.10);
