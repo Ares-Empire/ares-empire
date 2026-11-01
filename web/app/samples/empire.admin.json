@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-11-01",
+      "project": "empire",
+      "text": "The Ares Empire and Arestemis got contact pages like Aresium's: www.ares-empire.de/contact (German /kontakt) replaces the hub's old form and stays the Empire's general contact, and www.ares-empire.de/arestemis/contact is Arestemis's own. Each is one form for asking for the iPhone app and for questions, problems and ideas, in the app's own look, light or dark, in words that address no one, and both share one form with Aresium's. patrikbreeck.com and the hub's demo now ask for each app on its own page."
+    },
+    {
+      "at": "2026-11-01",
       "project": "aresium",
       "text": "Aresium can now change many payments at once: a circle in a category's list ticks payments as in Mail, and Kategorie or Name moves, adds to or renames all of them with one question for their shops and an undo. Saving an added category now asks whether to leave the old one and whether the shop's other payments should get it too. Build 12 went to the phone through TestFlight, with the first round of sorting and reading fixes."
     },
