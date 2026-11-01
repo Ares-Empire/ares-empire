@@ -23,7 +23,8 @@ rebuilt is backed up every night to the MacBook ([docs/BACKUP.md](docs/BACKUP.md
 made-up data: `empire-ios/showcase/`. Apple approved the developer account on 2026-10-29 (team `WQN8SHAH9B`): Aresium
 is on Patrik's iPhone through internal TestFlight. The comfort items Patrik approved for the other four apps are built
 (2026-10-30, briefs 49–52), the push key is live, and Arestemis is on Patrik's iPhone (push works there, its Telegram copy is off since 2026-10-31); Aresus (with Aresync) was uploaded on 2026-10-31; Arestoteles and the
-Empire app follow with `empire-ios/scripts/testflight.sh` (their App Store Connect records exist).
+Empire app were uploaded on 2026-11-01 (Arestoteles with its bust free of the watermark, everywhere), so all five apps
+reach Patrik's iPhone through internal TestFlight.
 
 **Next up (2026-10-27):** Aresium for other people is built (phone mode: their data on their iPhone, 25 banks, 2,815
 known shops, no AI; [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) → Progress). Privacy policy section live
@@ -197,6 +198,8 @@ Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 After adding a line to `web/app/empire-data.js`, run `python3 tools/empire_samples.py --web` (the website's
 previews are generated from it; a test checks they are current).
 
+- **2026-11-01 · empire** — The Empire app was uploaded to TestFlight for Patrik's iPhone, so all five Empire apps now reach his phone. A check of everything that differs between the simulator and a real iPhone found nothing in the way.
+- **2026-11-01 · arestoteles** — Arestoteles was uploaded to TestFlight for Patrik's iPhone. Its Aristotle lost the watermark an image tool had printed across the face: the app icon, the app, arestoteles.de and the hub's ring now show the hub's clean bust. When the app drops its saved notes after a logout in another Ares app, they now leave iPhone search too, and its copy of the vault stays out of the iPhone's backups, since it can always be downloaded again.
 - **2026-11-01 · aresium** — Aresium lets every category have a side: one's own categories now work for money in too, and a spending category that also gets money back (Freunde, when a friend pays back) can be offered for money in from the change window, without cluttering the menus. Every payment now counts once, as it happened: money out as Ausgaben, money in as Einnahmen, each under its own category. Build 9 went to the phone through TestFlight.
 - **2026-11-01 · arestemis** — Arestemis now searches ImmoScout24, Germany's biggest flat portal, in every town, and Immowelt in every town it knows instead of only München. Kleinanzeigen changed its list pages on the evening of 31 October; Arestemis missed its new listings for part of the evening until the fix went live. In Settings, Bewerbung became three rows like the others: a switch for automatic texts, a page with one's own text or with notes every automatic text includes, and About you; the automatic text is now written from the facts about the person and those notes. Build 3 went to the phone through TestFlight.
 - **2026-10-31 · aresus** — Aresus, with its Aresync tab, was uploaded to TestFlight for Patrik's iPhone. It now also watches each of Arestemis's search portals and tells only Patrik when one is blocked or failing: only after an hour without a break, as a normal notification that does not break through Focus, and silently if it comes back within six hours; the "running again" note replaces the alert. Short blocks no longer send anything, and a crash during such a problem still alerts at once. The false alarm about Aresium's retired Telegram bot is gone.
