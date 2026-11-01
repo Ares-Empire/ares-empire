@@ -1,7 +1,14 @@
 # Aresync drop: from the phone to the MacBook — plan
 
-**Draft 2026-11-01** (Claude, for Patrik), with Patrik's answers from the same evening in "Decided". Nothing here is
-built yet. Server: `~/aresus`; Mac: `~/aresync`; app: `empire-ios/Aresus` (its Aresync tab). Replaces
+**Draft 2026-11-01** (Claude, for Patrik), with Patrik's answers from the same evening in "Decided".
+
+**Status (2026-11-01, night):** the server part is live (aresus `eceb410`, brief 88: drops on, `DROP_MACHINE=Aresium`,
+the drop key's public half in `.env`); the Mac part is built and loaded (aresync `a94064d` + `156e747`, brief 89:
+`com.aresync.drop`, the secret key in the Keychain item "Ares Empire drop key"); a test file went from the server to
+Downloads end to end. **Waits for Patrik:** macOS has not let the background program into Documents and Downloads yet
+(System Settings → Privacy & Security → Files and Folders, python3; or Full Disk Access for `/usr/bin/python3`); until
+then each pass stops with one log line and drops wait on the server. The app's data side is merged (empire-ios brief
+90); the screens are brief 91. Receipts and the share extension come after. Server: `~/aresus`; Mac: `~/aresync`; app: `empire-ios/Aresus` (its Aresync tab). Replaces
 `empire-ios/CLAUDE.md` → Open 11 ("Aresync file sharing from the phone").
 
 ## What it is
