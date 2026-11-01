@@ -92,10 +92,13 @@ python3 -m http.server 8099 --directory web    # → http://localhost:8099
   `[lead to confirm]` answers 404; `LEGAL_PREVIEW=1` shows drafts locally. What the text is based on:
   [docs/PRIVACY.md](docs/PRIVACY.md). Linked ("Privacy · Imprint") from the login page and, signed in, from the
   hub's bottom-right corner (phone: the end of the page), via `window.LegalLinks` in `web/app/panels.jsx`.
-- **Contact form** — `/kontakt`, `/contact`, open without login, served only while the privacy policy in its language is
-  (`web/legal/kontakt.html`, `contact.html`, one inline script `contact.js`). It posts from the browser straight to the
-  account server's open `contact` collection, which mails Patrik ([docs/ACCOUNTS.md](docs/ACCOUNTS.md) → Website contact
-  form).
+- **Contact pages** — the Ares Empire's `/contact` and `/kontakt` (also its general contact) and Arestemis's
+  `/arestemis/contact` and `/arestemis/kontakt`, open without login, each one form for asking for the iPhone app
+  (`?topic=access`) and for questions, problems and ideas, in the app's own look, light or dark (`webauth/contact.py`,
+  the looks in `web/contact/`). They share the sending and the layout with aresium.de/contact byte for byte
+  (`web/shared/forms/`, README there), are served only while the privacy policy in their language is, and post from the
+  browser straight to the account server's open `contact` collection, which mails Patrik
+  ([docs/ACCOUNTS.md](docs/ACCOUNTS.md) → Website contact form).
 
 **Source of truth** — [`EMPIRE.md`](EMPIRE.md) (narrative) + `web/app/empire-data.js`
 (`window.EMPIRE`, the manifest the circle renders from). Add a province by appending to both; the circle

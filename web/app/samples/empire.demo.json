@@ -35,7 +35,7 @@
     {
       "slug": "arestemis",
       "name": "Arestemis",
-      "url": "https://www.ares-empire.de/contact",
+      "url": "https://www.ares-empire.de/arestemis/contact?topic=access",
       "logo": "brand/artemis.webp",
       "status": "CONQUERED",
       "domain": "",
@@ -55,7 +55,7 @@
       "state": "open",
       "live": null,
       "app": "arestemis://",
-      "install": "https://www.ares-empire.de/contact",
+      "install": "https://www.ares-empire.de/arestemis/contact?topic=access",
       "access": "granted"
     },
     {

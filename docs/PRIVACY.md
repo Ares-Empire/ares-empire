@@ -191,18 +191,28 @@ AV-Vertrag).
 - Kept 12 months after the matter is closed (in the collection and the mailbox), earlier with the account.
 - Basis: Art. 6(1)(b) for questions about the service, otherwise 6(1)(f).
 
-### Website contact forms (brief E7, `/kontakt`, `/contact`; Aresium's own since 2026-10-30)
+### Website contact forms (brief E7, `/kontakt`, `/contact`; Aresium's own since 2026-10-30, the hub's two since 2026-11-01)
 
-- Anyone, no account. The hub's page (`web/legal/kontakt.html`, `contact.html`) and Aresium's own form
-  (aresium.de/contact and /kontakt, `aresium` `src/web/contact-page.ts`, also where people ask for the app) post from
-  the browser straight to the account server's `contact` collection: name (optional, ≤ 100), email, message (≤ 5000;
-  may be empty when asking for the app), the page's language, and the honeypot `website` (always empty from people),
-  created; Aresium's form also the app (`aresium`) and the topic (`kind`: get the app, question, problem, idea, other).
-  Superusers only can read it. The pages load nothing from other hosts; the hub's is served only while the privacy
-  policy in its language is, Aresium's must be named in the policy before it goes live (To do 7).
-- Asking for Aresium: the email address is used to send the link for installing the app (a TestFlight link Patrik
-  sends himself). If Patrik instead invites people by email in App Store Connect, their address goes to Apple: the
-  policy must name that first.
+- Anyone, no account. Three pages, each also where people ask for its app: Aresium's (aresium.de/contact and /kontakt,
+  `aresium` `src/web/contact-page.ts`) and on the hub the Ares Empire's (/contact and /kontakt, which replaced the hub's
+  general form on 2026-11-01 and stays the Empire's general contact) and Arestemis's (/arestemis/contact and
+  /arestemis/kontakt), both `webauth/contact.py`. They post from the browser straight to the account server's
+  `contact` collection: name (optional, ≤ 100), email, message (≤ 5000; may be empty when asking for the app), the
+  page's language, the app (`aresium`, `empire`, `arestemis`), the topic (`kind`: get the app, question, problem, idea,
+  other), and the honeypot `website` (always empty from people), created. Superusers only can read it. The pages load
+  nothing from other hosts; the hub's are served only while the privacy policy in their language is. A new form is
+  covered by the policy's section 4 before it goes live (To do 8).
+- The hub's two pages remember the look chosen with their header's switch (light; dark is the default) in the
+  browser's `localStorage` (`ares-empire-appearance`), as aresium.de does with its own switch (`aresium-appearance`).
+  It stays in the browser, is never sent, holds nothing about the person, and is set only when the visitor switches.
+  The public policy names neither (a stored setting the visitor asked for, § 25(2) no. 2 TDDDG); Patrik may want a
+  sentence in section 3 (To do 8).
+- Asking for an app: the email address is used to send the link for installing it (a TestFlight link Patrik sends
+  himself). If Patrik instead invites people by email in App Store Connect, their address goes to Apple: the policy
+  must name that first. Arestemis and the Ares Empire app also need an Ares account (created in the app; the policy's
+  account section covers it). Arestemis itself is still named nowhere in the public pages: a request is only a contact
+  message, but **giving the `arestemis` service to anyone but Patrik needs its section first** (the Rule above: the
+  hunt, "About you", Groq in the USA, the portals).
 - A hook mails each message through Resend to `REDACTED-EMAIL` (IONOS), Reply-To the given address.
 - IP address: in the account server's request log for 5 days (as every request), and in PocketBase's in-memory rate
   limiter (5 per hour per address); not stored with the message.
@@ -307,8 +317,11 @@ library, read on the iPhone, photo discarded, what is stored, nothing transmitte
    for them, and the policy must name that request again before. The legal check of the server route (AVV entries,
    Groq, transfers, Art. 9, Art. 30, DPIA) is kept on branch `codex/03-aresium-privacy` in case server sorting comes
    back.
-7. **Aresium's own contact form (aresium.de/contact, /kontakt), before it goes live:** drafted 2026-10-30 on branch
-   `contact-form`, **needs Patrik's OK**. Section 4 of both policies ("Contact forms and email" / "Kontaktformulare und
-   E-Mail") names the form on aresium.de, the chosen topic (for example a request for the app) and that the email
-   address is used to send the install link; section 11 says "contact forms". Set "Last updated" / "Stand" to the
-   day it is published. No new recipient, no change to the netcup AVV (the same collection, server and mailbox).
+7. ~~**Aresium's own contact form (aresium.de/contact, /kontakt), before it goes live**~~: done 2026-10-31 (section 4
+   names it, the topic and the install link; section 11 says "contact forms").
+8. **The hub's contact pages (Ares Empire, Arestemis; 2026-11-01), with or before them going live:** section 4 of both
+   policies says the topic is processed "on aresium.de" only; the hub's pages send it too, and the app. Drafted on
+   ares-empire branch `contact-pages-privacy` (section 4: the contact forms on www.ares-empire.de and aresium.de, the
+   chosen topic, a request for an app), **needs Patrik's OK**. Optional, his call: a sentence in section 3 on the look
+   remembered in the browser by the switch on aresium.de and the hub's contact pages. Set "Last updated" / "Stand" to
+   the day it is published. No new recipient, no change to the netcup AVV (the same collection, server and mailbox).

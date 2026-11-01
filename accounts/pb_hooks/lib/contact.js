@@ -1,8 +1,10 @@
 /// <reference path="../../pb_data/types.d.ts" />
 // The contact collection's checks and its email to Patrik (pb_hooks/contact.pb.js; migrations 1793200000_contact.js and
 // 1793700000_contact_app_kind.js). Three senders write to it, all without a login:
-// - the hub's general form (www.ares-empire.de/contact, /kontakt): name, email, message, language;
-// - an app's own form on its website (aresium.de/contact, /kontakt): the same plus `app` and `kind`;
+// - an app's own contact page on the web: name, email, message, language, `app` and `kind`. Aresium's on aresium.de
+//   (/contact, /kontakt), and since 2026-11-01 on the hub the Ares Empire's (www.ares-empire.de/contact, /kontakt; app
+//   `empire`, also the Empire's general contact) and Arestemis's (/arestemis/contact, /arestemis/kontakt). The hub's
+//   older general form sent no app or kind; a message without them is still taken ("[Website] Contact: …");
 // - an iPhone app's Contact & support without a login (Aresium): builds out today end the message with a footer,
 //   "— Aresium 1.0 (12) · iOS 27.0 · iPhone · Problem" (empire-ios Shared/Support/SupportMessage.swift), read here
 //   as if it were `app`, `app_version`, `system` and `kind`; a later build can send those as fields instead.

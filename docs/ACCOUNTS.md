@@ -88,9 +88,12 @@ account server, and Patrik gets it by email. Migration `1793100000_feedback.js`,
 ## Website contact form (`contact`, 2026-10-25)
 
 Anyone can write to Patrik without an account at www.ares-empire.de/kontakt (German) or /contact (English); the imprint
-names it as the second quick way to reach him besides email. Since 2026-10-30 an app can have its own form on its
-website, in its own look, which is also where people ask for the app: Aresium's at aresium.de/contact and /kontakt
-(`aresium` `src/web/contact-page.ts`; "Get the app" is `?topic=access`). The pages post straight from the browser to
+names it as the second quick way to reach him besides email. Since 2026-10-30 an app can have its own form, in its own
+look, which is also where people ask for the app ("Get the app" is `?topic=access`): Aresium's at aresium.de/contact and
+/kontakt (`aresium` `src/web/contact-page.ts`), and since 2026-11-01 on the hub Arestemis's at
+www.ares-empire.de/arestemis/contact and /arestemis/kontakt, and the Ares Empire's own at /contact and /kontakt, which
+replaced the hub's general form and stays the Empire's general contact (`webauth/contact.py`, app `empire`). All three
+share the sending and the layout byte for byte (`web/shared/forms/`, README there). The pages post straight from the browser to
 the account server (`POST /api/collections/contact/records`, no login; PocketBase allows cross-origin requests), so the
 rate limit counts the visitor; never proxy them. Aresium's Contact & support without a login (empire-ios) posts here
 too. Migrations `1793200000_contact.js`, `1793700000_contact_app_kind.js`; hook `pb_hooks/contact.pb.js`, checks and
@@ -99,7 +102,8 @@ email in `pb_hooks/lib/contact.js`.
 - **Collection `contact`:** `name` (optional, ≤ 100), `email` (required, checked as an email address), `message`
   (≤ 5000 characters, not only blanks; needed unless `kind` is `access`), `language` (`en`, `de`), `website` (the
   honeypot: the form hides it from people, any text in it is refused), `created`. Since 2026-10-30, all optional:
-  `app` (as feedback's: `empire`, `aresium`, `arestemis`, `aresus`, `arestoteles`; empty for the hub's general form),
+  `app` (as feedback's: `empire`, `aresium`, `arestemis`, `aresus`, `arestoteles`; empty from the hub's old general
+  form, before 2026-11-01),
   `kind` (`access` = get the app, `question`, `problem`, `idea`, `other`), `app_version` (≤ 40, the characters of a
   version) and `system` (≤ 80, one line) for an iPhone app.
 - **The hook's checks** (before the save, PocketBase's own 400 shape, `data.<field>.code` `validation_required`): a
@@ -112,22 +116,26 @@ email in `pb_hooks/lib/contact.js`.
   (`trustedProxy`, rightmost entry).
 - **Email:** after each create the hook mails it to Patrik (`SUPPORT_TO`, `pb_hooks/lib/mail.js`) from the server's
   sender, `Reply-To` the given address, a plain body (kind, app, name, email, language, version and system when given,
-  the message or "(no message)", a link to the record). Subject: `[Website] Kontakt: <first words>` (the hub's German
-  page) or `[Website] Contact: …`; with an app, as feedback's: `[Aresium] Question: <first words>`, and for asking for
-  the app `[Aresium] Get the app: <first words, or the address>` with a line on sending the install link. A failed
+  the message or "(no message)", a link to the record). Subject with an app, as feedback's: `[Aresium] Question: <first
+  words>`, `[Ares Empire] Other: …`, and for asking for the app `[Arestemis] Get the app: <first words, or the
+  address>` with a line on sending the install link; without one (the hub's old form) `[Website] Kontakt: <first
+  words>` or `[Website] Contact: …`. A failed
   email is logged (`contact email failed`) and the record stays.
 - **Aresium's iPhone builds** without these fields end the message with a footer, "— Aresium 1.0 (12) · iOS 27.0 ·
   iPhone · Problem" (empire-ios `Shared/Support/SupportMessage.swift`); the hook reads it as `app`, `app_version`,
   `system` and `kind` and leaves it out of the mail's message. A later build can send the fields instead; keep reading
   the footer while builds that send it are installed.
 - **Kept** 12 months after the matter is closed, then deleted by hand in the admin UI (privacy policy, docs/PRIVACY.md).
-- The hub serves its pages (`webauth/legal.py`, `web/legal/kontakt.html`, `contact.html`, `contact.js`), only while
-  the privacy policy in the same language is published. An app's form must be named in the policy's section 4 before
-  it goes live (PRIVACY.md → To do 7).
-- **A new app's form:** copy Aresium's `web/public/forms/contact-form.js` as it is (it knows no app or language; the
-  page's data attributes drive it), write the page in the app's look with its words in both languages, set `data-app`,
-  give the page a Content-Security-Policy with `connect-src https://auth.ares-empire.de`, and add the app to the
-  policy's section 4.
+- The hub serves its pages (`webauth/contact.py`; the looks in `web/contact/`), only while the privacy policy in the
+  same language is published, with a Content-Security-Policy that allows only the hub and the account server. A new
+  form must be covered by the policy's section 4 before it goes live (PRIVACY.md → To do).
+- **A new app's form:** on the hub, add the app to `APPS` and `APP_WORDS` in `webauth/contact.py` (its paths, mark,
+  band, home, the words that name it in both languages) and its look as `web/contact/<app>.css` (every property the
+  shared layout uses, dark and light; `webauth/test_contact.py` names a missing one). On its own website, as Aresium:
+  copy `web/shared/forms/contact-form.js` and `contact-form.css` as they are, write the page with the same markup, set
+  `data-app`, give it a Content-Security-Policy with `connect-src https://auth.ares-empire.de`, and pin the hashes in
+  its tests (`web/shared/forms/README.md`). Then its "get the app" links (patrikbreeck.com `content/apps.json` →
+  `request`, the hub's demo) point there, and the policy's section 4 covers it.
 
 ## Bank formats shared from Aresium (`bank_formats`, 2026-10-27)
 

@@ -855,6 +855,32 @@ try:
     status, _ = call('POST', CONTACT, contact(message='Fictional note: a friend sent me.', app='aresium', kind='access'))
     check('asking for the app with a note: the note sums up the subject', status == 200 and
           mails(at_least=before + 1)[-1]['Subject'] == '[Aresium] Get the app: Fictional note: a friend sent me.')
+    # The hub's pages (2026-11-01, webauth/contact.py): Arestemis's own and the Ares Empire's, which is also the
+    # Empire's general contact. Each names its app and topic, as Aresium's.
+    before = len(mails())
+    status, wish = call('POST', CONTACT, contact(message='', name='', app='arestemis', kind='access'))
+    arestemis_mail = mails(at_least=before + 1)[-1]
+    arestemis_text = arestemis_mail.get_body(('plain',)).get_content()
+    check('asking for Arestemis on its page: "[Arestemis] Get the app", the app and the kind in the text', status == 200
+          and wish.get('app') == 'arestemis' and arestemis_mail['Subject'] == '[Arestemis] Get the app: visitor@example.com'
+          and arestemis_mail['Reply-To'] == 'visitor@example.com'
+          and all(part in arestemis_text for part in ('Someone asks for Arestemis', 'Kind:     Get the app',
+                                                      'App:      Arestemis', 'To send the install link, reply')))
+    before = len(mails())
+    status, asked = call('POST', CONTACT, contact(message='Fictional question about the imprint.', app='empire',
+                                                  kind='other', language='de'))
+    empire_mail = mails(at_least=before + 1)[-1]
+    empire_text = empire_mail.get_body(('plain',)).get_content()
+    check("the Empire's page, a general message: \"[Ares Empire] Other: …\", the app and the kind in the text",
+          status == 200 and asked.get('app') == 'empire' and asked.get('kind') == 'other'
+          and empire_mail['Subject'] == '[Ares Empire] Other: Fictional question about the imprint.'
+          and all(part in empire_text for part in ("A message from Ares Empire's website (German page)",
+                                                    'Kind:     Other', 'App:      Ares Empire', 'Language: de',
+                                                    'Reply to this email to answer')))
+    before = len(mails())
+    status, _ = call('POST', CONTACT, contact(message='', app='empire', kind='access'))
+    check('asking for the Ares Empire app without a message is taken', status == 200 and
+          mails(at_least=before + 1)[-1]['Subject'] == '[Ares Empire] Get the app: visitor@example.com')
     for label, body, field in [
             ('an empty message that does not ask for the app', {'message': '', 'app': 'aresium', 'kind': 'question'}, 'message'),
             ('an empty message without app or kind (the hub\'s form)', {'message': ''}, 'message'),

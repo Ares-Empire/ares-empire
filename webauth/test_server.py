@@ -1030,8 +1030,8 @@ class DemoTests(unittest.TestCase):
 
 
 class LegalPageTests(unittest.TestCase):
-    """Privacy policy, imprint and contact form: open without login, in their language, nothing loaded from other
-    hosts."""
+    """Privacy policy and imprint: open without login, in their language, nothing loaded from other hosts. The contact
+    pages have their own tests (webauth/test_contact.py)."""
 
     def setUp(self):
         server._cache.clear()
@@ -1044,7 +1044,6 @@ class LegalPageTests(unittest.TestCase):
         self.root = Path(directory)
         (self.root / 'legal').mkdir()
         shutil.copy(WEB / 'legal' / 'page.html', self.root / 'legal')
-        shutil.copy(WEB / 'legal' / 'contact.js', self.root / 'legal')
         shutil.copytree(WEB / 'fonts', self.root / 'fonts')
         for entry in legal.PAGES.values():
             (self.root / 'legal' / entry.file).write_text(f'<h1>{entry.title}</h1><p>Approved text.</p>', encoding='utf-8')
@@ -1071,7 +1070,7 @@ class LegalPageTests(unittest.TestCase):
             pair = legal.PAGES[entry.other]
             self.assertEqual(pair.other, path)
             self.assertNotEqual(pair.language, entry.language)
-        self.assertEqual(set(legal.PAGES), {'/datenschutz', '/privacy', '/impressum', '/imprint', '/kontakt', '/contact'})
+        self.assertEqual(set(legal.PAGES), {'/datenschutz', '/privacy', '/impressum', '/imprint'})
 
     def test_logged_in_visitors_and_head_requests(self):
         status, body, _ = send('/impressum', headers={'Cookie': server.COOKIE_NAME + '=user-one'})
@@ -1155,46 +1154,13 @@ class LegalPageTests(unittest.TestCase):
             for path in ('/datenschutz', '/privacy'):
                 self.assertIn('Promenade 18, 91522 Ansbach', send(path)[1].decode().replace('\n', ' '))
 
-    def test_the_contact_form_is_served_only_while_the_privacy_policy_is(self):
-        self.assertEqual((send('/kontakt')[0], send('/contact')[0]), (200, 200))
-        (self.root / 'legal' / 'privacy.html').write_text('<h1>Privacy policy</h1><p>[ADDRESS]</p>', encoding='utf-8')
-        self.assertEqual(send('/privacy')[0], 404)
-        self.assertEqual(send('/contact')[0], 404)  # it collects data, so never without its policy
-        self.assertEqual(send('/kontakt')[0], 200)  # the German policy is published
-        with patch.dict(os.environ, {'LEGAL_PREVIEW': '1'}):
-            self.assertEqual(send('/contact')[0], 200)
-        (self.root / 'legal' / 'contact.js').unlink()
-        self.assertEqual(send('/kontakt')[0], 404)  # a form without its script would post raw JSON pages
-
-    def test_every_footer_links_the_contact_form_in_its_language(self):
+    def test_every_footer_links_the_contact_page_in_its_language(self):
         for path, entry in legal.PAGES.items():
             with self.subTest(path=path):
                 page = send(path)[1].decode()
                 contact = '/kontakt' if entry.language == 'de' else '/contact'
                 self.assertRegex(page, rf'<nav>.*<a href="{contact}"')
-
-    def test_the_real_contact_pages_hold_the_form(self):
-        with patch.object(server, 'WEB_ROOT', str(WEB)), patch.dict(os.environ, {'LEGAL_PREVIEW': '1'}):
-            for path, privacy in (('/kontakt', '/datenschutz'), ('/contact', '/privacy')):
-                page = send(path)[1].decode()
-                with self.subTest(path=path):
-                    self.assertIn('action="https://auth.ares-empire.de/api/collections/contact/records"', page)
-                    self.assertRegex(page, r'<input id="contact-name" name="name" type="text"[^>]*maxlength="100"')
-                    self.assertRegex(page, r'<input id="contact-email" name="email" type="email"[^>]*required')
-                    self.assertRegex(page, r'<textarea id="contact-message" name="message"[^>]*maxlength="5000" required')
-                    # the honeypot: hidden from people and screen readers, out of the tab order
-                    self.assertRegex(page, r'<div class="trap" aria-hidden="true">\s*<label[^>]*>Website</label>\s*'
-                                           r'<input id="contact-website" name="website" type="text" tabindex="-1"')
-                    self.assertIn(f'<a href="{privacy}">', page)
-                    self.assertEqual({'empty', 'email', 'many', 'failed'}, set(re.findall(r'data-problem="(\w+)"', page)))
-                    self.assertIn('id="contact-sent"', page)
-                    self.assertIn('<noscript>', page)
-                    # one inline script (no src), filled into the frame, after the form
-                    scripts = re.findall(r'<script\b([^>]*)>', page)
-                    self.assertEqual(scripts, [''])
-                    self.assertIn('document.getElementById("contact-form")', page)
-                    self.assertLess(page.index('id="contact-form"'), page.index('<script>'))
-        self.assertNotIn('$', (WEB / 'legal' / 'contact.js').read_text())  # the frame is a string.Template
+                self.assertNotIn('<script', page)   # the frame has no script since the form left it (2026-11-01)
 
     def test_the_real_imprint_names_the_contact_form_and_the_policy_covers_it(self):
         with patch.object(server, 'WEB_ROOT', str(WEB)), patch.dict(os.environ, {'LEGAL_PREVIEW': '1'}):
@@ -1216,8 +1182,7 @@ class LegalPageTests(unittest.TestCase):
             text = re.sub(r'<[^>]+>', ' ', (WEB / 'legal' / entry.file).read_text(encoding='utf-8'))
             with self.subTest(page=entry.file):
                 self.assertEqual(informal[entry.language].findall(text), [])
-        for name, register in (('datenschutz.html', 'Sie haben das Recht'), ('kontakt.html', 'Ihre Nachricht')):
-            self.assertIn(register, (WEB / 'legal' / name).read_text(encoding='utf-8'))
+        self.assertIn('Sie haben das Recht', (WEB / 'legal' / 'datenschutz.html').read_text(encoding='utf-8'))
 
     def test_login_page_links_to_privacy_and_imprint(self):
         with patch.object(server, 'WEB_ROOT', str(WEB)):

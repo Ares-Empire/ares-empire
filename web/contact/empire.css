@@ -1,0 +1,91 @@
+/* The Ares Empire's look for its contact page (www.ares-empire.de/contact, /kontakt; webauth/contact.py), on the
+   shared form (web/shared/forms/contact-form.css). As the Empire app shows it (empire-ios Empire/Screens/EmpireStyle.swift
+   and its Contact & support, which has no accent): the hub's near-black wall with the marble bust sunk into it, neutral
+   glass, an ivory Send, and gold only where the app has it, in the name (the header and the band at the end).
+   Light is the app's marble hall: an ivory wall, antique gold, the bust as a faint grey relief.
+   Dark until switched (web/contact/appearance.js sets data-theme before this file applies). */
+
+:root {
+  color-scheme: dark;
+  --bg: #070708;                          /* EmpireStyle.background, the hub's wall */
+  --card: rgba(17, 18, 22, 0.58);
+  --card-2: rgba(27, 28, 33, 0.66);
+  --line-soft: rgba(255, 255, 255, 0.08);
+  /* the phone hub's text roles (EmpireStyle title, body, quiet), neutral greys beside the gold */
+  --ink: #eeeee8;
+  --ink-2: #adb2ad;
+  --ink-3: #7c807d;
+  --shadow: 0 30px 70px -26px rgba(0, 0, 0, 0.92);
+  --edge: rgba(255, 255, 255, 0.10);
+  /* the bright edge that fades, with the hub's gold at its far corner instead of an accent */
+  --glass-edge: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04) 30%, rgba(237, 202, 119, 0.08) 68%, rgba(255, 255, 255, 0.03));
+  --spec: radial-gradient(130% 90% at 0% 0%, rgba(255, 255, 255, 0.07), transparent 46%);
+  --glow1: none;                          /* no wash: the hub's wall is plain black (web/app/styles.css) */
+  --glow2: none;
+  /* no accent: the topic's icon, the focused box and the sent mark in the secondary ink (SupportSheet, accent nil) */
+  --highlight: #adb2ad;
+  --focus: rgba(173, 178, 173, 0.55);
+  --soft-fill: rgba(173, 178, 173, 0.10);
+  --soft-edge: rgba(173, 178, 173, 0.45);
+  --button: #eeeee8;                      /* FormButtonStyle.ivory */
+  --button-ink: #141617;
+  --problem: #d9b4a6;                     /* FormProblem.ink */
+  --issue: #ff5d6c;                       /* StatusTone.issueColor */
+  /* --gold-text (the hub's and EmpireStyle.goldText): the name in the header and the band */
+  --gold-text: linear-gradient(176deg, #fff6db 0%, #f6dd9c 19%, #e8c778 38%, #cca052 55%, #a87c31 72%, #ecce85 88%, #8c6420 100%);
+  --band-fill: var(--gold-text);
+  --band-size: clamp(48px, 9.8vw, 220px); /* ARES EMPIRE: 11 places across the width */
+  --bust-opacity: 0.2;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #efede6;                          /* the marble hall's ivory */
+  --card: rgba(255, 255, 255, 0.72);
+  --card-2: rgba(255, 255, 255, 0.84);
+  --line-soft: rgba(26, 24, 19, 0.09);
+  --ink: #1a1813;
+  --ink-2: #4e4f4a;
+  --ink-3: #6e716b;
+  --shadow: 0 24px 50px -24px rgba(42, 36, 24, 0.24);
+  --edge: rgba(255, 255, 255, 0.85);
+  --glass-edge: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.4) 35%, rgba(176, 132, 64, 0.14) 74%, rgba(255, 255, 255, 0.3));
+  --spec: radial-gradient(130% 90% at 0% 0%, rgba(255, 255, 255, 0.6), transparent 46%);
+  --highlight: #4e4f4a;
+  --focus: rgba(78, 79, 74, 0.55);
+  --soft-fill: rgba(78, 79, 74, 0.10);
+  --soft-edge: rgba(78, 79, 74, 0.45);
+  --button: #16181c;
+  --button-ink: #ffffff;
+  --problem: #a2503c;
+  --issue: #d11f35;
+  /* antique gold: the same polish, deeper, so it reads on ivory */
+  --gold-text: linear-gradient(176deg, #c9a050 0%, #b4893a 19%, #9c7428 38%, #7d5818 55%, #8e6620 72%, #b08440 88%, #5e3f0e 100%);
+  --bust-opacity: 0.13;
+}
+
+/* the throne room's bust sunk into the wall (the app's backdrop, the hub's figure), faint so the form stays the subject:
+   on a wide screen at the left edge, fading out before the form; narrower, behind the header as in the app, fading
+   out before the topic. */
+body::before {
+  background: url("/brand/head_transparent_real.webp") no-repeat left -24px bottom / auto min(80vh, 720px);
+  opacity: var(--bust-opacity);
+  /* faded on every side: the image's own edges never show, and it ends before the form */
+  -webkit-mask-image: radial-gradient(min(30vw, 420px) min(42vh, 380px) at min(13vw, 190px) calc(100% - min(38vh, 340px)), #000 40%, transparent 100%);
+  mask-image: radial-gradient(min(30vw, 420px) min(42vh, 380px) at min(13vw, 190px) calc(100% - min(38vh, 340px)), #000 40%, transparent 100%);
+}
+html[data-theme="light"] body::before { mix-blend-mode: multiply; filter: grayscale(1); }
+@media (max-width: 1179px) {
+  body::before {
+    position: absolute; bottom: auto; height: 420px;
+    background-position: -80px -10px; background-size: auto 420px;
+    -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 88%);
+    mask-image: linear-gradient(180deg, #000 30%, transparent 88%);
+  }
+}
+
+/* the name in gold, tracked capitals, as the app's header (THE EMPIRE) */
+.home span {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase;
+  background: var(--gold-text); -webkit-background-clip: text; background-clip: text; color: transparent;
+}

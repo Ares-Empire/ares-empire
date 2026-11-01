@@ -527,14 +527,18 @@ def build(seed: dict | None = None) -> dict[str, object]:
 # The hub for anyone, without an account (webauth/server.py serves it; web/app/empire-api.js loads these two files on
 # /demo). A made-up guest has the apps on the ring, with texts written for strangers and a made-up chronicle: when each
 # was started and finished (Patrik, 2026-10-27). Aresium links its own demo, and its install button its own contact form
-# with "Get the app" chosen (2026-10-30); Arestemis and Arestoteles the hub's contact form, for both; Aresus and Aresync,
-# Patrik's own tools, are shown without a link or an install button. Nothing of the real seed's
-# content goes into it: only its words (name, tagline, STATUS) and the provinces' logos.
+# with "Get the app" chosen (2026-10-30); Arestemis its own contact page on the hub, also on "Get the app", for both
+# (2026-11-01); Arestoteles, without a form of its own, the Empire's contact page; Aresus and Aresync, Patrik's own
+# tools, are shown without a link or an install button. The demo's band asks for the Ares Empire app on the Empire's
+# page (web/app/empire-api.js). Nothing of the real seed's content goes into it: only its words (name, tagline, STATUS)
+# and the provinces' logos.
 DEMO_FILE = "empire.demo.json"
 DEMO_WORDS_FILE = "demo-empire.js"          # window.EMPIRE on the demo page, in place of app/empire-data.js
 DEMO_TOKEN = "sample-demo-token"
-DEMO_REQUEST = "https://www.ares-empire.de/contact"   # where a guest asks for an app without a form of its own
+DEMO_REQUEST = "https://www.ares-empire.de/contact"   # the Empire's contact page: an app without a form of its own
+EMPIRE_REQUEST = DEMO_REQUEST + "?topic=access"       # the Ares Empire app (the demo's band, web/app/empire-api.js)
 ARESIUM_REQUEST = "https://aresium.de/contact?topic=access"   # Aresium's own form (aresium src/web/links.ts, GET_APP)
+ARESTEMIS_REQUEST = "https://www.ares-empire.de/arestemis/contact?topic=access"   # its own page (webauth/contact.py)
 ACCOUNTS[DEMO_TOKEN] = {"id": "sampledemo00001", "name": "Guest", "admin": False, "approved": True, "verified": True,
                         "services": ["empire", "aresium", "arestemis", "arestoteles", "aresus", "aresync"],
                         "requested": []}
@@ -546,7 +550,7 @@ DEMO_PROVINCES = {   # slug → what the demo says about it; the ring keeps this
                  "money goes, month by month.",
         "features": ["Automatic categories", "Clear charts by month and category", "Image processing for receipts"]},
     "arestemis": {
-        "url": DEMO_REQUEST, "domain": "", "blurb": "Flat finding on autopilot.",
+        "url": ARESTEMIS_REQUEST, "install": ARESTEMIS_REQUEST, "domain": "", "blurb": "Flat finding on autopilot.",
         "about": "Arestemis keeps one search for the flat you want, has an AI check every new listing against it and "
                  "tells you the moment a match goes live.",
         "features": ["One search: places, size, rent, move-in date", "An AI check of every new listing",

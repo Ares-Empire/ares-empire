@@ -1,10 +1,11 @@
-"""The legal pages: privacy policy, imprint and the contact form, in German and English, open to everyone (no login).
+"""The legal pages: privacy policy and imprint, in German and English, open to everyone (no login).
 
-They are the one exception to "websites stay English" (legal pages in Germany are German). The text lives in
-`web/legal/<name>.html` (body only, what Patrik approves); `web/legal/page.html` is the frame in the hub's look.
+They are the one exception to "websites stay English" (legal pages in Germany are German), with the contact pages
+(webauth/contact.py). The text lives in `web/legal/<name>.html` (body only, what Patrik approves); `web/legal/page.html`
+is the frame in the hub's look, its footer linking the contact page in the page's language (`/kontakt`, `/contact`).
 A page that still holds a draft marker is not served (404), so merging a draft never publishes it; set
-LEGAL_PREVIEW=1 to look at drafts locally. The contact form (`/kontakt`, `/contact`) collects personal data, so it is
-served only while the privacy policy in its language is (`needs`); its script (`web/legal/contact.js`) is inlined.
+LEGAL_PREVIEW=1 to look at drafts locally. The contact pages collect personal data, so they are served only while
+the privacy policy in their language is (`is_published`).
 """
 
 from __future__ import annotations
@@ -24,8 +25,6 @@ class LegalPage:
     language: str      # "de" | "en"
     title: str
     other: str         # the same page in the other language
-    needs: str | None = None    # a page that must be published for this one to be served
-    script: str | None = None   # a script in web/legal/, inlined at the end of the page
 
 
 PAGES = {
@@ -33,11 +32,10 @@ PAGES = {
     "/privacy": LegalPage("privacy.html", "en", "Privacy policy", "/datenschutz"),
     "/impressum": LegalPage("impressum.html", "de", "Impressum", "/imprint"),
     "/imprint": LegalPage("imprint.html", "en", "Imprint", "/impressum"),
-    "/kontakt": LegalPage("kontakt.html", "de", "Kontakt", "/contact", needs="/datenschutz", script="contact.js"),
-    "/contact": LegalPage("contact.html", "en", "Contact", "/kontakt", needs="/privacy", script="contact.js"),
 }
 
-# The footer: the pages in the page's language. The language link names the other language in that language.
+# The footer: the pages in the page's language, and the contact page (webauth/contact.py). The language link names the
+# other language in that language.
 NAV = {"de": (("/datenschutz", "Datenschutz"), ("/impressum", "Impressum"), ("/kontakt", "Kontakt")),
        "en": (("/privacy", "Privacy"), ("/imprint", "Imprint"), ("/contact", "Contact"))}
 OTHER_LANGUAGE = {"de": ("en", "English"), "en": ("de", "Deutsch")}
@@ -63,14 +61,12 @@ def _read(web_root: str, name: str) -> str | None:
 
 
 def is_published(path: str, web_root: str) -> bool:
-    """Whether the page may go online: its text is there and final, and so is the page it needs."""
+    """Whether the page may go online: its text is there and final."""
     entry = PAGES.get(path)
     if entry is None:
         return False
     content = _read(web_root, entry.file)
-    if content is None or is_draft(content):
-        return False
-    return entry.needs is None or is_published(entry.needs, web_root)
+    return content is not None and not is_draft(content)
 
 
 def render(path: str, web_root: str, preview: bool = False) -> tuple[bytes, str] | None:
@@ -80,8 +76,7 @@ def render(path: str, web_root: str, preview: bool = False) -> tuple[bytes, str]
         return None
     content = _read(web_root, entry.file)
     frame = _read(web_root, "page.html")
-    script = _read(web_root, entry.script) if entry.script else ""
-    if content is None or frame is None or script is None:
+    if content is None or frame is None:
         return None
     if not preview and not is_published(path, web_root):
         return None
@@ -92,6 +87,5 @@ def render(path: str, web_root: str, preview: bool = False) -> tuple[bytes, str]
         links.append(f'<a href="{href}"{current}>{html.escape(label)}</a>')
     nav = " · ".join(links)
     page = Template(frame).substitute(lang=entry.language, title=html.escape(entry.title), other_href=entry.other,
-                                      other_lang=other_language, other_label=other_label, nav=nav, content=content,
-                                      script=f"<script>\n{script}</script>" if script else "")
+                                      other_lang=other_language, other_label=other_label, nav=nav, content=content)
     return page.encode("utf-8"), entry.language

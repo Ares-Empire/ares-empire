@@ -8,9 +8,10 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from tools import empire_samples as samples
-from webauth import server
+from webauth import contact, server
 
 IP = "127.0.0.1"
 
@@ -108,8 +109,17 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(demo["me"]["admin"], False)
         self.assertEqual([p["slug"] for p in demo["projects"]], ["aresium", "arestemis", "arestoteles", "aresus", "aresync"])
         self.assertEqual([p["install"] for p in demo["projects"]],
-                         ["https://aresium.de/contact?topic=access", "https://www.ares-empire.de/contact",
+                         ["https://aresium.de/contact?topic=access",
+                          "https://www.ares-empire.de/arestemis/contact?topic=access",
                           "https://www.ares-empire.de/contact", None, None])
+        self.assertEqual([p["url"] for p in demo["projects"]][1:3],
+                         ["https://www.ares-empire.de/arestemis/contact?topic=access", "https://www.ares-empire.de/contact"])
+        # the demo's band asks for the Ares Empire app on the Empire's contact page
+        api = (samples.WEB_SAMPLES.parent / "empire-api.js").read_text(encoding="utf-8")
+        self.assertIn(f'<a href="{samples.EMPIRE_REQUEST}" target="_blank" rel="noopener">Get the app</a>', api)
+        # every address is one of the contact pages the hub or aresium.de serves (webauth/contact.py)
+        for link in (samples.EMPIRE_REQUEST, samples.ARESTEMIS_REQUEST, samples.DEMO_REQUEST):
+            self.assertIn(urlsplit(link).path, contact.PAGES)
         self.assertEqual(demo["chronicle"], samples.DEMO_CHRONICLE)
         self.assertEqual((demo["ideas"], demo["addable"], demo["pending"]), ([], [], 0))
         real = {c["text"] for c in seed["chronicle"]} | {p["blurb"] for p in seed["projects"]}

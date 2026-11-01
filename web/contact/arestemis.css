@@ -1,0 +1,61 @@
+/* Arestemis's look for its contact page (www.ares-empire.de/arestemis/contact, /arestemis/kontakt;
+   webauth/contact.py), on the shared form (web/shared/forms/contact-form.css). As the Arestemis app shows it
+   (empire-ios Shared/Design/EmpireDesign.swift): the shared wall and glass (Ink, the same as Aresium's) lit by its
+   moonlight violet (AppAccent.arestemis: #A996FF on the dark wall, #6A4FE0 on the light one; ProvinceWall's light from
+   the top and the far corner), the accent on the topic's icon, the focused box, the sent mark and Send.
+   Dark until switched (web/contact/appearance.js sets data-theme before this file applies). */
+
+:root {
+  color-scheme: dark;
+  --bg: #050507;                          /* Ink.background */
+  --card: rgba(15, 16, 21, 0.55);
+  --card-2: rgba(26, 28, 35, 0.62);
+  --line-soft: rgba(255, 255, 255, 0.08);
+  --ink: #f6f7fb;
+  --ink-2: #b3b9c6;
+  --ink-3: #6b7280;
+  --shadow: 0 30px 70px -26px rgba(0, 0, 0, 0.92);
+  --edge: rgba(255, 255, 255, 0.10);
+  --glass-edge: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04) 30%, rgba(169, 150, 255, 0.10) 68%, rgba(255, 255, 255, 0.03));
+  --spec: radial-gradient(130% 90% at 0% 0%, rgba(255, 255, 255, 0.07), transparent 46%);
+  /* ProvinceWall: the deep violet at 0.30 from the top, 0.16 from the far corner */
+  --glow1: radial-gradient(72% 52% at 50% -12%, rgba(106, 79, 224, 0.30), transparent 60%);
+  --glow2: radial-gradient(58% 50% at 90% 120%, rgba(106, 79, 224, 0.16), transparent 56%);
+  --highlight: #a996ff;                   /* AppAccent.arestemis.color */
+  --focus: rgba(169, 150, 255, 0.55);
+  --soft-fill: rgba(169, 150, 255, 0.10);
+  --soft-edge: rgba(169, 150, 255, 0.45);
+  --button: #a996ff;                      /* FormButtonStyle with the accent */
+  --button-ink: #141617;                  /* AppAccent.onColor */
+  --problem: #d9b4a6;
+  --issue: #ff5d6c;
+  --band-fill: linear-gradient(180deg, #f6f7fb 0%, rgba(127, 127, 127, 0.18) 116%);
+  --band-size: clamp(48px, 12vw, 220px);  /* ARESTEMIS: 9 letters across the width */
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #ecedf2;
+  --card: rgba(255, 255, 255, 0.74);
+  --card-2: rgba(247, 248, 251, 0.82);
+  --line-soft: rgba(15, 20, 40, 0.10);
+  --ink: #0a0c12;
+  --ink-2: #525a69;
+  --ink-3: #6e7685;
+  --shadow: 0 24px 50px -24px rgba(15, 22, 40, 0.26);
+  --edge: rgba(255, 255, 255, 0.85);
+  --glass-edge: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.4) 35%, rgba(106, 79, 224, 0.14) 74%, rgba(255, 255, 255, 0.3));
+  --spec: radial-gradient(130% 90% at 0% 0%, rgba(255, 255, 255, 0.6), transparent 46%);
+  /* on the light wall about a third as strong */
+  --glow1: radial-gradient(72% 52% at 50% -12%, rgba(106, 79, 224, 0.11), transparent 60%);
+  --glow2: radial-gradient(58% 50% at 90% 120%, rgba(106, 79, 224, 0.05), transparent 56%);
+  --highlight: #6a4fe0;
+  --focus: rgba(106, 79, 224, 0.55);
+  --soft-fill: rgba(106, 79, 224, 0.10);
+  --soft-edge: rgba(106, 79, 224, 0.45);
+  --button: #6a4fe0;
+  --button-ink: #ffffff;
+  --problem: #a2503c;
+  --issue: #d11f35;
+  --band-fill: linear-gradient(180deg, #0a0c12 0%, rgba(127, 127, 127, 0.18) 116%);
+}

@@ -1,0 +1,18 @@
+/* What the hub's contact pages add to the shared form (web/shared/forms/contact-form.css): the look switch beside the
+   language in the header (web/contact/appearance.js), since www.ares-empire.de has no switch of its own as aresium.de
+   has. Loaded after the shared form and before the app's look (empire.css, arestemis.css), whose colours it uses. */
+
+.top-end { display: flex; align-items: center; gap: 8px; }
+
+/* a square glass button like the language's (GlassIconButton): a sun on the dark page, a moon on the light one */
+.look {
+  display: inline-grid; place-items: center; width: 38px; height: 38px; margin: 0; padding: 0; border-radius: 12px;
+  border: 1px solid var(--line-soft); background: var(--card); color: var(--ink-2); cursor: pointer;
+  -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%);
+  transition: color .2s, border-color .2s, background .2s;
+}
+.look:hover { color: var(--ink); border-color: var(--ink-3); background: var(--card-2); }
+.look .icon { width: 17px; height: 17px; }
+.look .moon, html[data-theme="light"] .look .sun { display: none; }
+html[data-theme="light"] .look .moon { display: block; }
+@media (prefers-reduced-motion: reduce) { .look { transition: none; } }

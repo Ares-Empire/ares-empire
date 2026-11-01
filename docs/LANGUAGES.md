@@ -56,8 +56,9 @@ password-reset emails are fixed templates that cannot follow a field: they carry
 
 The websites (hub, Aresium) stay English only (Patrik, 2026-10-24). Their API calls send `Accept-Language: en`, so a
 German browser still gets English from the servers. Exceptions, in both languages with a page per language: the legal
-pages (privacy policy, imprint) and the contact forms (the hub's /contact and /kontakt; an app's own, Aresium's at
-aresium.de/contact and /kontakt since 2026-10-30, whose words address no one: no "you", no "du", Patrik 2026-10-31).
+pages (privacy policy, imprint) and the contact forms, whose words address no one: no "you", no "du" (Patrik,
+2026-10-31): Aresium's at aresium.de/contact and /kontakt since 2026-10-30, and on the hub since 2026-11-01 the Ares
+Empire's at /contact and /kontakt and Arestemis's at /arestemis/contact and /arestemis/kontakt.
 
 ## Where the details live
 

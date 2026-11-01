@@ -1,8 +1,8 @@
 /* Shared transport for the two hub trees. Localhost previews fetch JSON fixtures (web/app/samples, written by
    tools/empire_samples.py --web from the hub server itself); sample actions stay in memory. Other hosts always use the
    account API, except the public demo (/demo, webauth/server.py): the same sample mode with the made-up guest
-   (app/samples/empire.demo.json), each app's link from its sample (Aresium's demo, the request form) and a band
-   saying it is a demo. */
+   (app/samples/empire.demo.json), each app's link from its sample (Aresium's demo, an app's contact page) and a band
+   saying it is a demo, whose "Get the app" asks for the Ares Empire app on its contact page. */
 (function () {
   const demoMode = location.pathname === "/demo";
   const sampleMode = demoMode || location.hostname === "localhost" || location.hostname === "127.0.0.1";
@@ -12,7 +12,7 @@
     const band = document.createElement("div");
     band.className = "demo-band";
     band.innerHTML = '<span class="demo-dot"></span><span><b>Demo</b> · a made-up account to look around</span>' +
-      '<a href="https://www.ares-empire.de/contact" target="_blank" rel="noopener">Get the app</a>';   // DEMO_REQUEST
+      '<a href="https://www.ares-empire.de/contact?topic=access" target="_blank" rel="noopener">Get the app</a>';   // EMPIRE_REQUEST
     document.body.appendChild(band);
   }
   // ?as=… picks the preview account: admin (the default), member, new-member or requested.
