@@ -48,8 +48,9 @@ merged (briefs 27–28). On Patrik's iPhone since 2026-10-29 (internal TestFligh
    (Apple's on-device model or the server without storing anything, to be decided); each layer measured on Patrik's
    own transactions before choosing. Also receipts from a photo (Patrik, 2026-10-26). Plan:
    [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md).
-4. **Aresync file sharing from the phone:** Patrik's idea (2026-10-25), on hold: he will say what it should do when
-   it comes up; not needed for the current work.
+4. **Aresync file sharing from the phone:** Patrik's idea (2026-10-25), specified 2026-11-01: send any file or photo
+   from the iPhone to a chosen folder on the MacBook (Documents or Downloads, else `Zu sortieren`), receipts into
+   Rechnungen with their inventory line. Plan: [docs/ARESYNC-DROP.md](docs/ARESYNC-DROP.md).
 5. **New apps**, each built on the standard from its first screen.
 
 **Smaller open items:** the rest is in `empire-ios/CLAUDE.md` → Open and
