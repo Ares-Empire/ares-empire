@@ -55,14 +55,15 @@ class ContactApp:
     look: str                    # its stylesheet (web/contact/)
     band: str                    # the name across the width at the end (WordmarkBand)
     home: str | None             # where the name in the header and "Back" lead; None: no page of its own
-    images: tuple[str, ...] = () # pictures its look draws (the Empire's bust in the wall)
+    images: tuple[str, ...] = () # pictures its look draws (its god's bust in the wall, --bust)
 
 
 APPS = {
     "empire": ContactApp("empire", "Ares Empire", {"en": "/contact", "de": "/kontakt"}, "/brand/ares-bust-icon.png",
                          "/contact/empire.css", "ARES EMPIRE", "/", ("/brand/head_transparent_real.webp",)),
     "arestemis": ContactApp("arestemis", "Arestemis", {"en": "/arestemis/contact", "de": "/arestemis/kontakt"},
-                            "/brand/artemis-icon.png", "/contact/arestemis.css", "ARESTEMIS", None),
+                            "/brand/artemis-icon.png", "/contact/arestemis.css", "ARESTEMIS", None,
+                            ("/brand/artemis-profile.webp",)),
 }
 
 # path → (app, language)

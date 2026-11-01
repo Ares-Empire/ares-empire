@@ -35,6 +35,7 @@
   --gold-text: linear-gradient(176deg, #fff6db 0%, #f6dd9c 19%, #e8c778 38%, #cca052 55%, #a87c31 72%, #ecce85 88%, #8c6420 100%);
   --band-fill: var(--gold-text);
   --band-size: clamp(48px, 9.8vw, 220px); /* ARES EMPIRE: 11 places across the width */
+  --bust: url("/brand/head_transparent_real.webp");   /* the throne room's bust */
   --bust-opacity: 0.2;
 }
 
@@ -61,27 +62,8 @@ html[data-theme="light"] {
   --issue: #d11f35;
   /* antique gold: the same polish, deeper, so it reads on ivory */
   --gold-text: linear-gradient(176deg, #c9a050 0%, #b4893a 19%, #9c7428 38%, #7d5818 55%, #8e6620 72%, #b08440 88%, #5e3f0e 100%);
+  --bust: url("/brand/head_transparent_real.webp");
   --bust-opacity: 0.13;
-}
-
-/* the throne room's bust sunk into the wall (the app's backdrop, the hub's figure), faint so the form stays the subject:
-   on a wide screen at the left edge, fading out before the form; narrower, behind the header as in the app, fading
-   out before the topic. */
-body::before {
-  background: url("/brand/head_transparent_real.webp") no-repeat left -24px bottom / auto min(80vh, 720px);
-  opacity: var(--bust-opacity);
-  /* faded on every side: the image's own edges never show, and it ends before the form */
-  -webkit-mask-image: radial-gradient(min(30vw, 420px) min(42vh, 380px) at min(13vw, 190px) calc(100% - min(38vh, 340px)), #000 40%, transparent 100%);
-  mask-image: radial-gradient(min(30vw, 420px) min(42vh, 380px) at min(13vw, 190px) calc(100% - min(38vh, 340px)), #000 40%, transparent 100%);
-}
-html[data-theme="light"] body::before { mix-blend-mode: multiply; filter: grayscale(1); }
-@media (max-width: 1179px) {
-  body::before {
-    position: absolute; bottom: auto; height: 420px;
-    background-position: -80px -10px; background-size: auto 420px;
-    -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 88%);
-    mask-image: linear-gradient(180deg, #000 30%, transparent 88%);
-  }
 }
 
 /* the name in gold, tracked capitals, as the app's header (THE EMPIRE) */

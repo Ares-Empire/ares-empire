@@ -21,6 +21,8 @@
   /* ProvinceWall: the deep violet at 0.30 from the top, 0.16 from the far corner */
   --glow1: radial-gradient(72% 52% at 50% -12%, rgba(106, 79, 224, 0.30), transparent 60%);
   --glow2: radial-gradient(58% 50% at 90% 120%, rgba(106, 79, 224, 0.16), transparent 56%);
+  --bust: url("/brand/artemis-profile.webp");   /* Artemis, the god the app is named after, in profile */
+  --bust-opacity: 0.17;
   --highlight: #a996ff;                   /* AppAccent.arestemis.color */
   --focus: rgba(169, 150, 255, 0.55);
   --soft-fill: rgba(169, 150, 255, 0.10);
@@ -49,6 +51,8 @@ html[data-theme="light"] {
   /* on the light wall about a third as strong */
   --glow1: radial-gradient(72% 52% at 50% -12%, rgba(106, 79, 224, 0.11), transparent 60%);
   --glow2: radial-gradient(58% 50% at 90% 120%, rgba(106, 79, 224, 0.05), transparent 56%);
+  --bust: url("/brand/artemis-profile.webp");
+  --bust-opacity: 0.11;
   --highlight: #6a4fe0;
   --focus: rgba(106, 79, 224, 0.55);
   --soft-fill: rgba(106, 79, 224, 0.10);
