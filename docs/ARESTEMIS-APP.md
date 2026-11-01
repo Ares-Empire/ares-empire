@@ -18,7 +18,8 @@ bot with one search in a config file, stopped since Patrik found his flat. It be
 - **Application text:** a setting: *my own text* (written once) or *written by AI for each listing* (from the listing,
   Patrik's own text as the base, and "about me").
 - Later (not now): hunts for other things than flats. The core object is therefore a **hunt** with a `kind`
-  (`"flat"` today); nothing generic is built beyond that.
+  (`"flat"` today); nothing generic is built beyond that. **2026-11-01:** that time has come; plan:
+  [ARESTEMIS-ANYTHING.md](ARESTEMIS-ANYTHING.md).
 
 ## Decisions
 
