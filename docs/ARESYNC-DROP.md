@@ -107,7 +107,7 @@ choices:
 
 | Choice | Default | Effect (from Rechnungen's rules) |
 |---|---|---|
-| For the Steuererklärung | off | date at least **31 December, five years after the purchase year** (the rules' "Steuerbescheid final, practically +4 years": a 2026 purchase is claimed in the return filed in 2027, and the Finanzamt can ask back until the end of 2031). **Patrik to confirm this reading.** |
+| For the Steuererklärung | off | date at least **31 December, five years after the purchase year** (decided 2026-11-01, also in Rechnungen's rules): the Finanzamt can ask back until the Festsetzungsfrist ends, 4 years from the end of the tax year when filing voluntarily, from the end of the filing year when filing is required (§ 169, § 170 AO). Five years covers both when a required return is filed the following year. |
 | For the flat | off | → `Permanent/` (flat purchase, renovation and Handwerker invoices: proof for a later sale and the 10-year Spekulationsfrist) |
 | Valuable, keeping it | **on above 500 €** | → `Permanent/` (value proof for a Hausrat claim while he owns it) |
 | Manufacturer's warranty | none | years, or an end date: date at least warranty end + 1 month |
