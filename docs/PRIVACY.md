@@ -201,12 +201,12 @@ AV-Vertrag).
   page's language, the app (`aresium`, `empire`, `arestemis`), the topic (`kind`: get the app, question, problem, idea,
   other), and the honeypot `website` (always empty from people), created. Superusers only can read it. The pages load
   nothing from other hosts; the hub's are served only while the privacy policy in their language is. A new form is
-  covered by the policy's section 4 before it goes live (To do 8).
+  covered by the policy's section 4 before it goes live (done for both on 2026-11-01, To do 8).
 - The hub's two pages remember the look chosen with their header's switch (light; dark is the default) in the
   browser's `localStorage` (`ares-empire-appearance`), as aresium.de does with its own switch (`aresium-appearance`).
   It stays in the browser, is never sent, holds nothing about the person, and is set only when the visitor switches.
-  The public policy names neither (a stored setting the visitor asked for, § 25(2) no. 2 TDDDG); Patrik may want a
-  sentence in section 3 (To do 8).
+  Section 3 of the public policy names both since 2026-11-01 (a stored setting the visitor asked for, § 25(2) no. 2
+  TDDDG; To do 8).
 - Asking for an app: the email address is used to send the link for installing it (a TestFlight link Patrik sends
   himself). If Patrik instead invites people by email in App Store Connect, their address goes to Apple: the policy
   must name that first. Arestemis and the Ares Empire app also need an Ares account (created in the app; the policy's
@@ -291,6 +291,11 @@ bank_requests inboxes and the "[Aresium]" contact email were deployed the same d
 2026-10-28 (Aresium receipts): section 6 → "Aresium", one paragraph on receipts in both policies (camera or photo
 library, read on the iPhone, photo discarded, what is stored, nothing transmitted); Patrik approved the text.
 
+2026-11-01 (the hub's contact pages): section 4 of both policies names the contact forms on www.ares-empire.de
+(among them /contact, /kontakt) and aresium.de, the chosen topic and the install link for a request for an app;
+section 3 names the look remembered in the browser by the switch on aresium.de and on the hub's contact pages
+(localStorage, § 25(2) no. 2 TDDDG). Patrik approved both texts; published with the pages.
+
 ## To do (follow-up builds)
 
 1. ~~**Delete your account** in every app.~~ Done 2026-10-25 (briefs F1/F2): every app creates, leaves and deletes the
@@ -319,7 +324,8 @@ library, read on the iPhone, photo discarded, what is stored, nothing transmitte
    back.
 7. ~~**Aresium's own contact form (aresium.de/contact, /kontakt), before it goes live**~~: done 2026-10-31 (section 4
    names it, the topic and the install link; section 11 says "contact forms").
-8. **The hub's contact pages (Ares Empire, Arestemis; 2026-11-01), with or before them going live:** section 4 of both
+8. ~~**The hub's contact pages (Ares Empire, Arestemis; 2026-11-01), with or before them going live:**~~ done 2026-11-01
+   (Patrik approved section 4 and the optional section 3 sentence; published with the pages). Before: section 4 of both
    policies says the topic is processed "on aresium.de" only; the hub's pages send it too, and the app. Drafted on
    ares-empire branch `contact-pages-privacy` (section 4: the contact forms on www.ares-empire.de and aresium.de, the
    chosen topic, a request for an app), **needs Patrik's OK**. Optional, his call: a sentence in section 3 on the look
