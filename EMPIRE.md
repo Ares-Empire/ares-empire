@@ -153,7 +153,11 @@ repo as a top-level folder, and live services and data volumes depend on their p
 
 All empire repos live in the GitHub organization **[Ares-Empire](https://github.com/Ares-Empire)**
 (aresync follows once every laptop runs the org-aware version). Each repo keeps its own
-visibility, so code can go public project by project.
+visibility. **Public since 2026-11-02:** `aresium`, `empire-ios`, `ares-empire`, `Arestoteles` and `ares`, as fresh
+repos with cleaned history (the old ones are private archives, `<name>-archive-2026-11`). Private: `Arestemis` (its
+sites research and server briefs stay there), `aresus`, `aresync`, `arescope`, `companions` (until it is shown) and
+`AresOS` (next). Public repos hold no personal data ([PRIVACY.md](docs/PRIVACY.md) → Owner file) and never say how
+Arestemis gets past a site's blocks.
 
 iPhone apps for every province live in one repo, **`empire-ios`** (name deliberately not
 `ares…`, so the empire sync doesn't list it as a province of its own).
@@ -199,6 +203,7 @@ Newest first. Mirror of `EMPIRE.chronicle`; Claude Code appends here as it works
 After adding a line to `web/app/empire-data.js`, run `python3 tools/empire_samples.py --web` (the website's
 previews are generated from it; a test checks they are current).
 
+- **2026-11-02 · empire** — The code of the Ares Empire is public on GitHub: Aresium, the iPhone apps, the hub, Arestoteles and patrikbreeck.com, each a fresh repo whose history holds no personal data (name, address and email come from one file outside the repos, and the privacy check now lets commits that remove such data through). Arestemis, Aresus and Aresync stay private; the old repos are kept as private archives.
 - **2026-11-02 · aresium** — Aresium now says what a month costs on average and how much of it is fixed: under the overview's total, the average of the finished months and the fixed part, which opens the fixed costs (rent, subscriptions, insurance), each found by its amount, how often it comes and a steady day, with when the next one is due; a cancelled subscription moves to Ended, and one counted by mistake is taken out with a long press. The income side shows regular money in the same way. Aresium also went to Apple's beta review for testers outside the empire, and a walk through a fresh install fixed three snags for newcomers first: skipping the category list left everything unsorted, the first days of a month showed almost nothing, and a German button read like 'delete'. Build 19 went to the phone through TestFlight.
 - **2026-11-02 · arestemis** — Arestemis explains itself now: a tour of eight steps, shown once after the first login and again from Settings, walks through sample searches in the app's own language, from starting a search to what a Preismonitor and a page watch are for. Patrik asked for it when "Webseite beobachten" read as too vague; the tour's frame is shared with Aresium's, whose tour looks exactly as before. App build 13.
 - **2026-11-02 · aresync** — Aresync carries files from the iPhone to the MacBook from anywhere: in Aresus's Aresync tab a photo, a camera picture or any file is sent with a folder in Documents or Downloads chosen on the phone (a new one can be made there, or Sort later) and a name. The server encrypts it on arrival with a key whose secret half only the MacBook holds; the Mac's own program fetches it within a minute while the Mac is awake, puts it in place without overwriting anything, and a quiet push says it was delivered. The first file from the phone landed on 2026-11-02 (Aresus builds 2 and 3); sent files are deleted from the list with a swipe as in Mail. Aresus in the iPhone's share sheet comes next.
