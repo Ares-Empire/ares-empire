@@ -65,6 +65,11 @@
     {
       "at": "2026-11-02",
       "project": "arestemis",
+      "text": "Arestemis explains itself now: a tour of eight steps, shown once after the first login and again from Settings, walks through sample searches in the app's own language, from starting a search to what a Preismonitor and a page watch are for. Patrik asked for it when \"Webseite beobachten\" read as too vague; the tour's frame is shared with Aresium's, whose tour looks exactly as before. App build 13."
+    },
+    {
+      "at": "2026-11-02",
+      "project": "arestemis",
       "text": "Arestemis has a fourth kind of search, the Preismonitor: one product in one shop, its price kept as a curve over 30, 90 or 365 days, a push when it falls under a chosen price or is back in stock, or both, switchable at any time on the monitor's page. It reads the shop's own product data first and asks the AI only where a page has none. New search became a page of four cards with examples, and every search can be renamed in place without starting it again. App builds 11 and 12."
     },
     {
