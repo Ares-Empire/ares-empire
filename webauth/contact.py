@@ -142,7 +142,7 @@ APP_WORDS = {
             "description": "Ask for the Ares Empire iPhone app, or write about a question, a problem, an idea or "
                            "anything else.",
             "lead": "Ask for the iPhone app or write about a question, a problem, an idea or anything else around the "
-                    "Ares Empire. Messages go to {{OWNER_NAME}} by email.",
+                    "Ares Empire.",
             "idea": "What would make the Ares Empire better?",
             "note_app": "The Ares Empire app is for the iPhone (iOS 26 or later) and works with an Ares account, "
                         "created in the app. The install link comes by email, to this address.",
@@ -153,7 +153,7 @@ APP_WORDS = {
             "description": "Die iPhone-App von Ares Empire anfragen oder zu einer Frage, einem Problem, einer Idee "
                            "oder etwas anderem schreiben.",
             "lead": "Die iPhone-App anfragen oder zu einer Frage, einem Problem, einer Idee oder etwas anderem rund um "
-                    "Ares Empire schreiben. Nachrichten gehen per E-Mail an {{OWNER_NAME}}.",
+                    "Ares Empire schreiben.",
             "idea": "Was würde Ares Empire besser machen?",
             "note_app": "Die App von Ares Empire ist fürs iPhone (ab iOS 26) und nutzt ein Ares-Konto, das in der App "
                         "angelegt wird. Der Installationslink kommt per E-Mail an diese Adresse.",
@@ -164,7 +164,7 @@ APP_WORDS = {
         "en": {
             "page_title": "Contact · Arestemis",
             "description": "Ask for the Arestemis iPhone app, or write about a question, a problem or an idea.",
-            "lead": "Ask for the iPhone app or write about a question, a problem or an idea. Messages go to {{OWNER_NAME}} by email.",
+            "lead": "Ask for the iPhone app or write about a question, a problem or an idea.",
             "idea": "What would make Arestemis better?",
             "note_app": "Arestemis is an iPhone app (iOS 26 or later) and works with an Ares account, created in the "
                         "app. The install link comes by email, to this address.",
@@ -174,8 +174,7 @@ APP_WORDS = {
             "page_title": "Kontakt · Arestemis",
             "description": "Die iPhone-App von Arestemis anfragen oder zu einer Frage, einem Problem oder einer Idee "
                            "schreiben.",
-            "lead": "Die iPhone-App anfragen oder zu einer Frage, einem Problem oder einer Idee schreiben. Nachrichten "
-                    "gehen per E-Mail an {{OWNER_NAME}}.",
+            "lead": "Die iPhone-App anfragen oder zu einer Frage, einem Problem oder einer Idee schreiben.",
             "idea": "Was würde Arestemis besser machen?",
             "note_app": "Arestemis ist eine iPhone-App (ab iOS 26) und nutzt ein Ares-Konto, das in der App angelegt "
                         "wird. Der Installationslink kommt per E-Mail an diese Adresse.",
@@ -232,7 +231,6 @@ def words(app: str, language: str) -> dict:
     """The page's words: the shared ones with the app's own."""
     w = {**WORDS[language], **APP_WORDS[app][language]}
     w["placeholders"] = {**WORDS[language]["placeholders"], "idea": APP_WORDS[app][language]["idea"]}
-    w["lead"] = w["lead"].replace("{{OWNER_NAME}}", owner.get_owner()["name"])
     return w
 
 

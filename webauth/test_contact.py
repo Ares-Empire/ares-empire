@@ -134,6 +134,14 @@ class PageTests(OwnerTestCase):
                 self.assertNotRegex(contact.page(app, 'de', topic),
                                     r'(?i)\b(du|dich|dir|dein\w*|frag|schreib|gib|versuch|sende|melde)\b')
 
+    def test_the_pages_never_name_the_owner(self):
+        # Patrik, 2026-11-02: a search for his name brought up the contact page. His name is only on the legal pages,
+        # which search engines are asked to leave out (web/legal/page.html).
+        for app in contact.APPS:
+            for language in ('en', 'de'):
+                for topic in contact.TOPICS:
+                    self.assertNotIn('Musterfrau', contact.page(app, language, topic))
+
     def test_the_privacy_policy_imprint_and_email_fallback_are_linked_in_the_pages_language(self):
         for path, app, language, page in pages():
             with self.subTest(path=path):

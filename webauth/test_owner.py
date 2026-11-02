@@ -33,15 +33,17 @@ class OwnerTests(OwnerTestCase):
         for path in contact.PAGES:
             with self.subTest(path=path):
                 page = contact.render(path, None, WEB)[0].decode()
-                self.assertIn(DETAILS["name"], page)
+                self.assertNotIn(DETAILS["name"], page)   # only the legal pages name him (Patrik, 2026-11-02)
                 self.assertIn('href="mailto:' + DETAILS["email"] + '"', page)
                 self.assertNotIn("{{OWNER_", page)
 
     def test_owner_values_are_escaped_in_html(self):
         values = {key: '<&"\'>' for key in DETAILS}
         self.owner_file.write_text(json.dumps(values))
-        for page in (legal.render('/imprint', WEB)[0].decode(), contact.page('empire', 'en')):
-            self.assertIn(html.escape(values['name']), page)
+        imprint, contact_page = legal.render('/imprint', WEB)[0].decode(), contact.page('empire', 'en')
+        self.assertIn(html.escape(values['name']), imprint)
+        self.assertIn(html.escape(values['email']), contact_page)
+        for page in (imprint, contact_page):
             self.assertNotIn(values['name'], page)
             self.assertNotIn('&amp;lt;', page)
 

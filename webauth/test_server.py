@@ -1088,6 +1088,12 @@ class LegalPageTests(OwnerTestCase):
         self.assertGreater(int(headers['Content-Length']), 0)
         self.assertEqual(headers['Content-Language'], 'en')
 
+    def test_the_legal_pages_stay_out_of_search_results(self):
+        # Patrik, 2026-11-02: they name him and his address; reachable from every page, but not listed in searches.
+        for path in legal.PAGES:
+            with self.subTest(path=path):
+                self.assertIn(b'<meta name="robots" content="noindex, follow" />', send(path)[1])
+
     def test_font_and_its_licence_are_open(self):
         status, body, headers = send('/fonts/SpaceGrotesk-Variable.ttf')
         self.assertEqual(status, 200)
