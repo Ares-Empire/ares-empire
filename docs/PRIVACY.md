@@ -130,6 +130,20 @@ AV-Vertrag).
   made-up data and store nothing. A new demo page fits that sentence as long as it, too, stores nothing; one that
   would store something gets its own section first.
 
+### patrikbreeck.com (Patrik's personal site, repo `Ares-Empire/ares` in `~/ares`; public since 2026-11-02)
+
+- Static pages served by Caddy from `/srv/ares` (no login, no forms, no API). Its own privacy policy and imprint are on
+  the site (`content/legal/`, English and German), with the controller's facts from `content/site.json`, the same as
+  here.
+- Processing: only the request itself (IP address, time, URL); the Caddy block writes no access log, Caddy's error
+  entries keep 14 days (journald). No cookies, no analytics, nothing from other hosts (Content-Security-Policy
+  `'self'`). The look (light, dark, red) and the companions' choices stay in the visitor's browser (localStorage; the
+  companions' Motion choice in sessionStorage), § 25(2) no. 2 TDDDG; nothing is sent back.
+- It links the contact forms on www.ares-empire.de and aresium.de (the apps' Request access, passing only `topic` and
+  `look` in the address) and the demos; the hub's policy covers what is sent there. The companions' menu shows their
+  credits (`vendor/companions/NOTICE.md`), loaded from the site itself.
+- A change that processes something new (a form, an embed, a log) goes into its policy first, in both languages.
+
 ### Aresium (`aresium.service`, `aresium.de`, `~/aresium`)
 
 - Patrik's own bank (VR Bank CAMT/CSV) and PayPal transactions: date, amount, balance, description, counterparty
@@ -297,6 +311,10 @@ library, read on the iPhone, photo discarded, what is stored, nothing transmitte
 (among them /contact, /kontakt) and aresium.de, the chosen topic and the install link for a request for an app;
 section 3 names the look remembered in the browser by the switch on aresium.de and on the hub's contact pages
 (localStorage, § 25(2) no. 2 TDDDG). Patrik approved both texts; published with the pages.
+
+2026-11-02 (patrikbreeck.com public): the site's own policy (section 4: the companions on the home and apps pages,
+section 5: the contact forms it links) and imprint; Patrik approved those sections, the rest follows this file's facts,
+checked against the server the same day. Password and noindex removed (Caddyfile, `content/site.json` `public`).
 
 ## To do (follow-up builds)
 
