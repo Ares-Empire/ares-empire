@@ -15,6 +15,8 @@ import os
 from dataclasses import dataclass
 from string import Template
 
+from webauth import owner
+
 # Placeholders that must be gone before a page goes online (docs/PRIVACY.md).
 DRAFT_MARKERS = ("[ADDRESS]", "[lead to confirm]")
 
@@ -87,5 +89,5 @@ def render(path: str, web_root: str, preview: bool = False) -> tuple[bytes, str]
         links.append(f'<a href="{href}"{current}>{html.escape(label)}</a>')
     nav = " · ".join(links)
     page = Template(frame).substitute(lang=entry.language, title=html.escape(entry.title), other_href=entry.other,
-                                      other_lang=other_language, other_label=other_label, nav=nav, content=content)
+                                      other_lang=other_language, other_label=other_label, nav=nav, content=owner.fill(content))
     return page.encode("utf-8"), entry.language

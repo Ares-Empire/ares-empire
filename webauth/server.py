@@ -38,7 +38,7 @@ if not __package__:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from empire_language import request_language
-from webauth import contact, legal
+from webauth import contact, legal, owner
 from webauth.texts import text
 
 WEB_ROOT = os.environ.get("WEB_ROOT", "web")
@@ -990,6 +990,10 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main() -> None:
+    try:
+        owner.get_owner()
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
     sys.stderr.write(f"Ares Empire web serving {WEB_ROOT} on {HOST}:{PORT}, accounts at {AUTH_URL}\n")
     httpd.serve_forever()

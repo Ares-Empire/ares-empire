@@ -2,8 +2,7 @@
 
 **Decided 2026-10-24 (Patrik).** Status (2026-10-24): server live at `www.ares-empire.de/api/arestoteles`, app built
 (simulator; TestFlight pending), checked against the real vault (78 notes, 29 positions). Arestoteles stops being a trading bot and becomes the iPhone app for Patrik's
-Weltbild: his Obsidian vault of topics, positions, mechanisms, events and questions (`~/Documents/Patrik Breeck/
-Weltbild`, repo `carlsenares/opinions`, rules in its own `CLAUDE.md`). The website arestoteles.de stays as it is.
+Weltbild: his Obsidian vault of topics, positions, mechanisms, events and questions (`<local vault folder>`, repo `carlsenares/opinions`, rules in its own `CLAUDE.md`). The website arestoteles.de stays as it is.
 
 ## The decisions
 
@@ -37,7 +36,7 @@ Weltbild`, repo `carlsenares/opinions`, rules in its own `CLAUDE.md`). The websi
   one day while the vault stays private. The vault's name must not start with "ares" (the empire sync would make it a
   province).
 - **Sync:** the server keeps its own clone (`/var/lib/arestoteles/vault`, deploy key with write access, added
-  2026-10-24), pulls every minute, commits app edits as "Patrik Breeck (Arestoteles app)" and pushes. The laptops get
+  2026-10-24), pulls every minute, commits app edits as "<owner name> (Arestoteles app)" (name from the [owner file](PRIVACY.md#owner-file)) and pushes. The laptops get
   them through the Obsidian Git plugin (pull on open, push every 10 minutes); Aresync stays out of the vault (two
   committers on one repo would conflict).
 - **The trading code is deleted** (Patrik: no use for it; git keeps the history). Kept: the website (`web/`,

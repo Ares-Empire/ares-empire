@@ -19,7 +19,7 @@ bot with one search in a config file, stopped since Patrik found his flat. It be
   Patrik's own text as the base, and "about me").
 - Later (not now): hunts for other things than flats. The core object is therefore a **hunt** with a `kind`
   (`"flat"` today); nothing generic is built beyond that. **2026-11-01:** that time has come; plan:
-  [ARESTEMIS-ANYTHING.md](ARESTEMIS-ANYTHING.md).
+  the Arestemis repo, `docs/ARESTEMIS-ANYTHING.md`.
 
 ## Decisions
 
@@ -37,8 +37,7 @@ bot with one search in a config file, stopped since Patrik found his flat. It be
   ("Filtered out"), so a too-strict search shows.
 - **Places Germany-wide by search-as-you-type**, not a dropdown: suggestions come from WG-Gesucht's own city list via
   the server, so every city offered can actually be searched; each city is mapped to each portal's id when chosen.
-  The app says which
-  portals cover a place.
+  The app says which portals cover a place.
 - **Per account from the start** (a hunt and settings belong to an Empire account with the `arestemis` service),
   although only Patrik uses it. Not in the hub catalog yet (private).
 - **The old search and data are deleted** (Patrik: he won't hunt for a flat for years). The new database starts empty.

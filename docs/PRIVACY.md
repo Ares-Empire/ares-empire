@@ -9,6 +9,24 @@ Facts the code cannot show (server settings, providers) were confirmed by the le
 netcup was concluded by Patrik on 2026-10-25. The pages went live on 2026-10-25 after Patrik read them. A page is not
 served while it contains `[lead to confirm]` or `[ADDRESS]` (`webauth/legal.py`): keep that marker for anything unconfirmed.
 
+## Owner file
+
+All three sites (`ares-empire`, `ares` and `aresium`) share one owner file per machine, outside every repo.
+The path is `$ARES_OWNER_FILE` when set, otherwise `~/.config/ares-empire/owner.json` for the process user:
+`/root/.config/ares-empire/owner.json` on the server, `~/.config/ares-empire/owner.json` for the signed-in user on
+the Mac. It is never committed, copied into a repo, or printed in logs.
+
+The file is a JSON object with exactly `name`, `street`, `city` (postcode and town on one line) and `email`, each
+a non-empty string. Missing files, invalid JSON, extra or missing keys and empty values stop startup with the
+path and problem, without the values. The web services load it once at startup for the legal and contact pages.
+Restart them after changing it; legal pages must never show an empty or placeholder address.
+
+PocketBase runs as `empire-accounts` and cannot read root's home. Run `deploy/install-accounts.sh` as root after
+an owner email change: it validates the same file and writes only the email as `ARES_OWNER_EMAIL` to the root-only
+`/etc/empire-accounts/owner.env`. systemd reads it before switching users; `accounts/pb_hooks/lib/mail.js` requires
+that variable. The installer restarts `empire-accounts`. Tests use temporary made-up files via `ARES_OWNER_FILE`;
+account rule tests use a made-up `ARES_OWNER_EMAIL`, never the real file.
+
 ## What the public pages cover (Patrik, 2026-10-25)
 
 This file is the full internal inventory. The public policy covers only processing that concerns people other than
@@ -27,7 +45,7 @@ AV-Vertrag).
 
 ## Facts that hold everywhere
 
-- **Controller:** Patrik Breeck, REDACTED-ADDRESS, 85748 Garching, `REDACTED-EMAIL`. A private project, no company; no data
+- **Controller:** the details in the [owner file](#owner-file). A private project, no company; no data
   protection officer needed (§ 38 BDSG: fewer than 20 people process data). Patrik chose the address (2026-10-25); the
   public pages show it only in the policy's controller line and the imprint.
 - **Supervisory authority:** Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach,
@@ -186,7 +204,7 @@ AV-Vertrag).
 
 - Patrik's Weltbild vault (his notes, including political views). The `arestoteles` service gives access to his
   vault and is given only to Patrik and the test account (ARESTOTELES-APP.md).
-- Edits from the app are committed as "Patrik Breeck (Arestoteles app)" and pushed to GitHub (GitHub, Inc., USA;
+- Edits from the app are committed as "the [owner file](#owner-file) (Arestoteles app)" and pushed to GitHub (GitHub, Inc., USA;
   private repo). GitHub is an active EU–US DPF participant (dataprivacyframework.gov participant 6174, next
   certification due 2027-08-03; checked 2026-10-24).
 - Search (`GET /search?q=`) runs on our server (local model, brief E3); the query is not stored (uvicorn's access log
@@ -202,7 +220,7 @@ AV-Vertrag).
 
 - Collection `feedback` on the account server: account (deleted with the account), app, kind, message (≤ 5000),
   app version, system ("iOS 27.0 · iPhone"), language, created. Superusers only can read it.
-- A hook mails each message through Resend to `REDACTED-EMAIL`, Reply-To the account's email. The mailbox is at
+- A hook mails each message through Resend to `the [owner file](#owner-file)`, Reply-To the account's email. The mailbox is at
   IONOS SE, Germany (MX `mx00`/`mx01.ionos.de`; lead, 2026-10-24).
 - Kept 12 months after the matter is closed (in the collection and the mailbox), earlier with the account.
 - Basis: Art. 6(1)(b) for questions about the service, otherwise 6(1)(f).
@@ -229,7 +247,7 @@ AV-Vertrag).
   account section covers it). Arestemis itself is still named nowhere in the public pages: a request is only a contact
   message, but **giving the `arestemis` service to anyone but Patrik needs its section first** (the Rule above: the
   hunt, "About you", Groq in the USA, the portals).
-- A hook mails each message through Resend to `REDACTED-EMAIL` (IONOS), Reply-To the given address.
+- A hook mails each message through Resend to `the [owner file](#owner-file)` (IONOS), Reply-To the given address.
 - IP address: in the account server's request log for 5 days (as every request), and in PocketBase's in-memory rate
   limiter (5 per hour per address); not stored with the message.
 - Kept 12 months after the matter is closed (in the collection and the mailbox), deleted by hand in the admin UI.
@@ -246,7 +264,7 @@ AV-Vertrag).
   account number, an email address, a date, an amount or 5+ digits, and the server refuses the same again, also in the
   bank's name (`pb_hooks/lib/bank-formats.js`, `pb_hooks/lib/personal-data.js`). A person's name in a column's name cannot be detected; header cells are
   limited to 80 characters.
-- A hook mails each format through Resend to `REDACTED-EMAIL` (IONOS), without a Reply-To.
+- A hook mails each format through Resend to `the [owner file](#owner-file)` (IONOS), without a Reply-To.
 - IP address: in the account server's request log for 5 days (as every request), and in PocketBase's in-memory rate
   limiter (5 per hour per address); not stored with the format.
 - Kept until the bank is added to Aresium, at most 12 months; deleted by hand (the record in the admin UI and the
@@ -263,7 +281,7 @@ AV-Vertrag).
 - No personal data in the record: the app refuses to send a name that looks like an IBAN or account number, an email
   address, a date, an amount or 5+ digits, and the server refuses the same again (`pb_hooks/lib/personal-data.js`,
   the check of a bank format's name). A person's name typed instead of the bank's cannot be detected.
-- A hook mails each request through Resend to `REDACTED-EMAIL` (IONOS), without a Reply-To.
+- A hook mails each request through Resend to `the [owner file](#owner-file)` (IONOS), without a Reply-To.
 - IP address: in the account server's request log for 5 days (as every request), and in PocketBase's in-memory rate
   limiter (5 per hour per address); not stored with the request.
 - Kept until handled (the bank added to Aresium, or decided against), at most 12 months; deleted by hand (the record

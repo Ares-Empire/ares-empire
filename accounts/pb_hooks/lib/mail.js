@@ -13,8 +13,11 @@
 // A person's own email (approved, in the account's `language`) goes to the account's address: sendToAccount().
 // PocketBase's own verification and password-reset emails are templates (migration 1793300200_emails_de_en.js).
 
-// Where messages people write to Patrik go: the one place to change it.
-const SUPPORT_TO = "REDACTED-EMAIL";
+// The installer passes only the email from the machine-local owner file.
+const SUPPORT_TO = $os.getenv("ARES_OWNER_EMAIL");
+if (!SUPPORT_TO || !SUPPORT_TO.trim()) {
+  throw new Error("ARES_OWNER_EMAIL is missing; run deploy/install-accounts.sh with a valid owner file");
+}
 
 const LANGUAGES = { en: "English", de: "German" };
 const HUB = "https://www.ares-empire.de/login";

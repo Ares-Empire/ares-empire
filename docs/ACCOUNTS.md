@@ -78,7 +78,8 @@ account server, and Patrik gets it by email. Migration `1793100000_feedback.js`,
   admin UI (Collections → feedback).
 - **Rate limit:** at most 10 creates per hour per client IP (rule `feedback:create`, 3600 s, in Settings → Rate limits,
   added by the migration). The app shows "too many messages, try later" on the 429.
-- **Email:** after each create the hook mails it to `REDACTED-EMAIL` (`SUPPORT_TO` in `pb_hooks/lib/mail.js`,
+- **Email:** after each create the hook mails it to the email in the [owner file](PRIVACY.md#owner-file)
+  (`ARES_OWNER_EMAIL`, read as `SUPPORT_TO` in `pb_hooks/lib/mail.js`,
   shared with the contact hook) from the server's sender, `Reply-To` the account's email, subject
   `[Arestoteles] Idea: <first words>`, a plain body (kind, app, version, system, language, account email, the
   message, a link to the record). A failed email is logged

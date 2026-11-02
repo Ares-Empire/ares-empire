@@ -11,6 +11,7 @@ import tempfile
 import unittest
 import urllib.error
 from unittest.mock import patch
+from webauth.owner_fixture import OwnerTestCase
 from urllib.parse import parse_qs, urlparse
 
 from tools import empire_samples as samples
@@ -63,8 +64,9 @@ class Pulse(io.BytesIO):
         self.close()
 
 
-class HubTests(unittest.TestCase):
+class HubTests(OwnerTestCase):
     def setUp(self):
+        super().setUp()
         server._cache.clear()
         server._live_cache.clear()
         self.records = {
@@ -907,7 +909,7 @@ class HubTests(unittest.TestCase):
         self.assertGreater(int(headers['Content-Length']), 0)
 
 
-class DataAndTransportTests(unittest.TestCase):
+class DataAndTransportTests(OwnerTestCase):
     def test_state_missing_or_broken_is_503_otherwise_loaded(self):
         # All test files stay in the worktree and are removed on exit.
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
@@ -981,7 +983,7 @@ class DataAndTransportTests(unittest.TestCase):
                 self.assertEqual(server.pb_call('/api/collections/users/auth-refresh'), (0, {}))
 
 
-class BrandImageTests(unittest.TestCase):
+class BrandImageTests(OwnerTestCase):
     def test_only_images_under_brand_pass_with_a_bearer_token(self):
         self.assertTrue(server.is_brand_image("/brand/hermes.webp"))
         self.assertTrue(server.is_brand_image("/brand/ares-bust.PNG"))
@@ -995,11 +997,12 @@ WEB = Path(__file__).resolve().parent.parent / 'web'
 RESOURCE = re.compile(r'<(?:link|script|img|iframe|source|video|audio)\b[^>]*?\b(?:href|src)="([^"]*)"|url\(\s*["\']?([^"\')]+)')
 
 
-class DemoTests(unittest.TestCase):
+class DemoTests(OwnerTestCase):
     """The public demo (/demo): open without an account, it loads the demo's words and the made-up guest; the real
     seed (app/empire-data.js) and the other samples stay behind the login."""
 
     def setUp(self):
+        super().setUp()
         self.enterContext(patch.object(server, 'WEB_ROOT', str(WEB)))
 
     def test_the_demo_page_is_open_and_loads_the_demos_words_not_the_seed(self):
@@ -1029,11 +1032,12 @@ class DemoTests(unittest.TestCase):
                 self.assertEqual((status, headers.get('Location')), (303, '/login'))
 
 
-class LegalPageTests(unittest.TestCase):
+class LegalPageTests(OwnerTestCase):
     """Privacy policy and imprint: open without login, in their language, nothing loaded from other hosts. The contact
     pages have their own tests (webauth/test_contact.py)."""
 
     def setUp(self):
+        super().setUp()
         server._cache.clear()
         self.enterContext(patch.object(server.Handler, 'log_message'))
         self.enterContext(patch.dict(os.environ, {'LEGAL_PREVIEW': ''}))
@@ -1147,10 +1151,10 @@ class LegalPageTests(unittest.TestCase):
             for path in ('/datenschutz', '/privacy', '/impressum', '/imprint'):
                 page = send(path)[1].decode()
                 with self.subTest(path=path):
-                    self.assertIn('Patrik Breeck', page)
-                    self.assertIn('REDACTED-EMAIL', page)
+                    self.assertIn('Erika Musterfrau', page)
+                    self.assertIn('owner@example.org', page)
                     self.assertNotIn('[ADDRESS]', page)
-                    self.assertIn('85748 Garching', page)
+                    self.assertIn('12345 Musterstadt', page)
             for path in ('/datenschutz', '/privacy'):
                 self.assertIn('Promenade 18, 91522 Ansbach', send(path)[1].decode().replace('\n', ' '))
 

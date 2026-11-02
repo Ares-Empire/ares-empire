@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from webauth.owner_fixture import OwnerTestCase
 
 from webauth import contact, legal, server
 from webauth.test_server import RESOURCE, WEB, send
@@ -40,7 +41,7 @@ def custom_properties(css: str, selector: str) -> dict[str, str]:
     return dict(re.findall(r'(--[\w-]+)\s*:\s*([^;]+);', block[1])) if block else {}
 
 
-class PageTests(unittest.TestCase):
+class PageTests(OwnerTestCase):
     def test_the_paths_name_the_app_and_the_language(self):
         self.assertEqual({path: (app.slug, language) for path, (app, language) in contact.PAGES.items()}, {
             '/contact': ('empire', 'en'), '/kontakt': ('empire', 'de'),
@@ -139,8 +140,8 @@ class PageTests(unittest.TestCase):
                 privacy, imprint = ('/privacy', '/imprint') if language == 'en' else ('/datenschutz', '/impressum')
                 self.assertEqual(count(page, f'<a href="{privacy}">'), 2)   # the note and the footer
                 self.assertIn(f'<a href="{imprint}">', page)
-                self.assertEqual(count(page, 'href="mailto:REDACTED-EMAIL"'), 2)   # a failed send and <noscript>
-                self.assertRegex(page, r'data-problem="failed" hidden>[\s\S]*?mailto:pab@patrikbreeck\.de[\s\S]*?</p>')
+                self.assertEqual(count(page, 'href="mailto:owner@example.org"'), 2)   # a failed send and <noscript>
+                self.assertRegex(page, r'data-problem="failed" hidden>[\s\S]*?mailto:owner@example\.org[\s\S]*?</p>')
 
     def test_the_empire_page_leads_home_and_arestemis_has_no_page_of_its_own(self):
         empire, arestemis = contact.page('empire', 'en'), contact.page('arestemis', 'de')
@@ -153,7 +154,7 @@ class PageTests(unittest.TestCase):
         self.assertIn('>S</span></div>', arestemis)
 
 
-class StyleTests(unittest.TestCase):
+class StyleTests(OwnerTestCase):
     def test_no_inline_code_nothing_from_other_hosts_and_a_strict_policy(self):
         for path, _, _, page in pages():
             with self.subTest(path=path):
@@ -229,7 +230,7 @@ class StyleTests(unittest.TestCase):
                 self.assertEqual(missing, set())
 
 
-class SharedFormTests(unittest.TestCase):
+class SharedFormTests(OwnerTestCase):
     """web/shared/forms/ is the original; aresium web/public/forms/ has byte-identical copies (README.md there)."""
 
     def sums(self) -> dict[str, str]:
@@ -256,10 +257,11 @@ class SharedFormTests(unittest.TestCase):
                                  f'aresium {forms / name} differs from web/shared/forms/{name}')
 
 
-class ServingTests(unittest.TestCase):
+class ServingTests(OwnerTestCase):
     """The pages through the hub's handler, on a web root whose privacy policies are published."""
 
     def setUp(self):
+        super().setUp()
         server._cache.clear()
         self.enterContext(patch.object(server.Handler, 'log_message'))
         self.enterContext(patch.dict(os.environ, {'LEGAL_PREVIEW': ''}))

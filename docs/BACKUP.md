@@ -105,6 +105,6 @@ encrypted copy, decrypted it and all 40 files matched `MANIFEST.json`. Repeat af
    and into the password manager; `ssh-keygen -t ed25519 -N "" -f ~/.ssh/empire_backup`.
 2. On the server: `sudo bash deploy/install-backup.sh --mac <age public key> <file with the SSH public key>`. Without
    `--mac` it only updates (the Aresync hook runs it when `backup/serve.sh`, the installer or the units change).
-3. In the Mac's `~/aresync/config`: `BACKUP_SSH="empire-backup@REDACTED-IP"`.
+3. In the Mac's `~/aresync/config`: `BACKUP_SSH="empire-backup@<the server's IP address>"`.
 
 The privacy policy names the backups and how long they are kept (section 9, Speicherdauer / Storage period).

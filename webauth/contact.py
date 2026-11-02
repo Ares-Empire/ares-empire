@@ -24,7 +24,7 @@ import html
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
-from webauth import legal
+from webauth import legal, owner
 
 CONTACT_ENDPOINT = "https://auth.ares-empire.de/api/collections/contact/records"
 _ACCOUNT_ORIGIN = "{0.scheme}://{0.netloc}".format(urlsplit(CONTACT_ENDPOINT))
@@ -32,9 +32,6 @@ _ACCOUNT_ORIGIN = "{0.scheme}://{0.netloc}".format(urlsplit(CONTACT_ENDPOINT))
 # No inline script or style, nothing from other hosts; the form is sent by script to the account server only.
 CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; "
        f"connect-src {_ACCOUNT_ORIGIN}; form-action 'none'; base-uri 'none'; frame-ancestors 'none'")
-
-# Where a message can go when the form cannot send it (the imprint's address).
-OWNER_EMAIL = "REDACTED-EMAIL"
 
 # The topics in the order the menu shows them; the values are the collection's `kind`. Asking for the app comes first.
 TOPICS = ("access", "question", "problem", "idea", "other")
@@ -145,7 +142,7 @@ APP_WORDS = {
             "description": "Ask for the Ares Empire iPhone app, or write about a question, a problem, an idea or "
                            "anything else.",
             "lead": "Ask for the iPhone app or write about a question, a problem, an idea or anything else around the "
-                    "Ares Empire. Messages go to Patrik Breeck by email.",
+                    "Ares Empire. Messages go to {{OWNER_NAME}} by email.",
             "idea": "What would make the Ares Empire better?",
             "note_app": "The Ares Empire app is for the iPhone (iOS 26 or later) and works with an Ares account, "
                         "created in the app. The install link comes by email, to this address.",
@@ -156,7 +153,7 @@ APP_WORDS = {
             "description": "Die iPhone-App von Ares Empire anfragen oder zu einer Frage, einem Problem, einer Idee "
                            "oder etwas anderem schreiben.",
             "lead": "Die iPhone-App anfragen oder zu einer Frage, einem Problem, einer Idee oder etwas anderem rund um "
-                    "Ares Empire schreiben. Nachrichten gehen per E-Mail an Patrik Breeck.",
+                    "Ares Empire schreiben. Nachrichten gehen per E-Mail an {{OWNER_NAME}}.",
             "idea": "Was würde Ares Empire besser machen?",
             "note_app": "Die App von Ares Empire ist fürs iPhone (ab iOS 26) und nutzt ein Ares-Konto, das in der App "
                         "angelegt wird. Der Installationslink kommt per E-Mail an diese Adresse.",
@@ -167,8 +164,7 @@ APP_WORDS = {
         "en": {
             "page_title": "Contact · Arestemis",
             "description": "Ask for the Arestemis iPhone app, or write about a question, a problem or an idea.",
-            "lead": "Ask for the iPhone app or write about a question, a problem or an idea. Messages go to Patrik "
-                    "Breeck by email.",
+            "lead": "Ask for the iPhone app or write about a question, a problem or an idea. Messages go to {{OWNER_NAME}} by email.",
             "idea": "What would make Arestemis better?",
             "note_app": "Arestemis is an iPhone app (iOS 26 or later) and works with an Ares account, created in the "
                         "app. The install link comes by email, to this address.",
@@ -179,7 +175,7 @@ APP_WORDS = {
             "description": "Die iPhone-App von Arestemis anfragen oder zu einer Frage, einem Problem oder einer Idee "
                            "schreiben.",
             "lead": "Die iPhone-App anfragen oder zu einer Frage, einem Problem oder einer Idee schreiben. Nachrichten "
-                    "gehen per E-Mail an Patrik Breeck.",
+                    "gehen per E-Mail an {{OWNER_NAME}}.",
             "idea": "Was würde Arestemis besser machen?",
             "note_app": "Arestemis ist eine iPhone-App (ab iOS 26) und nutzt ein Ares-Konto, das in der App angelegt "
                         "wird. Der Installationslink kommt per E-Mail an diese Adresse.",
@@ -220,6 +216,7 @@ def icon(name: str, attributes: str = "", class_name: str = "icon") -> str:
 
 def with_email(sentence: str) -> str:
     """A sentence, with the owner's address as a mailto link in place of %e if it has one."""
+    OWNER_EMAIL = esc(owner.get_owner()["email"])
     if "%e" not in sentence:
         return esc(sentence)
     before, after = sentence.split("%e", 1)
@@ -235,6 +232,7 @@ def words(app: str, language: str) -> dict:
     """The page's words: the shared ones with the app's own."""
     w = {**WORDS[language], **APP_WORDS[app][language]}
     w["placeholders"] = {**WORDS[language]["placeholders"], "idea": APP_WORDS[app][language]["idea"]}
+    w["lead"] = w["lead"].replace("{{OWNER_NAME}}", owner.get_owner()["name"])
     return w
 
 

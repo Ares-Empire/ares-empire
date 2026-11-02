@@ -3,6 +3,7 @@
 # SMTP sink in the temp folder (never Resend, never the system's sendmail), and the account-deletion calls and the
 # notifications go to a fake service on localhost (never Arestemis or the push service).
 set -euo pipefail
+export ARES_OWNER_EMAIL=owner@example.org
 POCKETBASE="${POCKETBASE:-$HOME/.pocketbase-test/pocketbase}"
 RULES_ROOT="$(cd "$(dirname "$0")" && pwd)"
 if [ "$("$POCKETBASE" --version)" != "pocketbase version 0.40.6" ]; then
@@ -728,7 +729,7 @@ try:
     kept = new_mails(mark, 1)
     mail = kept[-1] if kept else None
     check('feedback is mailed to Patrik, Reply-To the account', len(kept) == 1 and
-          mail['To'] == 'REDACTED-EMAIL' and mail['Reply-To'] == 'user@example.com' and
+          mail['To'] == 'owner@example.org' and mail['Reply-To'] == 'user@example.com' and
           mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
           mail['Subject'] == '[Arestoteles] Idea: Fictional idea: search could also look inside the panels.')
     text = mail.get_body(('plain',)).get_content() if mail else ''
@@ -792,7 +793,7 @@ try:
     kept = mails(at_least=before + 1)
     mail = kept[-1] if len(kept) > before else None
     check('a contact message is mailed to Patrik, Reply-To the given email', mail is not None and
-          mail['To'] == 'REDACTED-EMAIL' and mail['Reply-To'] == 'visitor@example.com' and
+          mail['To'] == 'owner@example.org' and mail['Reply-To'] == 'visitor@example.com' and
           mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
           mail['Subject'] == '[Website] Contact: Fictional question about the imprint.')
     text = mail.get_body(('plain',)).get_content() if mail else ''
@@ -945,7 +946,7 @@ try:
     kept = mails(at_least=before + 1)
     mail = kept[-1] if len(kept) > before else None
     check('a shared format is mailed to Patrik, without a Reply-To', mail is not None and
-          mail['To'] == 'REDACTED-EMAIL' and mail['Reply-To'] is None and
+          mail['To'] == 'owner@example.org' and mail['Reply-To'] is None and
           mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
           mail['Subject'] == 'Aresium: bank format for Fictional Bank')
     text = mail.get_body(('plain',)).get_content().replace('\r\n', '\n') if mail else ''
@@ -1101,7 +1102,7 @@ try:
     kept = mails(at_least=before + 1)
     mail = kept[-1] if len(kept) > before else None
     check('a bank request is mailed to Patrik, without a Reply-To', mail is not None and
-          mail['To'] == 'REDACTED-EMAIL' and mail['Reply-To'] is None and
+          mail['To'] == 'owner@example.org' and mail['Reply-To'] is None and
           mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
           mail['Subject'] == '[Aresium] Bank wish: Fictional Bank')
     text = mail.get_body(('plain',)).get_content().replace('\r\n', '\n') if mail else ''

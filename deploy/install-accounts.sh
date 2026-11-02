@@ -13,6 +13,11 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 OPT=/opt/empire-accounts
 DATA=/var/lib/empire-accounts
 
+# Validate before changing the installation. Only the email is handed to PocketBase;
+# systemd reads this root-only file before switching to empire-accounts.
+install -d -m 700 -o root -g root /etc/empire-accounts
+PYTHONPATH="$REPO" python3 -m webauth.owner --accounts-environment /etc/empire-accounts/owner.env
+
 id empire-accounts >/dev/null 2>&1 ||
   useradd --system --home-dir "$DATA" --shell /usr/sbin/nologin empire-accounts
 install -d -m 755 -o root -g root "$OPT"

@@ -10,6 +10,7 @@ Wants=network-online.target
 Type=simple
 User=empire-accounts
 Group=empire-accounts
+EnvironmentFile=/etc/empire-accounts/owner.env
 ExecStart=/opt/empire-accounts/pocketbase serve --http=127.0.0.1:8090 \
   --dir=/var/lib/empire-accounts/pb_data \
   --migrationsDir=/opt/empire-accounts/pb_migrations \
