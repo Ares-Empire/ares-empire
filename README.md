@@ -1,118 +1,60 @@
+<p align="center">
+  <img src="docs/images/banner.png" alt="The Ares Empire hub on the web and in its iPhone app" width="100%">
+</p>
+
 # Ares Empire
 
-The central hub / home of the empire — a single overview that ties together every
-"Ares" service and (later) provides shared sign-on (SSO) across them.
+The hub of the Ares apps: one account for all of them, the push service behind their notifications, and the overview
+at **[ares-empire.de](https://www.ares-empire.de)**: every app on a ring, with the chronicle of what was built.
 
-> **On the name.** "Ares" is Patrik's long-standing online handle — not a tribute to the
-> war god, just a name that's grown on him. The Greek-war-god association is treated as
-> *aesthetic* (marble, command, gravitas), never devotional.
+[The apps](https://patrikbreeck.com/en/apps/) · [Their iPhone code](https://github.com/Ares-Empire/empire-ios) ·
+[The project map](EMPIRE.md)
 
-## Naming decision — **"Ares Empire"** (not just "Ares")
+## What lives here
 
-Chosen over the bare "Ares" because:
+| Part | What it is |
+|---|---|
+| **The hub website** (`web/`) | The apps on a ring that turns, a board for each, the chronicle as a timeline, and the plans. A phone version too. No build step: React and Babel are served from the repository itself. |
+| **Accounts** (`accounts/`) | One account for every app, on PocketBase: sign-up, email confirmation, approval, password reset, and access per app. [docs/ACCOUNTS.md](docs/ACCOUNTS.md) |
+| **The web server** (`webauth/`) | The login gate, the hub's API, and the legal and contact pages in English and German. Python's standard library only. |
+| **Push** (`push/`) | One service that sends every iPhone app's notifications through Apple's push service. [docs/PUSH.md](docs/PUSH.md) |
+| **Backups** (`backup/`) | The nightly encrypted backup of the data that cannot be rebuilt. [docs/BACKUP.md](docs/BACKUP.md) |
+| **The map** ([`EMPIRE.md`](EMPIRE.md)) | The projects, the shared design language, how the apps are built, and the chronicle. |
 
-- It names a **collection**, which is exactly what the hub is — Aresium + Arestoteles +
-  future services. "Ares" alone reads as one app; "Ares Empire" reads as the thing that
-  *contains* the apps.
-- It carries the grand, sovereign feel the project is going for, and matches how the
-  integration docs already refer to it ("Ares Empire", "the empire home").
-- It disambiguates from the individual products, all of which start with "Ares…".
+## The apps
 
-Short forms: directory `ares-empire`, future domain candidate `ares-empire.*` /
-`aresempire.*` (TBD), display name **Ares Empire**.
+| App | What it is | Code |
+|---|---|---|
+| **Aresium** | Personal finance from bank exports | [aresium](https://github.com/Ares-Empire/aresium) |
+| **Arestemis** | Searches that run for you: flats, things for sale, prices, pages | iPhone app in [empire-ios](https://github.com/Ares-Empire/empire-ios) |
+| **Arestoteles** | A personal knowledge map, searched by meaning | [Arestoteles](https://github.com/Ares-Empire/Arestoteles) |
+| **Aresus** | The watchtower over the server, the services and the machines' sync | iPhone app in [empire-ios](https://github.com/Ares-Empire/empire-ios) |
+| **Ares Empire** | This hub, and its iPhone app | here, and [empire-ios](https://github.com/Ares-Empire/empire-ios) |
 
-## What lives here (to be built)
+## Screenshots
 
-- **Service overview** — a card grid of the empire's services with live status and
-  deep-links: **Aresium** (personal finance · aresium.de), **Arestoteles** (AI portfolio ·
-  arestoteles.de), and room for the next ones.
-- **Central hub / SSO provider** — the adopted empire home and future single sign-on
-  (today each app ships its own custom login; the hub becomes the shared identity later —
-  see arestoteles `docs/09`).
+<table>
+  <tr>
+    <td><img src="docs/images/app-ring-dark.png" alt="The apps on a ring, the chronicle below"></td>
+    <td><img src="docs/images/app-ring-light.png" alt="The same in light mode"></td>
+    <td><img src="docs/images/app-province-light.png" alt="One app's page"></td>
+    <td><img src="docs/images/app-approvals-dark.png" alt="Approvals of new accounts"></td>
+    <td><img src="docs/images/app-more-dark.png" alt="Asking for another app"></td>
+  </tr>
+</table>
 
 ## Design language
 
-Shared "Ares Empire" look from Aresium + Arestoteles: near-black wall, glassmorphism,
-Space Grotesk + JetBrains Mono, restrained motion. The hub is **clean / modern / professional**
-— **polished gold used sparingly as an accent** (not glare) over black, lit by faint Mars-red +
-steel-blue ambient, with a monochrome marble bust embedded at the left edge. Each *product* gets
-its own marble bust of a fitting figure (Arestoteles → Aristotle); the **empire** keeps the
-**Ares bust** as its mark (the intro's slamming figure + the favicon).
+Near-black walls, glass cards and faint red and blue light; polished gold only as an accent; Space Grotesk and
+JetBrains Mono. Each app has a marble bust of its own and one accent colour. The details are in
+[EMPIRE.md](EMPIRE.md) → The crown language.
 
-## Logo
+## Run it locally
 
-**Direction chosen: an Ares marble bust in gilded war-gear** — the empire's sovereign mark,
-consistent with the bust-per-product language but elevated (helmeted, martial, **gold-armored**)
-so it reads as the *crown* above the philosopher busts rather than a peer to them. White marble
-face/head + **polished shiny gold helmet & armor** against pure black: a regal marble-gold-black
-palette that's unmistakably the empire's, while the sub-products stay pure white marble.
-
-The actual artwork is **deferred to Claude Design** (same path the Aristotle bust took).
-The copy-paste brief — including the resolved style choices (white-marble face, gilded
-Corinthian helmet pushed back, bearded, gold cuirass, black ground) — is in
-[`brand/LOGO_PROMPT.md`](brand/LOGO_PROMPT.md). Drop the generated PNG in `brand/` as `ares-bust.png`.
-
-### The Arestoteles hub button, until the logo lands
-
-The button in the Arestoteles header now reads **"Ares Empire"** (plain wordmark) with the
-old red status-dot and "›" chevron removed. Once `ares-bust.png` exists, swap the wordmark
-for **the mark + "Ares Empire"** (mark-only is too ambiguous before the brand is known).
-
----
-
-## The hub website (`web/`) — built & **live at https://www.ares-empire.de**
-
-The hub is built, in the empire's house style — **no build step** (React-from-CDN + Babel-in-browser
-+ vanilla `window`-global modules, exactly like Aresium / Arestoteles). The Ares bust now lives
-background-removed at `brand/ares-bust.png` (+ `web/brand/`).
-
-**Run locally**
-
-```bash
-python3 -m http.server 8099 --directory web    # → http://localhost:8099
+```sh
+python3 -m http.server 8099 --directory web               # the hub on its bundled data: http://127.0.0.1:8099
+python3 -m unittest discover -s webauth -p 'test_*.py'     # the web server's tests
+python3 -m unittest tools/test_empire_samples.py           # the sample answers stay current
 ```
 
-**What's there**
-
-- **Slam intro** (`web/app/empire-intro.js`) — the bust drops; fine gold fissures burst from the
-  root all at once and grow outward; "ARES EMPIRE" slams in in polished gold (single shine), then it morphs into the hub.
-- **The figure** — a monochrome marble bust (`brand/head1.png`) embedded flush at the left edge
-  (screen-blend + edge mask), gazing toward the circle (`web/app/app.jsx`).
-- **Orbital circle** (`web/app/ring.jsx`) — the provinces ride a stretched, offset ellipse as
-  horizontal tabs (mark · GOLD NAME · status). Drag / scroll / ← → to revolve; click the focused one to spread into the **project board**.
-- **Boards** (`web/app/panels.jsx`) — a count-adaptive card grid (2 → L/R, 3 → L/M/R, 4 → quadrants …)
-  with context, reused for the project board and the **EXPANSIONS** view (the plans, via **EXPAND**).
-- **Timeline** — the chronicle as a clean horizontal ribbon below the circle.
-- **CONQUER forge** — name a province → it generates the seed `CLAUDE.md`, the manifest entry and
-  the Claude Code handoff (copy buttons), then adds it to the circle.
-- **Login / logout** — Empire accounts (email + password, sign-up with approval, password reset) via
-  `webauth/server.py` + the `web/login.html` template; a logout control sits top-right. See [docs/ACCOUNTS.md](docs/ACCOUNTS.md).
-- **Privacy policy and imprint** — `/datenschutz`, `/privacy`, `/impressum`, `/imprint`, open without login
-  (`webauth/legal.py`, text in `web/legal/`, self-hosted font in `web/fonts/`). A page still holding `[ADDRESS]` or
-  `[lead to confirm]` answers 404; `LEGAL_PREVIEW=1` shows drafts locally. What the text is based on:
-  [docs/PRIVACY.md](docs/PRIVACY.md). Linked ("Privacy · Imprint") from the login page and, signed in, from the
-  hub's bottom-right corner (phone: the end of the page), via `window.LegalLinks` in `web/app/panels.jsx`.
-- **Contact pages** — the Ares Empire's `/contact` and `/kontakt` (also its general contact) and Arestemis's
-  `/arestemis/contact` and `/arestemis/kontakt`, open without login, each one form for asking for the iPhone app
-  (`?topic=access`) and for questions, problems and ideas, in the app's own look, light or dark (`webauth/contact.py`,
-  the looks in `web/contact/`). They share the sending and the layout with aresium.de/contact byte for byte
-  (`web/shared/forms/`, README there), are served only while the privacy policy in their language is, and post from the
-  browser straight to the account server's open `contact` collection, which mails Patrik
-  ([docs/ACCOUNTS.md](docs/ACCOUNTS.md) → Website contact form).
-
-**Source of truth** — [`EMPIRE.md`](EMPIRE.md) (narrative) + `web/app/empire-data.js`
-(`window.EMPIRE`, the manifest the circle renders from). Add a province by appending to both; the circle
-grows on its own.
-
-**Deploy** (live on this server, behind Caddy — `/etc/caddy/Caddyfile`)
-
-- `ares-empire.service` (`deploy/systemd/`) runs `webauth/server.py` on the docker bridge
-  `172.18.0.1:5185`, reading settings from `.env`. Logins are checked against `empire-accounts`
-  (PocketBase, `deploy/install-accounts.sh`).
-- `empire-push.service` (`push/`, `deploy/install-push.sh`): one push service for every Empire app; Caddy routes
-  `/api/push/*` to it. Contract and operating notes: [docs/PUSH.md](docs/PUSH.md).
-- `empire-backup.timer` (`backup/`, `deploy/install-backup.sh`): the nightly backup of the data that cannot be
-  rebuilt; the MacBook fetches it with Aresync. [docs/BACKUP.md](docs/BACKUP.md).
-- Caddy proxies the domain → the service and handles TLS itself. (`deploy/nginx/` and the TLS
-  scripts are from the old nginx setup, kept for reference.)
-- **Updating the site:** edit `web/…`; the service serves from disk live (no rebuild).
+The full server (login, legal pages) and deploying: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
