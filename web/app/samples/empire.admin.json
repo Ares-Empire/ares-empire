@@ -174,6 +174,11 @@
     {
       "at": "2026-11-02",
       "project": "aresium",
+      "text": "Bank files reach Aresium from anywhere now: shared from Files, Safari or AirDrop it opens and imports them, and a file dragged from Files onto its main screen is imported the same way, held until the lock opens. Watching the share sheet end to end for the first time found two bugs, both fixed: iOS's copy of a shared bank file was never deleted after reading, and an MT940 statement shared while Aresium was closed was refused. Build 17 went to the phone through TestFlight."
+    },
+    {
+      "at": "2026-11-02",
+      "project": "aresium",
       "text": "Aresium can take money paid back off what was spent: when someone pays back an expense, all of it or a share, the two payments are linked by hand on either payment's page (suggestions first: the same amount, half, a third, within days; a search for paybacks in parts), and only one's own share counts as spent, in the expense's month and category, while the payback no longer counts as income. Nothing is matched without asking, and every other payment still counts as it happened. Patrik asked after Aresium's overview looked far too high. Build 16 went to the phone through TestFlight."
     },
     {
