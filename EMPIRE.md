@@ -153,10 +153,10 @@ repo as a top-level folder, and live services and data volumes depend on their p
 
 All empire repos live in the GitHub organization **[Ares-Empire](https://github.com/Ares-Empire)**
 (aresync follows once every laptop runs the org-aware version). Each repo keeps its own
-visibility. **Public since 2026-11-02:** `aresium`, `empire-ios`, `ares-empire`, `Arestoteles` and `ares`, as fresh
+visibility. **Public since 2026-11-02:** `aresium`, `empire-ios`, `ares-empire`, `Arestoteles`, `ares` and `AresOS`, as fresh
 repos with cleaned history (the old ones are private archives, `<name>-archive-2026-11`). Private: `Arestemis` (its
-sites research and server briefs stay there), `aresus`, `aresync`, `arescope`, `companions` (until it is shown) and
-`AresOS` (next). Public repos hold no personal data ([PRIVACY.md](docs/PRIVACY.md) → Owner file) and never say how
+sites research and server briefs stay there), `aresus`, `aresync`, `arescope` and `companions` (until it is shown).
+Public repos hold no personal data ([PRIVACY.md](docs/PRIVACY.md) → Owner file) and never say how
 Arestemis gets past a site's blocks.
 
 iPhone apps for every province live in one repo, **`empire-ios`** (name deliberately not
