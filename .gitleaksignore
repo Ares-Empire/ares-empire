@@ -1,2 +1,2 @@
 # Confirmed gitleaks false alarms (made-up test data), one fingerprint per line.
-324182a41d7a84815916db95e93ae8defa77d39b:webauth/test_server.py:generic-api-key:466
+5bf9a5a59b45c85968ca6f26c90b0e493251009a:webauth/test_server.py:generic-api-key:466
