@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-11-02",
+      "project": "arestemis",
+      "text": "Arestemis has a fourth kind of search, the Preismonitor: one product in one shop, its price kept as a curve over 30, 90 or 365 days, a push when it falls under a chosen price or is back in stock, or both, switchable at any time on the monitor's page. It reads the shop's own product data first and asks the AI only where a page has none. New search became a page of four cards with examples, every search can be renamed in place without starting it again, and pages that refuse a plain read are now opened by a real Chrome on the server, running as its own user in Chrome's sandbox behind a firewall that lets it reach only the public internet (Geizhals, Eventim and the ZHS courses opened this way). App builds 11 and 12."
+    },
+    {
+      "at": "2026-11-02",
       "project": "aresium",
       "text": "Aresium links money paid back for several payments at once: select the expenses someone paid back, tick the payments that came in from them, and the money is shared out expense by expense, the oldest first, each paid back in full before the next, until it runs out; or the other way round, several transfers paying back one expense. Before linking, a summary shows what each expense gets back and what stays open or still counts as income, and one undo takes every link back. A payment that came in can never pay back more than it brought. Build 18 went to the phone through TestFlight."
     },
