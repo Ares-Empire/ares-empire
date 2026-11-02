@@ -65,6 +65,16 @@
     {
       "at": "2026-11-02",
       "project": "arestemis",
+      "text": "Arestemis can watch a web page now: give it an address and say in your own words what to look for (\"when KALLAX costs under 45 €\", \"when the Mensa has Schnitzel\"), and it reads the page every 15 minutes to once a day and tells you when it happens. Only a change goes to the AI, a list that merely reorders is no change, and a page that refuses the server is shown as stopped rather than knocked on again; pages of the sites it hunts and anything inside the server's own network are refused. Tried on 17 real pages: 12 read fine, five need a real browser (Geizhals, Eventim, the ZHS courses, the city's appointments), which comes later. eBay went live the same afternoon with its own keys, and the app's Angebote tab now shows what is new grouped by search, and each search's listings on their own, with a search over all found listings, best match first. App builds 9 and 10."
+    },
+    {
+      "at": "2026-11-02",
+      "project": "arestemis",
+      "text": "Arestemis hunts on five sites for things now: besides Kleinanzeigen and MTB-News Bikemarkt it reads mydealz's deals, IKEA Preowned (used IKEA furniture near the search's towns, which OpenStreetMap now gives coordinates) and Vinted. Each was tested with a real hunt: Kallax shelves near Garching with the accessories filtered out, Levi's 501 on Vinted with brand, size and the buyer-protection fee. The app greys a site that cannot serve the chosen delivery (IKEA only for pickup, Vinted and mydealz only shipped). App build 8."
+    },
+    {
+      "at": "2026-11-02",
+      "project": "arestemis",
       "text": "Arestemis became a hunter for more than flats: an account can run several hunts, and a new kind of hunt looks for things for sale on Kleinanzeigen (search words, words to leave out, a price with an allowance for negotiable prices, condition, pickup near a place or shipping, private sellers). The AI check filters out spare parts and accessories and warns of signs of a scam; a new hunt checks what is online once, quietly. Things are read every 3 minutes and each site has an hourly budget, so the flat hunt keeps its pace. Underneath, the server was split into a shared hunting core and one search type per kind, proven to find exactly the same flats before and after. App build 6."
     },
     {
