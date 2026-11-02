@@ -2,13 +2,14 @@
 
 **Draft 2026-11-01** (Claude, for Patrik), with Patrik's answers from the same evening in "Decided".
 
-**Status (2026-11-01, night):** the server part is live (aresus `eceb410`, brief 88: drops on, `DROP_MACHINE=Aresium`,
-the drop key's public half in `.env`); the Mac part is built and loaded (aresync `a94064d` + `156e747`, brief 89:
-`com.aresync.drop`, the secret key in the Keychain item "Ares Empire drop key"); a test file went from the server to
-Downloads end to end. **Waits for Patrik:** macOS has not let the background program into Documents and Downloads yet
-(System Settings → Privacy & Security → Files and Folders, python3; or Full Disk Access for `/usr/bin/python3`); until
-then each pass stops with one log line and drops wait on the server. The app's data side is merged (empire-ios brief
-90); the screens are brief 91. Receipts and the share extension come after. Server: `~/aresus`; Mac: `~/aresync`; app: `empire-ios/Aresus` (its Aresync tab). Replaces
+**Status (2026-11-02):** **it works on the phone.** Patrik's first file (a PDF to Sort later) landed on the Mac on
+2026-11-02 with Aresus build 2, after macOS gave `/usr/bin/python3` Full Disk Access (switching on Python.app does not
+count: macOS checks the launcher the agent starts). Built since: delete any drop with a swipe (server: `DELETE` in any
+state), the push says "<name> delivered", new folders made in the picker where you browse, the sheet closes with one
+swipe (aresus brief 92, empire-ios brief 93, Aresus build 3). In progress: Aresus in the iPhone's share sheet with the
+send screen inside it, uploads in a background session that go on after the share sheet closes, dropping files onto
+the Aresync tab, a second pick adding to the first (empire-ios briefs 94 merged, 100 the look). Receipts (step 2)
+come after. Server: `~/aresus`; Mac: `~/aresync`; app: `empire-ios/Aresus` (its Aresync tab). Replaces
 `empire-ios/CLAUDE.md` → Open 11 ("Aresync file sharing from the phone").
 
 ## What it is
@@ -147,7 +148,10 @@ Design by Claude, the rest by Codex (Patrik, 2026-10-31); each part checked befo
 2. **Mac** (`~/aresync`): the drop key, the `drop` program and its launchd agent, the target rules, the folder list,
    the receipt inventory line (with tests on a copy of the inventory's format, never the real folder).
 3. **App** (`empire-ios/Aresus`): the send screen in the Aresync tab (design first), the share extension (files and
-   photos), the waiting/landed list, the offline queue. Then step 2 (receipts).
+   photos), the waiting/landed list, the offline queue. Then step 2 (receipts). The share extension shows the send
+   screen itself: iOS gives a share extension no way to open its app (Patrik agreed, 2026-11-02). The drop code lives
+   in `Aresus/AresusDrops/`, compiled into the app and the extension; the queue is in Aresus's own App Group
+   `group.de.ares-empire.aresus`.
 4. **Live test** on the phone: a photo, a PDF from Files, a receipt for each choice, a vanished folder, the Mac asleep
    for a night.
 5. Step 3 only after a few weeks of use, if picking by hand is too much.
