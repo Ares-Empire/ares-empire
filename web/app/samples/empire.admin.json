@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-11-02",
+      "project": "aresium",
+      "text": "Aresium now says what a month costs on average and how much of it is fixed: under the overview's total, the average of the finished months and the fixed part, which opens the fixed costs (rent, subscriptions, insurance), each found by its amount, how often it comes and a steady day, with when the next one is due; a cancelled subscription moves to Ended, and one counted by mistake is taken out with a long press. The income side shows regular money in the same way. Aresium also went to Apple's beta review for testers outside the empire, and a walk through a fresh install fixed three snags for newcomers first: skipping the category list left everything unsorted, the first days of a month showed almost nothing, and a German button read like 'delete'. Build 19 went to the phone through TestFlight."
+    },
+    {
+      "at": "2026-11-02",
       "project": "arestemis",
       "text": "Arestemis explains itself now: a tour of eight steps, shown once after the first login and again from Settings, walks through sample searches in the app's own language, from starting a search to what a Preismonitor and a page watch are for. Patrik asked for it when \"Webseite beobachten\" read as too vague; the tour's frame is shared with Aresium's, whose tour looks exactly as before. App build 13."
     },
