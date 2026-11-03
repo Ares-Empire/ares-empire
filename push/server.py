@@ -3,7 +3,7 @@
 
   public    127.0.0.1:8095  POST/DELETE /api/push/devices   the apps, via Caddy (www.ares-empire.de/api/push/*)
   internal  127.0.0.1:8096  POST /send, GET /health,         province services and the account server on this host;
-                            DELETE /internal/accounts/<id>   Caddy never routes here
+                            DELETE /internal/accounts/<id>[/devices[/arestemis]]   Caddy never routes here
 
 Each listener only knows its own route table, so no path on the public port reaches /send.
 Without the APNs key settings it runs as a dry run: messages are kept in the outbox, nothing is sent.
@@ -20,9 +20,10 @@ import sys
 import threading
 from collections.abc import Callable
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from urllib.parse import unquote, urlparse
 
+from empire_http import LimitedHTTPServer, LimitedRequestHandler
 from empire_language import request_language
 from push.accounts import Accounts
 from push.apns import Apns, HttpxTransport, ProviderToken
@@ -33,7 +34,7 @@ from push.texts import text
 
 log = logging.getLogger("push")
 
-MAX_BODY_BYTES = 10_000
+MAX_REQUESTS = 16  # per listener; internal calls have their own slots
 CLEAN_UP_EVERY = 24 * 60 * 60
 
 
@@ -54,7 +55,7 @@ def match(template: str, path: str) -> dict[str, str] | None:
     return params
 
 
-class Handler(BaseHTTPRequestHandler):
+class Handler(LimitedRequestHandler, BaseHTTPRequestHandler):
     """JSON in, JSON out. `self.server.service` is the PushService; `routes` is set per listener below (paths may
     have `{name}` parts, handed to the route as `self.params`)."""
 
@@ -103,26 +104,21 @@ class Handler(BaseHTTPRequestHandler):
         return match[1] if match else ""
 
     def client_ip(self) -> str:
-        # Caddy sets X-Forwarded-For to the visitor's address; the last entry is the one it added.
-        forwarded = self.headers.get("X-Forwarded-For", "")
-        return forwarded.split(",")[-1].strip() if forwarded else self.client_address[0]
+        return self.request_client_ip()
 
     def json_body(self) -> dict:
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-        except ValueError:
-            raise APIError(400, "Invalid content length.")
-        if length > MAX_BODY_BYTES:
-            raise APIError(413, "Request too large.")
-        if length <= 0:
+        if not self.request_body:
             raise APIError(400, "A JSON object is required.")
         try:
-            body = json.loads(self.rfile.read(length))
+            body = json.loads(self.request_body)
         except (ValueError, UnicodeError):
             raise APIError(400, "Invalid JSON.")
         if not isinstance(body, dict):
             raise APIError(400, "A JSON object is required.")
         return body
+
+    def request_error(self, status, message):
+        self.send_json({"error": text(message, self.language)}, status)
 
     def send_json(self, data: dict, status: int = HTTPStatus.OK) -> None:
         body = json.dumps(data).encode()
@@ -166,6 +162,14 @@ def delete_account(h: Handler) -> None:
     h.send_no_content()
 
 
+def remove_devices(h: Handler) -> None:
+    generations = h.headers.get_all("X-Empire-Access-Generation", [])
+    if len(generations) != 1 or not re.fullmatch(r"[0-9]{1,16}", generations[0]):
+        raise APIError(400, "Invalid access generation.")
+    h.service.remove_devices(h.params["account"], h.params.get("app"), int(generations[0]))
+    h.send_no_content()
+
+
 class PublicHandler(Handler):
     routes = {("POST", "/api/push/devices"): register_device,
               ("DELETE", "/api/push/devices"): unregister_device}
@@ -174,7 +178,9 @@ class PublicHandler(Handler):
 class InternalHandler(Handler):
     routes = {("POST", "/send"): send,
               ("GET", "/health"): health,
-              ("DELETE", "/internal/accounts/{account}"): delete_account}
+              ("DELETE", "/internal/accounts/{account}"): delete_account,
+              ("DELETE", "/internal/accounts/{account}/devices"): remove_devices,
+              ("DELETE", "/internal/accounts/{account}/devices/{app}"): remove_devices}
 
 
 # ── Running ──────────────────────────────────────────────────────────────────
@@ -212,8 +218,11 @@ def clean_up_daily(service: PushService, stop: threading.Event, every: float = C
             return
 
 
-def serve(handler: type[Handler], port: int, service: PushService) -> ThreadingHTTPServer:
-    httpd = ThreadingHTTPServer((HOST, port), handler)
+def serve(handler: type[Handler], port: int, service: PushService) -> LimitedHTTPServer:
+    client_options = {"max_per_client": 4, "rate": 1, "burst": 20}
+    if handler is InternalHandler:
+        client_options = {"max_per_client": None}
+    httpd = LimitedHTTPServer((HOST, port), handler, max_requests=MAX_REQUESTS, **client_options)
     httpd.service = service
     return httpd
 

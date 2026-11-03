@@ -52,6 +52,12 @@ class Accounts:
         except (OSError, ValueError, HTTPException):
             return 0, {}
 
+    def forget_account(self, user: str) -> None:
+        """The next registration must check the account's current access."""
+        with self._lock:
+            self._cache = {key: hit for key, hit in self._cache.items()
+                           if not hit[1] or hit[1].get("id") != user}
+
     def account(self, token: str, client_ip: str | None = None) -> dict:
         """The account record behind a valid token.
 

@@ -56,6 +56,9 @@ class Socket:
     def makefile(self, *args):
         return self.input
 
+    def settimeout(self, seconds):
+        pass
+
     def sendall(self, body):
         self.output.write(body)
 
@@ -513,6 +516,222 @@ class DeleteAccountTests(PushTestCase):
         self.assertEqual(self.user_of(DEVICE_A), "memberone000001")
 
 
+class RemoveDevicesTests(PushTestCase):
+    EMPIRE = "de.ares-empire.empire"
+
+    def setUp(self):
+        super().setUp()
+        self.register(DEVICE_A)
+        self.register(DEVICE_B, app=self.EMPIRE)
+        self.register(DEVICE_C, token="member-two")
+        self.send()
+
+    def remove(self, scope="", account="memberone000001", handler=None):
+        for record in self.records.values():
+            if record["id"] == account:
+                record["access_generation"] = max(1, record.get("access_generation", 0))
+        return self.request("/internal/accounts/" + account + "/devices" + ("/" + scope if scope else ""),
+                            method="DELETE", token=None, handler=handler,
+                            headers={"X-Empire-Access-Generation": "1"})
+
+    def test_scoped_removal_keeps_other_apps_accounts_and_outbox(self):
+        before = self.store.outbox()
+        self.pb_calls.clear()
+        self.assertEqual(self.remove("arestemis")[:2], (204, None))
+        self.assertIsNone(self.user_of(DEVICE_A))
+        self.assertEqual(self.user_of(DEVICE_B, self.EMPIRE), "memberone000001")
+        self.assertEqual(self.user_of(DEVICE_C), "membertwo000002")
+        self.assertEqual(self.store.outbox(), before)
+        self.assertEqual(self.pb_calls, [])
+
+    def test_stalled_authentication_does_not_block_another_accounts_work(self):
+        entered = threading.Event()
+        proceed = threading.Event()
+        registered = threading.Event()
+        revoked = threading.Event()
+        original = self.accounts.account
+        errors = []
+
+        def account(token, *args):
+            record = original(token, *args)
+            if token == "member-one":
+                entered.set()
+                proceed.wait(3)
+            return record
+
+        def run(action, done):
+            try:
+                action()
+                done.set()
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = []
+        with patch.object(self.accounts, "account", side_effect=account):
+            try:
+                for token, device, done in (("member-one", DEVICE_A, threading.Event()),
+                                            ("member-two", DEVICE_C, registered)):
+                    thread = threading.Thread(target=run, args=(lambda t=token, d=device: self.service.register(
+                        t, None, {"app": APP, "token": d, "environment": "sandbox"}), done))
+                    threads.append(thread)
+                    thread.start()
+                    if token == "member-one":
+                        self.assertTrue(entered.wait(1))
+                thread = threading.Thread(target=run, args=(
+                    lambda: self.service.delete_account("unrelated000001"), revoked))
+                threads.append(thread)
+                thread.start()
+                self.assertTrue(registered.wait(0.5))
+                self.assertTrue(revoked.wait(0.5))
+            finally:
+                proceed.set()
+                for thread in threads:
+                    thread.join(2)
+        self.assertEqual(errors, [])
+
+    def test_an_old_removal_cannot_remove_a_restored_registration(self):
+        path = "/internal/accounts/memberone000001/devices/arestemis"
+        self.records["member-one"].update(services=["empire"], access_generation=1)
+        self.assertEqual(self.request(path, method="DELETE", token=None,
+                                      headers={"X-Empire-Access-Generation": "1"})[0], 204)
+        self.records["member-one"].update(services=["empire", "arestemis"], access_generation=2)
+        self.assertEqual(self.register(), 204)
+        self.assertEqual(self.request(path, method="DELETE", token=None,
+                                      headers={"X-Empire-Access-Generation": "1"})[0], 204)
+        self.assertEqual(self.user_of(DEVICE_A), "memberone000001")
+
+    def test_generation_and_repeated_operation_survive_a_push_restart(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as directory:
+            path = str(Path(directory) / "push.db")
+            first = store.Store(path)
+            try:
+                with patch.object(self.service, "store", first):
+                    self.records["member-one"]["access_generation"] = 2
+                    self.accounts.forget_account("memberone000001")
+                    self.assertEqual(self.register(), 204)
+                    self.service.remove_devices("memberone000001", "arestemis", generation=1)
+                    self.assertEqual(first.device(APP, DEVICE_A).user, "memberone000001")
+            finally:
+                first.close()
+            reopened = store.Store(path)
+            try:
+                with patch.object(self.service, "store", reopened):
+                    self.service.remove_devices("memberone000001", "arestemis", generation=1)
+                    self.assertEqual(reopened.device(APP, DEVICE_A).user, "memberone000001")
+                    self.service.remove_devices("memberone000001", "arestemis", generation=3)
+                    self.assertIsNone(reopened.device(APP, DEVICE_A))
+                    self.accounts.forget_account("memberone000001")
+                    self.assertEqual(self.register(), 403)
+                    self.service.remove_devices("memberone000001", "arestemis", generation=3)
+                    self.assertIsNone(reopened.device(APP, DEVICE_A))
+            finally:
+                reopened.close()
+
+    def test_device_removal_requires_one_valid_generation_header(self):
+        path = "/internal/accounts/memberone000001/devices"
+        for value in (None, "", "0", "-1", "1, 2", "9007199254740992", "9" * 5000):
+            with self.subTest(value=str(value)[:20]):
+                headers = {} if value is None else {"X-Empire-Access-Generation": value}
+                self.assertEqual(self.request(path, method="DELETE", token=None, headers=headers)[0], 400)
+        self.assertEqual(self.store.counts(), {APP: 2, self.EMPIRE: 1})
+
+    def test_all_app_removal_keeps_other_accounts_and_outbox(self):
+        before = self.store.outbox()
+        self.assertEqual(self.remove()[:2], (204, None))
+        self.assertIsNone(self.user_of(DEVICE_A))
+        self.assertIsNone(self.user_of(DEVICE_B, self.EMPIRE))
+        self.assertEqual(self.user_of(DEVICE_C), "membertwo000002")
+        self.assertEqual(self.store.outbox(), before)
+
+    def test_repeat_and_unknown_account_are_204(self):
+        for scope in ("arestemis", ""):
+            self.assertEqual(self.remove(scope)[0], 204)
+            self.assertEqual(self.remove(scope)[0], 204)
+            self.assertEqual(self.remove(scope, "nobody000000009")[0], 204)
+
+    def test_invalid_scope_or_id_is_400_with_no_changes(self):
+        for scope, account in (("empire", "memberone000001"), ("nope", "memberone000001"),
+                               ("arestemis", "bad%20id"), ("", "x%2Fy"), ("", "z" * 65)):
+            with self.subTest(scope=scope, account=account):
+                self.assertEqual(self.remove(scope, account)[0], 400)
+        self.assertEqual(self.store.counts(), {APP: 2, self.EMPIRE: 1})
+
+    def test_routes_are_internal_only_and_wrong_method_is_405(self):
+        for scope in ("", "arestemis"):
+            self.assertEqual(self.remove(scope, handler=server.PublicHandler)[0], 404)
+            path = "/internal/accounts/memberone000001/devices" + ("/" + scope if scope else "")
+            self.assertEqual(self.request(path, method="GET", token=None)[0], 405)
+        self.assertEqual(self.store.counts(), {APP: 2, self.EMPIRE: 1})
+
+    def test_removal_refreshes_cached_access_before_another_registration(self):
+        self.records["member-one"]["services"] = ["empire"]
+        self.assertEqual(self.remove("arestemis")[0], 204)
+        self.pb_calls.clear()
+        self.assertEqual(self.register(), 403)
+        self.assertEqual(self.pb_calls, [("member-one", "192.0.2.10")])
+        self.assertEqual(self.register(DEVICE_B, app=self.EMPIRE), 204)
+        self.assertIsNone(self.user_of(DEVICE_A))
+        # Other accounts keep their cached access.
+        self.pb_calls.clear()
+        self.assertEqual(self.register(DEVICE_C, token="member-two"), 204)
+        self.assertEqual(self.pb_calls, [])
+
+    def test_approval_removal_refreshes_the_login(self):
+        self.assertEqual(self.remove()[0], 204)
+        with patch.object(self.accounts, "refresh", return_value=(403, {})):
+            self.assertEqual(self.register(), 403)
+            self.assertEqual(self.register(DEVICE_B, app=self.EMPIRE), 403)
+        self.assertEqual(self.store.counts(), {APP: 1})
+
+    def test_removal_rejects_a_registration_whose_authentication_was_already_in_progress(self):
+        entered = threading.Event()
+        proceed = threading.Event()
+        removed = threading.Event()
+        errors = []
+        self.accounts._cache.clear()
+
+        def refresh(*args):
+            record = copy.deepcopy(self.records["member-one"])
+            entered.set()
+            if not proceed.wait(2):
+                raise RuntimeError("registration wait expired")
+            return 200, {"record": record}
+
+        def register():
+            try:
+                self.service.register("member-one", None,
+                                      {"app": APP, "token": DEVICE_A, "environment": "sandbox"})
+            except Exception as exc:
+                errors.append(exc)
+
+        def remove():
+            try:
+                self.service.remove_devices("memberone000001", "arestemis", generation=1)
+                removed.set()
+            except Exception as exc:
+                errors.append(exc)
+
+        with patch.object(self.accounts, "refresh", side_effect=refresh):
+            registration = threading.Thread(target=register)
+            registration.start()
+            try:
+                self.assertTrue(entered.wait(1))
+                removal = threading.Thread(target=remove)
+                removal.start()
+                self.assertTrue(removed.wait(0.5))
+                proceed.set()
+                removal.join(2)
+                self.assertTrue(removed.is_set())
+            finally:
+                proceed.set()
+                registration.join(2)
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], service.APIError)
+        self.assertEqual(errors[0].status, 403)
+        self.assertIsNone(self.user_of(DEVICE_A))
+        self.assertEqual(self.accounts._cache, {})
+
+
 class DryRunTests(PushTestCase):
     dry_run = True
 
@@ -710,7 +929,9 @@ class RouteTests(PushTestCase):
         public = {path for _, path in server.PublicHandler.routes}
         internal = {path for _, path in server.InternalHandler.routes}
         self.assertEqual(public, {"/api/push/devices"})
-        self.assertEqual(internal, {"/send", "/health", "/internal/accounts/{account}"})
+        self.assertEqual(internal, {"/send", "/health", "/internal/accounts/{account}",
+                                    "/internal/accounts/{account}/devices",
+                                    "/internal/accounts/{account}/devices/{app}"})
         self.assertEqual(public & internal, set())
         self.assertTrue(all(path.startswith("/api/push/") for path in public))  # all Caddy forwards
 

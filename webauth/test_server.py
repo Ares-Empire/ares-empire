@@ -26,6 +26,9 @@ class Socket:
     def makefile(self, *args):
         return self.input
 
+    def settimeout(self, seconds):
+        pass
+
     def sendall(self, body):
         self.output.write(body)
 

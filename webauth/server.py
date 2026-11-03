@@ -29,7 +29,7 @@ import urllib.error
 import urllib.request
 from http import HTTPStatus
 from http.client import HTTPException
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.server import SimpleHTTPRequestHandler
 from time import time
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -37,6 +37,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 if not __package__:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from empire_http import LimitedHTTPServer, LimitedRequestHandler
 from empire_language import request_language
 from webauth import contact, legal, owner
 from webauth.texts import text
@@ -51,7 +52,6 @@ SERVICE = "empire"
 COOKIE_NAME = "empire_session"
 SESSION_SECS = 30 * 24 * 60 * 60  # matches the users token duration in PocketBase
 CHECK_CACHE_SECS = 60
-MAX_FORM_BYTES = 10_000
 
 # Provinces the hub can hand a logged-in visitor to. "handoff" provinces accept the Empire
 # token by POST at /sso (no second login); others just get a link.
@@ -225,7 +225,8 @@ def log(message: str) -> None:
 # Every error of the JSON API is {"error": <a sentence in the request's language>, "code": <one of these>}
 # (docs/API-EMPIRE.md → Errors). Codes are stable English words that clients act on; they are never translated.
 # By status; a 403 on an admin route is admin_only instead (the account is not an admin).
-CODES = {400: "bad_request", 401: "unauthorized", 403: "no_access", 404: "not_found",
+CODES = {400: "bad_request", 401: "unauthorized", 403: "no_access", 404: "not_found", 408: "bad_request",
+         429: "unavailable",
          413: "bad_request", 500: "server_error", 503: "unavailable"}
 ERROR_CODES = frozenset(CODES.values()) | {"admin_only"}
 SERVER_ERROR = "Something went wrong on the server. Try again later."
@@ -756,7 +757,7 @@ def handoff_page(url: str, token: str) -> bytes:
 
 # ── HTTP ─────────────────────────────────────────────────────────────────────
 
-class Handler(SimpleHTTPRequestHandler):
+class Handler(LimitedRequestHandler, SimpleHTTPRequestHandler):
     # Python's table lacks the font types on some versions (the legal pages' self-hosted font).
     extensions_map = {**SimpleHTTPRequestHandler.extensions_map, ".ttf": "font/ttf", ".woff2": "font/woff2"}
 
@@ -767,9 +768,7 @@ class Handler(SimpleHTTPRequestHandler):
         sys.stderr.write(f"{self.address_string()} - {fmt % args}\n")
 
     def _client_ip(self) -> str:
-        # Caddy sets X-Forwarded-For to the visitor's address; the last entry is the one it added.
-        fwd = self.headers.get("X-Forwarded-For", "")
-        return fwd.split(",")[-1].strip() if fwd else self.client_address[0]
+        return self.request_client_ip()
 
     def _redirect(self, location: str, cookie: str | None = None) -> None:
         self.send_response(HTTPStatus.SEE_OTHER)
@@ -833,16 +832,10 @@ class Handler(SimpleHTTPRequestHandler):
         return False
 
     def _json_body(self) -> dict:
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-        except ValueError:
-            raise APIError(400, "Invalid content length.")
-        if length > MAX_FORM_BYTES:
-            raise APIError(413, "Request too large.")
-        if length <= 0:
+        if not self.request_body:
             raise APIError(400, "A JSON object is required.")
         try:
-            body = json.loads(self.rfile.read(length))
+            body = json.loads(self.request_body)
         except (ValueError, UnicodeError):
             raise APIError(400, "Invalid JSON.")
         if not isinstance(body, dict):
@@ -894,11 +887,15 @@ class Handler(SimpleHTTPRequestHandler):
         return request_language(self.headers.get("Accept-Language"))
 
     def _form(self) -> dict[str, str]:
-        length = int(self.headers.get("Content-Length", "0") or "0")
-        if length <= 0 or length > MAX_FORM_BYTES:
-            return {}
-        body = self.rfile.read(length).decode("utf-8", "replace")
+        body = self.request_body.decode("utf-8", "replace")
         return {k: v[0] for k, v in parse_qs(body).items()}
+
+    def request_error(self, status, message):
+        path = urlparse(self.path).path
+        if path == "/api/empire" or path.startswith("/api/empire/"):
+            self._send_json(self._api_error(message, CODES[status]), status)
+        else:
+            self.send_error(status, message)
 
     def do_GET(self):
         url = urlparse(self.path)
@@ -994,7 +991,7 @@ def main() -> None:
         owner.get_owner()
     except ValueError as exc:
         raise SystemExit(str(exc)) from None
-    httpd = ThreadingHTTPServer((HOST, PORT), Handler)
+    httpd = LimitedHTTPServer((HOST, PORT), Handler)
     sys.stderr.write(f"Ares Empire web serving {WEB_ROOT} on {HOST}:{PORT}, accounts at {AUTH_URL}\n")
     httpd.serve_forever()
 

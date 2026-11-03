@@ -455,6 +455,9 @@ class _Socket:
     def makefile(self, *args):
         return self.input
 
+    def settimeout(self, seconds):
+        pass
+
     def sendall(self, data: bytes):
         self.output.write(data)
 

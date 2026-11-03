@@ -54,7 +54,7 @@ class OwnerTests(OwnerTestCase):
             return fake_httpd
 
         fake_httpd = Mock()
-        with patch.object(server, 'ThreadingHTTPServer', side_effect=httpd), patch.object(server.sys, 'stderr'):
+        with patch.object(server, 'LimitedHTTPServer', side_effect=httpd), patch.object(server.sys, 'stderr'):
             server.main()
         fake_httpd.serve_forever.assert_called_once()
 
