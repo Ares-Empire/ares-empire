@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-11-03",
+      "project": "arestemis",
+      "text": "One Arestemis search can now look for several similar things: up to five search words, such as ties from three makers, each read on every chosen site, with one description of what fits per word and one list of results. Behind it, every site is now read three ways (the page's own data, its layout, its plain text), so a site that changes its layout no longer silently loses a listing's facts; a check per site alerts within the hour if it does, and an AI fills in facts that only the ad's text states. App build 15."
+    },
+    {
+      "at": "2026-11-03",
       "project": "aresium",
       "text": "The Aresium website caught up with the iPhone app: fixed costs and the monthly average, money paid back, search, the day and name pages, renaming, changing many payments at once, going through what is not sorted name by name, and categories made where one is chosen, on desktop and phone, in English and German, and all of it in the demo. Checking the new version on the real data showed that the balance line had been wrong for weeks, on the website and in the app: on a day with several payments, whichever was stored last decided it, and two accounts were mixed into one number. It is now each account's balance at the end of the day, read from the chain of its bookings, added up."
     },

@@ -65,6 +65,11 @@
     {
       "at": "2026-11-03",
       "project": "arestemis",
+      "text": "One Arestemis search can now look for several similar things: up to five search words, such as ties from three makers, each read on every chosen site, with one description of what fits per word and one list of results. Behind it, every site is now read three ways (the page's own data, its layout, its plain text), so a site that changes its layout no longer silently loses a listing's facts; a check per site alerts within the hour if it does, and an AI fills in facts that only the ad's text states. App build 15."
+    },
+    {
+      "at": "2026-11-03",
+      "project": "arestemis",
       "text": "Arestemis's listing pages read like listings now: the numbers a search asks about in one card, a dash where the listing does not say, a few short notes on what to check, and the site's button first, while the application text moved to a quiet button. Where a site shows only a preview of the text, the page says so instead of looking cut off. New search lost most of its words: one line and one example per kind. Underneath, the AI was measured on 168 hand-labelled cases from real hunts, so things are now checked by a smaller model, and page watches on shop lists no longer take another product's price for the watched one. App build 14."
     },
     {
