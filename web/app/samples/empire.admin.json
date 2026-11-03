@@ -172,6 +172,11 @@
   "addable": [],
   "chronicle": [
     {
+      "at": "2026-11-03",
+      "project": "arestemis",
+      "text": "Arestemis's listing pages read like listings now: the numbers a search asks about in one card, a dash where the listing does not say, a few short notes on what to check, and the site's button first, while the application text moved to a quiet button. Where a site shows only a preview of the text, the page says so instead of looking cut off. New search lost most of its words: one line and one example per kind. Underneath, the AI was measured on 168 hand-labelled cases from real hunts, so things are now checked by a smaller model, and page watches on shop lists no longer take another product's price for the watched one. App build 14."
+    },
+    {
       "at": "2026-11-02",
       "project": "empire",
       "text": "The code of the Ares Empire is public on GitHub: Aresium, the iPhone apps, the hub, Arestoteles and patrikbreeck.com, each a fresh repo whose history holds no personal data (name, address and email come from one file outside the repos, and the privacy check now lets commits that remove such data through). Arestemis, Aresus and Aresync stay private; the old repos are kept as private archives."

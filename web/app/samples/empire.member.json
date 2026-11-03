@@ -63,6 +63,11 @@
   ],
   "chronicle": [
     {
+      "at": "2026-11-03",
+      "project": "arestemis",
+      "text": "Arestemis's listing pages read like listings now: the numbers a search asks about in one card, a dash where the listing does not say, a few short notes on what to check, and the site's button first, while the application text moved to a quiet button. Where a site shows only a preview of the text, the page says so instead of looking cut off. New search lost most of its words: one line and one example per kind. Underneath, the AI was measured on 168 hand-labelled cases from real hunts, so things are now checked by a smaller model, and page watches on shop lists no longer take another product's price for the watched one. App build 14."
+    },
+    {
       "at": "2026-11-02",
       "project": "arestemis",
       "text": "Arestemis explains itself now: a tour of eight steps, shown once after the first login and again from Settings, walks through sample searches in the app's own language, from starting a search to what a Preismonitor and a page watch are for. Patrik asked for it when \"Webseite beobachten\" read as too vague; the tour's frame is shared with Aresium's, whose tour looks exactly as before. App build 13."
