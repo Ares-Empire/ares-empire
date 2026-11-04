@@ -287,6 +287,17 @@ class ClientLimitTests(unittest.TestCase):
         now[0] = 1
         self.assertEqual(limits.acquire("first"), 0)
 
+    def test_requests_without_a_body_count_towards_the_rate_but_hold_no_slot(self):
+        # A page's parallel file requests through Caddy must not be refused for concurrency; only bodies hold slots.
+        limits = empire_http.ClientLimits(concurrent=2, rate=0, burst=9, clock=lambda: 0)
+        for _ in range(5):
+            self.assertEqual(limits.acquire("browser", hold=False), 0)
+        self.assertEqual(limits.acquire("browser"), 0)
+        self.assertEqual(limits.acquire("browser"), 0)
+        self.assertEqual(limits.acquire("browser"), 503)
+        self.assertEqual(limits.acquire("browser", hold=False), 0)
+        self.assertEqual(limits.acquire("browser", hold=False), 429)
+
     def test_rate_rejection_happens_before_the_body_is_read(self):
         httpd = empire_http.LimitedHTTPServer(("127.0.0.1", 0), push.PublicHandler,
                                               bind_and_activate=False, burst=1, rate=0)

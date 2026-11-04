@@ -39,7 +39,8 @@ class ClientLimits:
         self.clients = OrderedDict()
         self.lock = threading.Lock()
 
-    def acquire(self, client):
+    def acquire(self, client, hold=True):
+        """0 when admitted, else the status to answer. Only a request that holds a slot counts towards concurrency."""
         now = self.clock()
         with self.lock:
             if client not in self.clients:
@@ -56,6 +57,8 @@ class ClientLimits:
             if state[1] < 1:
                 return 429
             state[1] -= 1
+            if not hold:
+                return 0
             if state[0] >= self.concurrent:
                 return 503
             state[0] += 1
@@ -121,12 +124,6 @@ class LimitedRequestHandler:
             return False
         self.close_connection = True
         self.request_body = b""
-        if isinstance(self.server, LimitedHTTPServer) and self.server.client_limits is not None:
-            client = self.request_client_ip()
-            status = self.server.client_limits.acquire(client)
-            if status:
-                return self.reject_request(status, "Too many requests. Please try again shortly.")
-            self.admitted_client = client
         lengths = self.headers.get_all("Content-Length", [])
         if self.headers.get_all("Transfer-Encoding"):
             return self.reject_request(400, "Invalid content length.")
@@ -138,6 +135,16 @@ class LimitedRequestHandler:
         if len(digits) > len(str(MAX_BODY_BYTES)) or (digits and int(digits) > MAX_BODY_BYTES):
             return self.reject_request(413, "Request too large.")
         length = int(digits or "0")
+        # Every request counts towards the client's rate. Only one with a body holds a concurrency slot: a slow body is
+        # what can tie a worker up, while a page's many parallel file requests (HTTP/2 through Caddy) end at once.
+        if isinstance(self.server, LimitedHTTPServer) and self.server.client_limits is not None:
+            client = self.request_client_ip()
+            holds = length > 0
+            status = self.server.client_limits.acquire(client, hold=holds)
+            if status:
+                return self.reject_request(status, "Too many requests. Please try again shortly.")
+            if holds:
+                self.admitted_client = client
         self.request_input.deadline = monotonic() + BODY_SECONDS
         try:
             self.request_body = self.rfile.read(length)
