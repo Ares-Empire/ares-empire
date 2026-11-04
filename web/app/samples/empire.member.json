@@ -63,6 +63,11 @@
   ],
   "chronicle": [
     {
+      "at": "2026-11-04",
+      "project": "arestemis",
+      "text": "The Preismonitor can watch a product everywhere now (“Überall”): type a product such as AirPods Max 2, and optionally a colour or size in words, and within seconds Arestemis finds it on price comparison sites, shops and marketplaces, shows the cheapest offer with its shop and every shop's price, keeps the cheapest price as a curve and sends a push when it falls under a chosen price. A list shows every site it checks, each with a switch, and a button suggests a shop that is missing. Thing searches also got more accurate after a check of 747 real listings: a complete article sold with extras, another name or language for the same thing, and a shipped offer from far away are no longer turned down by mistake. App build 16."
+    },
+    {
       "at": "2026-11-03",
       "project": "arestemis",
       "text": "One Arestemis search can now look for several similar things: up to five search words, such as ties from three makers, each read on every chosen site, with one description of what fits per word and one list of results. Behind it, every site is now read three ways (the page's own data, its layout, its plain text), so a site that changes its layout no longer silently loses a listing's facts; a check per site alerts within the hour if it does, and an AI fills in facts that only the ad's text states. App build 15."
