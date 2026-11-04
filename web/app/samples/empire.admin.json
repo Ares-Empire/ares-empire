@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-11-04",
+      "project": "aresium",
+      "text": "Aresium reads Sparda-Bank: a tester asked for it, and all eleven Sparda-Banks now run on the same online banking as the Volksbanks, so their files are read like a VR bank's and the account is named Sparda-Bank. The \"How do I get my file?\" guide has its steps in German and English, and build 23 went to TestFlight for testers, who can now join through a public link."
+    },
+    {
+      "at": "2026-11-04",
       "project": "arestemis",
       "text": "The Preismonitor can watch a product everywhere now (“Überall”): type a product such as AirPods Max 2, and optionally a colour or size in words, and within seconds Arestemis finds it on price comparison sites, shops and marketplaces, shows the cheapest offer with its shop and every shop's price, keeps the cheapest price as a curve and sends a push when it falls under a chosen price. A list shows every site it checks, each with a switch, and a button suggests a shop that is missing. Thing searches also got more accurate after a check of 747 real listings: a complete article sold with extras, another name or language for the same thing, and a shipped offer from far away are no longer turned down by mistake. App build 16."
     },
