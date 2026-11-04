@@ -24,6 +24,34 @@ trap cleanup EXIT
 mkdir "$RULES_TMP/hooks" "$RULES_TMP/public" "$RULES_TMP/mail" "$RULES_TMP/fake"
 # Every hook, with its shared modules (pb_hooks/lib/).
 cp -R "$RULES_ROOT/pb_hooks/." "$RULES_TMP/hooks/"
+# The integration checks can inject an insertion failure without changing production hooks.
+cat >"$RULES_TMP/hooks/test-job-failure.pb.js" <<'JS'
+onRecordCreate((e) => {
+  let fail = false;
+  try {
+    $os.stat($os.getenv("TEST_JOB_FAILURE_FILE"));
+    fail = true;
+  } catch (_) {}
+  if (fail && e.record.getString("service") === "push") throw new Error("Injected job save failure");
+  e.next();
+}, "deletions");
+// A synchronous entry point for repeated runner checks; the real cron endpoint is exercised separately.
+routerAdd("POST", "/api/test/run-account-jobs", (e) => {
+  require(`${__hooks}/lib/deletions.js`).run(e.app);
+  return e.noContent(204);
+}, $apis.requireSuperuserAuth());
+routerAdd("POST", "/api/test/save-older-account", (e) => {
+  const body = e.requestInfo().body;
+  const older = e.app.findRecordById("users", body.account);
+  const current = e.app.findRecordById("users", body.account);
+  current.set("approved", false);
+  e.app.save(current);
+  if (body.mode === "services") older.set("services", ["empire"]);
+  else older.set("name", "Saved from an older snapshot");
+  e.app.save(older);
+  return e.noContent(204);
+}, $apis.requireSuperuserAuth());
+JS
 # A local SMTP sink: accepts every message and writes it to $RULES_TMP/mail/<n>.eml (no TLS, no auth, no relaying).
 python3 - "$RULES_TMP/mail" >"$RULES_TMP/sink.log" 2>&1 <<'PY' &
 import itertools, os, socketserver, sys
@@ -87,6 +115,9 @@ class Fake(http.server.BaseHTTPRequestHandler):
         with lock:
             with open(os.path.join(folder, 'calls'), 'a') as calls:
                 calls.write(f'{self.command} {self.path}\n')
+            with open(os.path.join(folder, 'headers'), 'a') as headers:
+                headers.write(json.dumps({'path': self.path,
+                                          'generation': self.headers.get('X-Empire-Access-Generation')}) + '\n')
             if body:
                 with open(os.path.join(folder, 'bodies'), 'a') as bodies:
                     bodies.write(json.dumps({'path': self.path, 'body': json.loads(body)}) + '\n')
@@ -141,6 +172,7 @@ if ! "$POCKETBASE" superuser create bootstrap@example.com "$RULES_PASSWORD" \
   exit 1
 fi
 ARESTEMIS_INTERNAL_URL="http://127.0.0.1:$FAKE_PORT/arestemis" PUSH_INTERNAL_URL="http://127.0.0.1:$FAKE_PORT/push" \
+  TEST_JOB_FAILURE_FILE="$RULES_TMP/fail-job-save" \
   "$POCKETBASE" serve --automigrate=false --http "127.0.0.1:$RULES_PORT" --dir "$RULES_TMP/data" \
   --migrationsDir "$RULES_ROOT/pb_migrations" --hooksDir "$RULES_TMP/hooks" \
   --publicDir "$RULES_TMP/public" >"$RULES_TMP/server.log" 2>&1 &
@@ -384,9 +416,10 @@ def ready(account, title, de_title):
              'url': 'empire://ring', 'thread': 'access', 'collapse_id': 'ready-' + account}]
 
 
-def jobs(account):
+def jobs(account, operation='delete'):
     """The deletion jobs of a deleted account, by service."""
-    query = '/api/collections/deletions/records?perPage=100&filter=' + urllib.parse.quote(f"account = '{account}'")
+    query = '/api/collections/deletions/records?perPage=100&sort=generation,created&filter=' + urllib.parse.quote(
+        f"account = '{account}' && operation = '{operation}'")
     return {job['service']: job for job in must('GET', query, token=supertoken)['items']}
 
 
@@ -394,10 +427,15 @@ def open_jobs():
     return must('GET', '/api/collections/deletions/records?filter=done%3Dfalse', token=supertoken)['totalItems']
 
 
-def run_deletions(until):
+def run_deletions(until, advance=True, real_cron=False):
     """Runs the deletion cron once (as admin UI → Settings → Crons does; it runs in the background) and waits until
     `until()` holds."""
-    must('POST', '/api/crons/empire-deletions', token=supertoken)
+    if advance:
+        with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db', timeout=5) as db:
+            db.execute("UPDATE deletions SET next_attempt = '2000-01-01 00:00:00.000Z' "
+                       "WHERE done = false AND next_attempt != ''")
+    route = '/api/crons/empire-deletions' if real_cron else '/api/test/run-account-jobs'
+    must('POST', route, token=supertoken)
     for attempt in range(100):
         if until():
             return True
@@ -1216,7 +1254,8 @@ try:
         service: (job['done'], job['attempts']) for service, job in jobs(normal['id']).items()} ==
         {'arestemis': (False, 0), 'push': (False, 0)})
     check('an account declined by an admin gets its jobs too', set(jobs(declined['id'])) == {'arestemis', 'push'})
-    check('the cron calls every open job and a 2xx closes it', run_deletions(lambda: open_jobs() == 0) and
+    check('the cron calls every open job and a 2xx closes it',
+          run_deletions(lambda: open_jobs() == 0, real_cron=True) and
           all(f'DELETE /{service}/internal/accounts/{account}' in fake_calls()
               for service in ('arestemis', 'push') for account in (normal['id'], declined['id'])))
     for who, token in [('an admin', admin_token), ('anyone', '')]:
@@ -1255,6 +1294,165 @@ try:
     check('... once', ran and quiet(mark))
     fake_status('arestemis', 204)
     check('once the service answers, every job closes', run_deletions(lambda: open_jobs() == 0))
+
+    # Access changes use the same job list, after a successful save; restoring access starts no work.
+    access = create('access-jobs@example.com', approved=True, verified=True, services=['empire', 'arestemis'])
+    account = access['id']
+    path = '/api/collections/users/records/' + account
+    must('PATCH', path, {'name': 'Renamed'}, supertoken)
+    check('an unrelated update creates no access jobs', not jobs(account, 'pause') and
+          not jobs(account, 'remove_devices'))
+    status, _ = call('PATCH', path, {'services': ['empire'], 'email': 'invalid'}, supertoken)
+    check('a failed save creates no access jobs', status == 400 and not jobs(account, 'pause') and
+          not jobs(account, 'remove_devices') and 'arestemis' in user(account)['services'])
+    must('PATCH', path, {'services': ['empire']}, admin_token)
+    pause = jobs(account, 'pause').get('arestemis', {})
+    devices = jobs(account, 'remove_devices').get('push', {})
+    check('removing Arestemis creates one pause and one scoped push job',
+          pause.get('done') is False and pause.get('attempts') == 0 and
+          devices.get('app') == 'arestemis' and devices.get('done') is False and not jobs(account))
+    must('PATCH', path, {'services': ['empire']}, admin_token)
+    check('saving the same access again creates no jobs',
+          jobs(account, 'pause').get('arestemis', {}).get('id') == pause.get('id') and
+          jobs(account, 'remove_devices').get('push', {}).get('id') == devices.get('id'))
+    fake_status('arestemis', 404)
+    fake_status('push', 404)
+    ran = run_deletions(lambda: jobs(account, 'pause').get('arestemis', {}).get('attempts') == 1 and
+                        jobs(account, 'remove_devices').get('push', {}).get('attempts') == 1)
+    check('a 404 on either access route keeps the job open', ran and
+          jobs(account, 'pause')['arestemis']['done'] is False and
+          jobs(account, 'remove_devices')['push']['done'] is False and
+          jobs(account, 'pause')['arestemis']['last_error'] == 'HTTP 404')
+    check('the cron posts pause and removes only Arestemis registrations',
+          f'POST /arestemis/internal/accounts/{account}/pause' in fake_calls() and
+          f'DELETE /push/internal/accounts/{account}/devices/arestemis' in fake_calls() and
+          f'DELETE /arestemis/internal/accounts/{account}' not in fake_calls())
+    with open(os.environ['RULES_TMP'] + '/fake/headers') as headers:
+        access_calls = [json.loads(line) for line in headers if account in line]
+    check('both services receive the saved access generation', len(access_calls) == 2 and all(
+          request['generation'] == str(user(account)['access_generation']) for request in access_calls))
+    must('PATCH', path, {'services': ['empire', 'arestemis']}, admin_token)
+    check('restoring access supersedes existing jobs without resuming work',
+          jobs(account, 'pause')['arestemis']['id'] == pause['id'] and
+          jobs(account, 'pause')['arestemis']['done'] is True and
+          jobs(account, 'pause')['arestemis']['superseded'] is True and
+          jobs(account, 'remove_devices')['push']['done'] is True)
+    calls = list(fake_calls())
+    check('the cron makes no calls for superseded jobs', run_deletions(lambda: open_jobs() == 0) and
+          fake_calls() == calls)
+    must('PATCH', path, {'services': ['empire']}, admin_token)
+    pause = jobs(account, 'pause')['arestemis']
+    devices = jobs(account, 'remove_devices')['push']
+    fake_status('arestemis', 503)
+    fake_status('push', 503)
+    with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db', timeout=5) as db:
+        db.execute('UPDATE deletions SET created = ? WHERE id = ?', ('2026-01-01 00:00:00.000Z', pause['id']))
+    mark = len(mails())
+    ran = run_deletions(lambda: jobs(account, 'pause')['arestemis']['reported'])
+    new = new_mails(mark, 1)
+    check('a stuck access job is mailed once with its operation and job link', ran and len(new) == 1 and
+          subjects(new) == ['Ares account access change stuck: Arestemis'] and
+          'pause' in html(new[0]) and pause['id'] in html(new[0]))
+    mark = len(mails())
+    attempts = jobs(account, 'pause')['arestemis']['attempts']
+    ran = run_deletions(lambda: jobs(account, 'pause')['arestemis']['attempts'] > attempts)
+    check('a stuck access job alert is not repeated', ran and quiet(mark))
+    fake_status('arestemis', 204)
+    fake_status('push', 204)
+    check('access jobs retry and close after success', run_deletions(lambda: open_jobs() == 0))
+    must('PATCH', path, {'approved': False, 'services': ['empire']}, admin_token)
+    fresh_pause = jobs(account, 'pause')['arestemis']
+    fresh_devices = jobs(account, 'remove_devices')['push']
+    check('losing approval and Arestemis together makes a fresh pause and an all-app push job',
+          fresh_pause['id'] != pause['id'] and fresh_pause['done'] is False and
+          fresh_devices['id'] != devices['id'] and fresh_devices['app'] == '' and
+          fresh_devices['attempts'] == 0)
+    check('the all-app push job uses its devices route', run_deletions(lambda: open_jobs() == 0) and
+          f'DELETE /push/internal/accounts/{account}/devices' in fake_calls())
+    before = must('GET', '/api/collections/deletions/records', token=supertoken)['totalItems']
+    must('PATCH', path, {'approved': True, 'services': ['empire', 'arestemis']}, admin_token)
+    check('restoring approval and services creates no job',
+          must('GET', '/api/collections/deletions/records', token=supertoken)['totalItems'] == before)
+    access_token = login('users', 'access-jobs@example.com')
+    must('POST', LEAVE, {'service': 'arestemis'}, access_token)
+    check('the leave route also plans access jobs through its record save',
+          jobs(account, 'pause')['arestemis']['id'] != fresh_pause['id'] and
+          jobs(account, 'remove_devices')['push']['app'] == 'arestemis')
+    check('leaving jobs also complete', run_deletions(lambda: open_jobs() == 0))
+
+    # Job insertion and access persistence must either both succeed or both roll back.
+    atomic = create('atomic-jobs@example.com', approved=True, verified=True, services=['empire', 'arestemis'])
+    atomic_path = '/api/collections/users/records/' + atomic['id']
+    fault = os.environ['RULES_TMP'] + '/fail-job-save'
+    with open(fault, 'w') as flag:
+        flag.write('fail')
+    before_generation = atomic['access_generation']
+    status, _ = call('PATCH', atomic_path, {'approved': False}, admin_token)
+    check('a failed job insert rolls back approval and its generation', status >= 400 and
+          user(atomic['id'])['approved'] is True and
+          user(atomic['id'])['access_generation'] == before_generation and
+          not jobs(atomic['id'], 'pause') and not jobs(atomic['id'], 'remove_devices'))
+    status, _ = call('DELETE', atomic_path, token=supertoken)
+    check('a failed deletion-job insert rolls back account deletion', status >= 400 and
+          user(atomic['id'])['approved'] is True and not jobs(atomic['id']))
+    os.unlink(fault)
+    must('PATCH', atomic_path, {'approved': False}, admin_token)
+    check('retrying after an insertion failure plans durable jobs',
+          user(atomic['id'])['approved'] is False and
+          jobs(atomic['id'], 'pause')['arestemis']['generation'] == before_generation + 1 and
+          jobs(atomic['id'], 'remove_devices')['push']['generation'] == before_generation + 1)
+    must('PATCH', atomic_path, {'approved': True}, admin_token)
+    check('restoration advances the access generation',
+          user(atomic['id'])['access_generation'] == before_generation + 2)
+    for who, token in [('the account', login('users', 'atomic-jobs@example.com')), ('an admin', admin_token)]:
+        check(who + ' cannot choose an access generation',
+              refused('PATCH', atomic['id'], {'access_generation': 100}, token) and
+              user(atomic['id'])['access_generation'] == before_generation + 2)
+    status, _ = call('POST', '/api/collections/users/records', {
+        'email': 'generation-signup@example.com', 'password': password, 'passwordConfirm': password,
+        'requested': ['empire'], 'access_generation': 100})
+    check('a sign-up cannot choose an access generation', status in (400, 403))
+    for mode in ('profile', 'services'):
+        older = create('older-' + mode + '@example.com', approved=True, verified=True,
+                       services=['empire', 'arestemis'])
+        must('POST', '/api/test/save-older-account', {'account': older['id'], 'mode': mode}, supertoken)
+        after = user(older['id'])
+        expected_generation = 1 if mode == 'profile' else 2
+        check('an older ' + mode + ' save preserves the current approval and generation',
+              after['approved'] is False and after['access_generation'] == expected_generation)
+        cleanup = jobs(older['id'], 'remove_devices')['push']
+        check('an older ' + mode + ' save keeps all-app removal at the current generation',
+              cleanup['app'] == '' and cleanup['generation'] == expected_generation and not cleanup['done'])
+    check('jobs from older-snapshot saves complete', run_deletions(lambda: open_jobs() == 0))
+
+    # Batches are independent per service, and scheduled retries yield to later due jobs.
+    bulk = []
+    created = time.strftime('%Y-%m-%d %H:%M:%S.000Z', time.gmtime(time.time() - 3600))
+    with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db', timeout=5) as db:
+        for index in range(201):
+            job_id = 'batch' + str(index).zfill(10)
+            bulk.append(job_id)
+            db.execute('INSERT INTO deletions (id, account, service, operation, created, updated) '
+                       'VALUES (?, ?, ?, ?, ?, ?)', (job_id, job_id, 'arestemis', 'delete', created, created))
+    later_push = must('POST', '/api/collections/deletions/records',
+                      {'account': 'batchpush000001', 'service': 'push', 'operation': 'delete'}, supertoken)
+    later_arestemis = must('POST', '/api/collections/deletions/records',
+                          {'account': 'batchlast000001', 'service': 'arestemis', 'operation': 'delete'}, supertoken)
+
+    def job(job_id):
+        return must('GET', '/api/collections/deletions/records/' + job_id, token=supertoken)
+
+    fake_status('arestemis', 503)
+    fake_status('push', 204)
+    check('201 older unavailable-service jobs do not starve a push deletion',
+          run_deletions(lambda: job(later_push['id'])['done'], advance=False) and
+          job(later_push['id'])['attempts'] == 1)
+    check('later jobs of the unavailable service progress before its retries',
+          run_deletions(lambda: job(later_arestemis['id'])['attempts'] == 1, advance=False) and
+          bool(job(bulk[0])['next_attempt']) and job(bulk[0])['attempts'] == 1)
+    fake_status('arestemis', 204)
+    check('scheduled jobs finish in bounded batches when the service recovers',
+          run_deletions(lambda: open_jobs() <= 2) and run_deletions(lambda: open_jobs() == 0))
 except Exception as exc:
     check(str(exc), False)
 if not failures:
@@ -1292,7 +1490,39 @@ def update_rule(names, admin_may_change):
     return ('(id = @request.auth.id && ' + OWN + ') || (@request.auth.admin = true && id != @request.auth.id && ' +
             ' && '.join('@request.body.' + name + ':isset = false' for name in untouchable) + ')')
 PY
-# contact_app_kind down (the newest): the contact form's app, kind, version and system are gone, a message needs text
+# access_jobs down: keep deletion jobs, remove access jobs and the two fields.
+migrate_down 'access jobs'
+python3 - <<'PY'
+import json, os, sqlite3, sys
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    fields = json.loads(db.execute('SELECT fields FROM _collections WHERE name = ?', ('deletions',)).fetchone()[0])
+    rows = db.execute('SELECT account, service FROM deletions').fetchall()
+    kept = db.execute('SELECT id, account, service, attempts, done, last_error, reported FROM deletions ORDER BY id').fetchall()
+with open(os.environ['RULES_TMP'] + '/old-jobs.json', 'w') as saved:
+    json.dump(kept, saved)
+ok = not {'operation', 'app'} & {field['name'] for field in fields} and bool(rows) and len(rows) == len(set(rows))
+print(('PASS' if ok else 'FAIL') + ' migration down keeps deletion jobs and removes access jobs and fields')
+sys.exit(0 if ok else 1)
+PY
+# Apply just the new migration to existing deletion jobs, then roll it back again for the older migration checks.
+if ! "$POCKETBASE" migrate up --dir "$RULES_TMP/data" --migrationsDir "$RULES_ROOT/pb_migrations" \
+  --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/up.log" 2>&1; then
+  cat "$RULES_TMP/up.log" >&2
+  exit 1
+fi
+python3 - <<'PY'
+import json, os, sqlite3, sys
+with open(os.environ['RULES_TMP'] + '/old-jobs.json') as saved:
+    before = json.load(saved)
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    rows = db.execute('SELECT id, account, service, attempts, done, last_error, reported FROM deletions ORDER BY id').fetchall()
+    operations = {row[0] for row in db.execute('SELECT operation FROM deletions')}
+ok = [list(row) for row in rows] == before and operations == {'delete'}
+print(('PASS' if ok else 'FAIL') + ' migration up preserves existing deletion jobs and sets their operation')
+sys.exit(0 if ok else 1)
+PY
+migrate_down 'access jobs again'
+# contact_app_kind down: the contact form's app, kind, version and system are gone, a message needs text
 # again, and the messages already sent stay.
 migrate_down 'contact app and kind'
 python3 - <<'PY'
@@ -1504,12 +1734,17 @@ requests = 'bank_requests' in collections and labels.count('bank_requests:create
 print(('PASS' if requests else 'FAIL') + ' migration up adds the bank_requests collection and its rate limit again')
 with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
     contact = json.loads(db.execute('SELECT fields FROM _collections WHERE name = ?', ('contact',)).fetchone()[0])
+    jobs = json.loads(db.execute('SELECT fields FROM _collections WHERE name = ?', ('deletions',)).fetchone()[0])
 message = next(field for field in contact if field['name'] == 'message')
 kinds = next((field['values'] for field in contact if field['name'] == 'kind'), None)
 app_kind = ({'app', 'kind', 'app_version', 'system'} <= {field['name'] for field in contact}
             and message['required'] is False and kinds == ['access', 'question', 'problem', 'idea', 'other'])
 print(('PASS' if app_kind else 'FAIL') + ' migration up adds app, kind, version and system to contact again')
-ok = ok and again and formats and requests and app_kind
+operations = next((field['values'] for field in jobs if field['name'] == 'operation'), None)
+access_jobs = {'operation', 'app'} <= {field['name'] for field in jobs} and \
+    operations == ['delete', 'pause', 'remove_devices']
+print(('PASS' if access_jobs else 'FAIL') + ' migration up adds access job operations and scope again')
+ok = ok and again and formats and requests and app_kind and access_jobs
 sys.exit(0 if ok else 1)
 PY
 python3 - <<'PY'
@@ -1517,7 +1752,10 @@ import os, sys
 sys.path.insert(0, os.environ['RULES_TMP'])
 from users_rules import update_rule, users
 names, update = users()
-ok = 'ring' not in names and 'ring' not in update and update == update_rule(names, ('approved', 'services', 'requested'))
-print(('PASS' if ok else 'FAIL') + ' migration up drops the ring field and its place in the admins\' rule again')
+base_names = [name for name in names if name != 'access_generation']
+expected = '(' + update_rule(base_names, ('approved', 'services', 'requested')) + \
+    ') && @request.body.access_generation:isset = false'
+ok = 'ring' not in names and 'ring' not in update and 'access_generation' in names and update == expected
+print(('PASS' if ok else 'FAIL') + ' migration up drops the ring and protects the managed access generation')
 sys.exit(0 if ok else 1)
 PY

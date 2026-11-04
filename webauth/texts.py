@@ -1,6 +1,12 @@
 """Hub API sentences in both languages; the login website stays English."""
 
 TEXTS = {
+    "Too many requests. Please try again shortly.": {
+        "en": "Too many requests. Please try again shortly.",
+        "de": "Zu viele Anfragen. Bitte versuch es in Kürze noch einmal.",
+    },
+    "Request timed out.": {"en": "Request timed out.", "de": "Zeit für die Anfrage abgelaufen."},
+    "Incomplete request body.": {"en": "Incomplete request body.", "de": "Unvollständiger Anfrageinhalt."},
     "Issue: ": {"en": "Issue: ", "de": "Problem: "},
     "This account has no access to Ares Empire.": {
         "en": "This account has no access to Ares Empire.",

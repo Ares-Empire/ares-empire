@@ -10,6 +10,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from push.config import APIError
+
 OUTBOX_KEEP = 200
 STALE_DAYS = 60
 
@@ -25,6 +27,12 @@ CREATE TABLE IF NOT EXISTS devices (
     UNIQUE (app, token)
 );
 CREATE INDEX IF NOT EXISTS devices_by_user ON devices (app, user);
+CREATE TABLE IF NOT EXISTS account_access (
+    user TEXT PRIMARY KEY,
+    generation INTEGER NOT NULL,
+    revoked_app TEXT,
+    deleted INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE IF NOT EXISTS outbox (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     at TEXT NOT NULL,
@@ -73,6 +81,19 @@ class Store:
         with self._lock:
             self._db.close()
 
+    def accept_access(self, user: str, generation: int, app: str) -> None:
+        """Persists the generation of authenticated activity before changing registrations."""
+        with self._lock, self._db:
+            row = self._db.execute("SELECT generation, revoked_app, deleted FROM account_access WHERE user = ?",
+                                   (user,)).fetchone()
+            if row and (row[2] or generation < row[0] or
+                        (generation == row[0] and row[1] in ("", app))):
+                raise APIError(403, "This account's access changed. Please try again.")
+            if row is None or generation > row[0]:
+                self._db.execute("INSERT INTO account_access (user, generation) VALUES (?, ?)"
+                                 " ON CONFLICT(user) DO UPDATE SET generation = excluded.generation, revoked_app = NULL",
+                                 (user, generation))
+
     # Devices
 
     def register(self, app: str, token: str, user: str, environment: str, language: str = "en") -> str | None:
@@ -120,7 +141,26 @@ class Store:
         with self._lock, self._db:
             devices = self._db.execute("DELETE FROM devices WHERE user = ?", (user,)).rowcount
             outbox = self._db.execute("DELETE FROM outbox WHERE user_or_all = ?", (user,)).rowcount
+            self._db.execute("INSERT INTO account_access (user, generation, deleted) VALUES (?, 0, 1)"
+                             " ON CONFLICT(user) DO UPDATE SET deleted = 1", (user,))
         return devices, outbox
+
+    def remove_devices(self, user: str, app: str | None, generation: int) -> int:
+        """Removes an account's registrations, optionally for just one app; keeps its outbox."""
+        query = "DELETE FROM devices WHERE user = ?"
+        args = (user,)
+        if app is not None:
+            query += " AND app = ?"
+            args += (app,)
+        with self._lock, self._db:
+            row = self._db.execute("SELECT generation, revoked_app, deleted FROM account_access WHERE user = ?",
+                                   (user,)).fetchone()
+            if row and (row[2] or row[0] > generation or (row[0] == generation and row[1] is not None)):
+                return 0
+            self._db.execute("INSERT INTO account_access (user, generation, revoked_app) VALUES (?, ?, ?)"
+                             " ON CONFLICT(user) DO UPDATE SET generation = excluded.generation,"
+                             " revoked_app = excluded.revoked_app", (user, generation, app or ""))
+            return self._db.execute(query, args).rowcount
 
     def counts(self) -> dict[str, int]:
         with self._lock:

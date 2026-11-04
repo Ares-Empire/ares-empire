@@ -56,7 +56,9 @@ a service counts as *connected* once it accepts Empire logins and no longer has 
 
 Local verification (no live account data): `bash accounts/test-rules.sh` uses a disposable PocketBase 0.40.6
 from `$POCKETBASE` (default `~/.pocketbase-test/pocketbase`) and checks API rules, email visibility, feedback, the
-contact forms (the hub's, an app's with app and kind, Aresium's old footer), the bank formats shared from Aresium, the bank requests from Aresium, the account emails and notifications, the leave route, the deletion jobs and migration rollback/reapply. It loads every hook; their mail goes to a local SMTP
+contact forms (the hub's, an app's with app and kind, Aresium's old footer), the bank formats and bank requests from
+Aresium, the account emails and notifications, the leave route, the deletion and access-change jobs, and migration
+rollback/reapply. It loads every hook; their mail goes to a local SMTP
 sink the script starts (never Resend, never the system's sendmail) and the deletion calls and notifications to a fake
 service on localhost, which records each notification's body for the checks. Hub contract tests use fake PocketBase responses: `python3 -m unittest webauth/test_server.py`.
 - **Email**: Resend via `smtp.resend.com:2465` (the host blocks outgoing 25/465/587), domain
@@ -278,6 +280,7 @@ error says both.
 | Approved for the first time, or given more apps | the account | its `language`: which apps, how to log in (and the hub's address when `empire` is among them) |
 | Confirm the email address, reset the password (PocketBase's own) | the account | English and German in one message (migration `1793300200_emails_de_en.js`) |
 | A deletion job still fails a day after the deletion | Patrik | English, once per job |
+| An access-change job still fails after a day | Patrik | English, once per job |
 
 The texts are in `pb_hooks/lib/mail.js`, the one mail module of every hook. "Patrik" here means the superusers
 (`superusers()`: whoever can approve in the admin UI), not `SUPPORT_TO`, the address for what people write to him
@@ -305,10 +308,14 @@ Apple's push key exists the push service runs as a dry run and only keeps them i
   `pb_hooks/deletions.pb.js` writes one job per service that keeps data per account into **`deletions`** (`account`,
   `service`, `attempts`, `done`, `last_error`, `reported`, `created`, `updated`; superusers only; migration
   `1793300100_deletions.js`). **CONTRACT ADDITION:** `reported` remembers that Patrik was mailed about the job.
-- The cron **`empire-deletions`** (every 5 minutes; run by hand: admin UI → Settings → Crons) calls each open job,
-  oldest first: `DELETE http://127.0.0.1:<port>/internal/accounts/<id>`. 2xx or 404 → `done`; anything else →
+  Migration `1793800000_access_jobs.js` adds `operation`, `app`, `generation`, `superseded`, and `next_attempt`;
+  existing jobs become `operation: delete`. Account deletion and its jobs commit in one transaction.
+- The cron **`empire-deletions`** (every 5 minutes; run by hand: admin UI → Settings → Crons) selects up to 200 due
+  jobs independently per service, ordered by `next_attempt,created`:
+  `DELETE http://127.0.0.1:<port>/internal/accounts/<id>`. 2xx or 404 → `done`; anything else →
   `attempts + 1`, `last_error`, tried again on the next run. A service that does not answer at all is not called
   again in that run. A job still failing a day after the deletion is mailed to Patrik once.
+  Failed and skipped jobs receive `next_attempt` five minutes later; newly due jobs progress before those retries.
 - Today's services: **Arestemis** `127.0.0.1:8097` (settings, hunts, matches with their applications, rejected
   listings; [Arestemis API.md](https://github.com/Ares-Empire/Arestemis/blob/main/docs/API.md)) and the **push
   service** `127.0.0.1:8096` (devices of every app and outbox rows; [PUSH.md](PUSH.md)). `ARESTEMIS_INTERNAL_URL` and
@@ -322,6 +329,60 @@ Apple's push key exists the push service runs as a dry run and only keeps them i
   `service` field of `deletions` (a new migration).
 - **A stuck job** (the email): fix the service, or delete the data by hand, then switch on `done` in the admin UI
   (Collections → deletions).
+
+### Taking away access reaches Arestemis and push
+
+Every change to a user's approval or services advances its **`access_generation`** (an integer, initially zero,
+managed by the save hook). Normal accounts and admins cannot choose it. Migration `1793800000_access_jobs.js` adds
+the field. Reordering the same services or changing a name, password, or requests leaves it unchanged.
+
+When access is removed, `pb_hooks/deletions.pb.js` saves the changed account and two jobs in one transaction, after
+the record save succeeds. A failure inserting either job rolls back the whole change. HTTP execution happens later,
+outside the transaction. Jobs appear in the same **`deletions`** collection (superusers only):
+
+- **Arestemis**, `operation: pause`: `POST http://127.0.0.1:8097/internal/accounts/<id>/pause`, through the same
+  internal listener and caller settings as deletion. It pauses all the account's hunts, deletes nothing, and answers
+  `204` also on repeats.
+- **Push**, `operation: remove_devices`: removing approval uses
+  `DELETE http://127.0.0.1:8096/internal/accounts/<id>/devices` (every app; `app` empty); removing only Arestemis
+  uses `/internal/accounts/<id>/devices/arestemis` (`app: arestemis`). It removes registrations and preserves the
+  outbox ([PUSH.md](PUSH.md#internal-api-province-services-on-the-same-host)).
+
+Each job stores the account's `generation` and sends **`X-Empire-Access-Generation: <generation>`**. The
+**`empire-deletions`** cron runs these jobs every five minutes, with the same attempts, errors, per-service batches,
+and one email after a day as deletion jobs. Access jobs need a **2xx** answer; a `404` keeps retrying until
+the route is installed. Each loss of access gets fresh jobs, including after an earlier loss was completed. Losing
+approval and Arestemis together creates just one job per service, with all-app push removal. An access change marks
+older pending access jobs `done` and `superseded` in the same transaction. If access remains denied and work is still
+pending, replacement jobs carry the new generation and current scope. Full restoration creates no jobs. Failed
+saves and unrelated updates create none. The leave route's record save follows the same rule.
+
+Restoring access supersedes pending access jobs and starts no hunts. Hunts and their results are kept; the person
+starts them again. Receivers also fence already-sent calls and retries by generation (below). A late HTTP completion
+cannot reopen a superseded job. The jobs record future updates; the migration does not plan past access changes.
+
+**Arestemis receiver contract (implemented in its own repository):**
+
+- Keep `POST /internal/accounts/<id>/pause` under the deletion route's localhost guard and outside Caddy routing.
+  Require exactly one decimal `X-Empire-Access-Generation`, from 1 through 9007199254740991; invalid or missing is 400.
+- Persist a per-account highest generation and whether its pause was applied. Compare/update that state and pause
+  all hunts in one database transaction or under equivalent per-account synchronization. An older generation, or
+  an already-applied pause for the same generation, answers **204 with no changes**. A newer pause advances the
+  generation, pauses hunts, and marks that generation applied. Missing/deleted accounts also answer 204.
+- On each authorized hunt start/resume, obtain `access_generation` from the authenticated PocketBase record,
+  reject a result older than the stored generation or already paused at that generation, and persist a newer
+  generation before starting hunts, under the same synchronization. Advancing it clears the prior applied marker.
+  Authentication and other network calls stay outside the critical section. Preserve the fence across restarts and
+  account deletion, so an authentication result already in flight cannot recreate activity for a deleted account.
+- Test revoke → restore → manual resume → delayed old pause, a lost 204 followed by a retry, restart persistence,
+  and revocation during authentication. The resumed hunt must remain running for old-generation calls.
+
+Rollout: install push (`sudo bash deploy/install-push.sh`) and the generation-aware Arestemis receiver, then accounts
+(`sudo bash deploy/install-accounts.sh`).
+The accounts restart applies migration `1793800000_access_jobs.js` and loads the updated hooks. The existing
+`empire-deletions` cron needs no separate system cron entry. Until Arestemis's pause route is deployed, those jobs
+remain open and retry; an older receiver that ignores generations must be updated before enabling these jobs.
+To complete a stuck access job manually, apply its `operation`, `app`, and `generation`, then set `done`.
 
 ### The hub's approvals (website and Empire app)
 

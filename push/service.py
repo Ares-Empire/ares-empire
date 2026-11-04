@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
+from contextlib import contextmanager
 from dataclasses import replace
 
 from push.accounts import Accounts, may_use
@@ -98,6 +100,32 @@ class PushService:
         self.store = store
         self.accounts = accounts
         self.apns = apns
+        self._account_locks = {}
+        self._locks_guard = threading.Lock()
+
+    @contextmanager
+    def account_lock(self, user):
+        with self._locks_guard:
+            entry = self._account_locks.setdefault(user, [threading.Lock(), 0])
+            entry[1] += 1
+        try:
+            with entry[0]:
+                yield
+        finally:
+            with self._locks_guard:
+                entry[1] -= 1
+                if not entry[1]:
+                    del self._account_locks[user]
+
+    def accept_access(self, record, app):
+        generation = record.get("access_generation", 0)
+        if type(generation) is not int or not 0 <= generation <= 9_007_199_254_740_991:
+            raise APIError(503, "The account server returned an unreadable answer.")
+        try:
+            self.store.accept_access(record["id"], generation, app)
+        except APIError:
+            self.accounts.forget_account(record["id"])
+            raise
 
     @property
     def dry_run(self) -> bool:
@@ -115,7 +143,9 @@ class PushService:
         record = self.accounts.account(empire_token, client_ip)
         if not may_use(record, APPS[app]):
             raise APIError(403, "This account has no access to this app.")
-        moved = self.store.register(app, token, record["id"], environment, language)
+        with self.account_lock(record["id"]):
+            self.accept_access(record, app)
+            moved = self.store.register(app, token, record["id"], environment, language)
         log.info("registered %s device %s (%s)%s", app, short(token), environment,
                  ", moved from another account" if moved else "")
 
@@ -125,7 +155,9 @@ class PushService:
             raise APIError(401, "unauthenticated")
         app, token, _ = parse_device(body, with_environment=False)
         record = self.accounts.account(empire_token, client_ip)
-        if self.store.unregister(app, token, record["id"]):
+        with self.account_lock(record["id"]):
+            removed = self.store.unregister(app, token, record["id"])
+        if removed:
             log.info("removed %s device %s", app, short(token))
 
     # Internal API (province services on this host)
@@ -171,8 +203,24 @@ class PushService:
         its outbox rows go. An account with nothing here is fine too."""
         if not USER_ID.fullmatch(user):
             raise APIError(400, "Invalid account id.")
-        devices, outbox = self.store.delete_account(user)
+        with self.account_lock(user):
+            devices, outbox = self.store.delete_account(user)
+            self.accounts.forget_account(user)
         log.info("deleted account: %d device(s), %d outbox row(s)", devices, outbox)
+
+    def remove_devices(self, user: str, app: str | None = None, generation: int | None = None) -> None:
+        """Access was removed: drop registrations for all apps or Arestemis only, preserving the outbox."""
+        if not USER_ID.fullmatch(user):
+            raise APIError(400, "Invalid account id.")
+        if app is not None and app != "arestemis":
+            raise APIError(400, "Unknown app.")
+        if type(generation) is not int or not 1 <= generation <= 9_007_199_254_740_991:
+            raise APIError(400, "Invalid access generation.")
+        bundle = "de.ares-empire." + app if app else None
+        with self.account_lock(user):
+            devices = self.store.remove_devices(user, bundle, generation)
+            self.accounts.forget_account(user)
+        log.info("removed account registrations: %d device(s)", devices)
 
     def health(self) -> dict:
         return {"ok": True, "dry_run": self.dry_run, "devices": self.store.counts()}

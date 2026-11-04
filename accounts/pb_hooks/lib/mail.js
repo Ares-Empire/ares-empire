@@ -167,6 +167,17 @@ function approved(language, first, apps, hub) {
 // To the superusers: deleting a deleted account's data in a service keeps failing. job = {account, service, since,
 // attempts, error, link}.
 function deletionStuck(job) {
+  if (job.operation && job.operation !== "delete") {
+    return {
+      subject: "Ares account access change stuck: " + job.service,
+      html: "<p>Applying an account access change in <b>" + escape(job.service) + "</b> keeps failing since " +
+        escape(job.since) + " (" + job.attempts + " attempts).</p>" +
+        "<p>Account id: " + escape(job.account) + "<br>Operation: " + escape(job.operation) +
+        "<br>Last error: " + escape(job.error || "–") + "</p>" +
+        "<p>The account server keeps trying every 5 minutes. After applying the change by hand, switch on " +
+        "<b>done</b> in <a href=\"" + escape(job.link) + "\">the job</a>.</p>",
+    };
+  }
   return {
     subject: "Ares account deletion stuck: " + job.service,
     html: "<p>Deleting the data of a deleted account in <b>" + escape(job.service) + "</b> keeps failing since " +

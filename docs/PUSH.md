@@ -16,7 +16,7 @@ the "good structure" rule ([EMPIRE.md → How we build apps](../EMPIRE.md#how-we
 ```
 iPhone app ──POST /api/push/devices (Empire token)──▶ Caddy (www.ares-empire.de) ──▶ push service :8095 (public part)
 province service (Arestemis, Aresus, …) ──POST /send──▶ push service :8096 (127.0.0.1 only, never routed by Caddy)
-account server (PocketBase) ──POST /send, DELETE /internal/accounts/<id>──▶ push service :8096
+account server (PocketBase) ──POST /send, DELETE /internal/accounts/<id>[/devices[/arestemis]]──▶ push service :8096
 push service ──HTTP/2, ES256 token──▶ Apple (api.push.apple.com / api.sandbox.push.apple.com)
 ```
 
@@ -69,6 +69,26 @@ and the account's `services` must contain the service of that app (table below).
   sends no removals (the token is invalid).
 - Errors: `401` token rejected, `403` the account lacks the app's service, `400` bad body, `503` account server down.
 
+Both push listeners accept bodies up to **10,000 bytes**, checked from one decimal `Content-Length` before reading.
+POST needs the length; malformed or repeated lengths, transfer encoding, and incomplete bodies are `400`;
+an oversized body is `413`. Headers and body each have an absolute **5-second** read deadline (body timeout `408`;
+incomplete headers close the connection). Each listener has **16** request workers and its own slots; excess
+connections receive `503` immediately, with `Retry-After: 1`. The listen backlog is 32. Responses have a 5-second
+socket write timeout and each connection handles one request. Registration bodies are small; the send limit allows
+the English and German notification payloads, each subject to Apple's separate 4 KB check.
+
+Public requests also have per-client limits: **4 concurrent**, a token bucket replenished at **1 request/second**,
+and a **20-request burst**. Concurrency refusal is `503`, rate refusal is `429`, both before reading the body.
+Client bookkeeping is bounded to 4096 entries. Internal services share the loopback address, so that listener uses
+the global cap only. The hub uses **8 concurrent requests per client**, **4 requests/second**, and an **80-request
+burst**, allowing its page's asset requests while keeping worker slots available for other clients.
+
+`AUTH_TRUSTED_PROXY` lists the exact peer IP addresses allowed to supply Caddy's `X-Forwarded-For`. Defaults are
+`127.0.0.1,::1`; the hub's unit also includes `172.18.0.1` for its bridge listener. Only the last address Caddy appends
+is used; other peers use their socket address. Malformed or repeated forwarded headers use the socket address.
+The same identity is used for admission and account-server forwarding. Confirm Caddy's actual source address when
+installing the hub unit; Caddy's buffering and read timeouts are configured separately by the server operator.
+
 ## Internal API (province services on the same host)
 
 `POST http://127.0.0.1:8096/send`, JSON:
@@ -114,8 +134,24 @@ and the account's `services` must contain the service of that app (table below).
 - `DELETE http://127.0.0.1:8096/internal/accounts/<id>` → `204` (2026-10-25): the account server's call after an
   Empire account was deleted ([ACCOUNTS.md → Accounts in every app](ACCOUNTS.md#accounts-in-every-app)). That
   account's devices of every app go, and its outbox rows with them (they hold the texts sent to it); `204` also when
-  there is nothing. `400` for an id that is not 1–64 of `A–Z a–z 0–9 _ -`. No login; internal port only. Leaving one
-  app needs nothing here: the app removes its device with `DELETE /api/push/devices` when it logs out.
+  there is nothing. `400` for an id that is not 1–64 of `A–Z a–z 0–9 _ -`. No login; internal port only. Leaving
+  Arestemis also follows the access-change jobs below; the app removes its own device on logout as before.
+- `DELETE http://127.0.0.1:8096/internal/accounts/<id>/devices` → `204`: removes that account's device
+  registrations for every app after approval is removed.
+- `DELETE http://127.0.0.1:8096/internal/accounts/<id>/devices/arestemis` → `204`: removes only that account's
+  Arestemis registrations after its `arestemis` service is removed. Other app names are `400`.
+  Both device-removal routes preserve the outbox, are idempotent, and use the same id validation as account deletion.
+  They require one **`X-Empire-Access-Generation`** header: a decimal integer from 1 through 9007199254740991 (`400`
+  for missing, repeated, or invalid). They clear cached approvals and compare the generation under that account's
+  lock. Authentication runs before acquiring the lock, and its returned `access_generation` must pass the stored
+  fence before registration. Unrelated accounts' authentication never holds this lock.
+  SQLite's `account_access` table persists the highest generation, applied removal scope, and deletion marker.
+  A call older than authenticated activity, or a repeat of the applied generation, answers **204 without removing
+  devices**. A fresh authorized registration advances the fence; account deletion keeps a marker that refuses late
+  registrations. These small markers survive restart along with the device database.
+  No login; internal loopback listener only, never routed by Caddy, and
+  `404` on the public listener. PocketBase plans these calls as retryable jobs in **deletions**, run by the existing
+  **empire-deletions** cron ([ACCOUNTS.md → Taking away access](ACCOUNTS.md#taking-away-access-reaches-arestemis-and-push)).
 - Never logs a device token or an Empire token in full.
 
 ## Who sends what
@@ -157,7 +193,8 @@ simulator is tested with `xcrun simctl push <udid> <bundle id> payload.apns`.
 
 ## Operating
 
-- **Install or update** (also after every change in `push/` or `empire_language.py`): `sudo bash deploy/install-push.sh`.
+- **Install or update** (also after every change in `push/`, `empire_language.py`, or `empire_http.py`):
+  `sudo bash deploy/install-push.sh`.
   It creates the user,
   `/opt/empire-push` (venv + code), `/var/lib/empire-push`, `/etc/empire-push`, installs the unit, restarts the service
   and prints `/health`. Caddy, inside the `ares-empire.de, www.ares-empire.de` site and before the hub's catch-all:
@@ -179,7 +216,12 @@ simulator is tested with `xcrun simctl push <udid> <bundle id> payload.apns`.
   `"dry_run": false`. A key that is set but unreadable stops the service (see the journal) instead of quietly not
   sending.
 - **Tests** (Mac or server): `python3 -m venv .venv && .venv/bin/pip install -r push/requirements.txt`, then
-  `.venv/bin/python -m unittest push/test_push.py`.
+  `.venv/bin/python -m unittest push/test_push.py test_empire_http.py`. Job unit checks:
+  `node --test accounts/test_jobs.js`; PocketBase integration and rollback/reapply: `bash accounts/test-rules.sh`.
+
+The hub uses the same body cap and deadlines through `empire_http.py`, with **32** workers. Its login, sign-up and
+reset forms and JSON API fit the 10,000-byte cap. Restart `ares-empire` after updating that shared module or
+`webauth/server.py`.
 
 ### Accounts rollout (2026-10-25, lead, on the server)
 

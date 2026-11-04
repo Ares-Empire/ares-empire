@@ -1,6 +1,15 @@
 """App-facing push API messages. Codes and developer validation messages stay unchanged."""
 
 TEXTS = {
+    "Too many requests. Please try again shortly.": {
+        "en": "Too many requests. Please try again shortly.",
+        "de": "Zu viele Anfragen. Bitte versuch es in Kürze noch einmal.",
+    },
+    "This account's access changed. Please try again.": {
+        "en": "This account's access changed. Please try again.",
+        "de": "Der Zugang dieses Kontos hat sich geändert. Bitte versuch es noch einmal.",
+    },
+    "Request timed out.": {"en": "Request timed out.", "de": "Zeit für die Anfrage abgelaufen."},
     "This account has no access to this app.": {
         "en": "This account has no access to this app.",
         "de": "Dieses Konto hat keinen Zugang zu dieser App.",
