@@ -1,5 +1,10 @@
 # Planning council: reach and wake
 
+> **Focused on the wrong question.** Patrik meant the board itself, not reaching and waking sessions. Its remarks on
+> the board ("Where the seats still disagree" 1 and 3) are replaced by
+> [2026-11-05-work-board.md](2026-11-05-work-board.md). The settings it asked for are on every machine since
+> 2026-11-05.
+
 2026-11-05 evening · subject: an extension of the work board ("The Council" in `EMPIRE.md` → Expansions), as written
 in the seats' shared brief at ares-empire `27edba0` · a planning council (`docs/COUNCIL.md`), the first with a
 cross-check round · about 25 minutes. Builds on the first planning council over the board:
