@@ -63,6 +63,11 @@
   ],
   "chronicle": [
     {
+      "at": "2026-11-05",
+      "project": "arestemis",
+      "text": "Arestemis's Preismonitor reads shipping costs on more sites now, so most offers compare by their real total; a price that only holds with a coupon counts at its normal price; and an offer whose shipping a shop does not state is no longer hidden: it shows in price order with “+ Versand unbekannt”, and its alarm says so, while the price curve keeps only known totals. App build 18."
+    },
+    {
       "at": "2026-11-04",
       "project": "arestemis",
       "text": "Arestemis's Preismonitor “Überall” got its second round: every offer is checked to be the product itself, so a case never counts as the headphones' price; words that name a family or a kind of product get up to four concrete suggestions or a way to a search for things; the monitor compares the price including shipping, or finds stores near a chosen place for pickup; and “Auch gebraucht” adds used listings from marketplaces to the same page. A Codex orchestrator built and tested every step live on the real sites, the app's screens included. App build 17."
