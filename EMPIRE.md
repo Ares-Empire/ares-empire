@@ -103,6 +103,11 @@ apps and the notifications; content people wrote is not. Rules: [docs/LANGUAGES.
 **Data that cannot be rebuilt is backed up every night** (Patrik, 2026-10-25): a service that starts storing such
 data adds it to the nightly backup in the same change ([docs/BACKUP.md](docs/BACKUP.md) → New data).
 
+**Councils check the big choices** (Patrik, 2026-11-05): a few agents, each with its own role and question, look at a
+plan or a piece of work blind, then check each other's answers, and Claude brings Patrik one verdict. Used for choices
+that are hard to undo, milestones, a bug that comes back, and an expansion before it gets a plan. Method and roles:
+[docs/COUNCIL.md](docs/COUNCIL.md). When Patrik says "council", this is what he means.
+
 ---
 
 ## The hub (what the website is)
