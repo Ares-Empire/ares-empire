@@ -32,18 +32,23 @@
         logo: "brand/hermes.webp",
         status: "CONQUERED",
         domain: "aresium.de",
-        blurb: "Personal finance command — VR Bank + PayPal, imported and understood.",
+        blurb: "Personal finance from your bank's own exports — imported, sorted and understood.",
         // detail: the full-screen province page. Any field may be omitted — the page shows a
         // tidy empty state for what isn't filled in yet. `changelog` falls back to the chronicle
         // entries tagged with this slug.
         detail: {
-          about: "The empire's personal-finance command. Aresium imports VR Bank and PayPal " +
-            "activity, reconciles it, and turns raw statements into an understood picture of " +
-            "balances, cash flow and where the money actually goes.",
+          about: "The empire's personal-finance command. Aresium reads the exports of 25 German banks " +
+            "and PayPal, with no bank login and no aggregator in between, sorts every payment into a " +
+            "category by itself and learns from each correction. It shows spending and income by month " +
+            "and category, the monthly average and the fixed costs. A website and an iPhone app; on the " +
+            "iPhone the data stays on the device.",
           features: [
-            "VR Bank + PayPal import",
-            "Transaction categorisation & reconciliation",
-            "Balance and cash-flow overview",
+            "CSV, CAMT and MT940 from 25 German banks, and PayPal",
+            "Sorts by itself with known shops and local places, learns from every correction",
+            "Spending and income by month and category, each day's payments",
+            "The monthly average and the fixed costs, found on their own",
+            "Quick sort, many payments at once, money paid back linked to its expense",
+            "On the iPhone: data on the device, Face ID lock, receipts from a photo",
           ],
           setup: "",
           wip: [],

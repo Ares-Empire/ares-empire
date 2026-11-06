@@ -139,7 +139,7 @@ Mirror of `EMPIRE.projects`. Status vocabulary: `SCOUTED` (idea) → `BESIEGING`
 
 | Province | State | Domain | What it is |
 |---|---|---|---|
-| **Aresium** | CONQUERED | aresium.de | Personal finance command — VR Bank + PayPal, imported and understood. |
+| **Aresium** | CONQUERED | aresium.de | Personal finance from your bank's own exports — imported, sorted and understood; a website and an iPhone app. |
 | **Arestoteles** | CONQUERED | arestoteles.de | Patrik's Weltbild on the phone — positions, topics, mechanisms, events; read, search, edit, discuss with Claude. |
 | **Arestemis** | CONQUERED | arestemis.de (forwards to its demo) | Searches that run for you — flats, things for sale, prices and web pages; an iPhone app, every find checked by an AI, a push when one fits. |
 | **Aresync** | BESIEGING | — | Git sync across Windows & Mac — every repo, everywhere, automatically. |
