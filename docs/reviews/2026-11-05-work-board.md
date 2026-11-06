@@ -121,6 +121,9 @@ entry in `EMPIRE.md` and `web/app/empire-data.js` change to match.
   `mac-aresium` from the next prompt on; a name Patrik gave stays. Live on the MacBook and the server since
   2026-11-06. The topic in the name is how open work finds its session.
 - The five buried questions are closed.
+- **A question is asked in the session too** (later the same day): a session that only posted to the board and
+  stopped left Patrik not knowing what it needed. Now the question is asked in full in the reply, near the top, and
+  also posted to the board so it is not lost; he answers in either place, and the session closes the board item.
 
 ## The design that follows (briefs 232 and 233)
 
