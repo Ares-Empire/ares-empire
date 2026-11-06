@@ -75,7 +75,6 @@
         },
       },
 
-      // ── MUSTERING: declared provinces, gearing up — not built yet ──────────────
       {
         slug: "arestemis",
         name: "Arestemis",
@@ -83,15 +82,26 @@
         logo: "brand/artemis.webp",
         status: "CONQUERED",
         domain: "",
-        blurb: "Apartment sniper — claims new flat listings the moment they post.",
+        blurb: "Searches that run for you — flats, things for sale, prices and web pages.",
         detail: {
-          about: "The huntress. Arestemis watches the Munich housing portals and pounces on a " +
-            "new listing the instant it appears — first to the viewing, first to apply. Runs " +
-            "24/7 as a Telegram bot in the empire (formerly the FlatSniper project).",
-          features: ["Real-time listing watch", "Instant alerts", "Fast-track applying"],
+          about: "The huntress. Arestemis runs searches from the iPhone: flats and WG rooms on the " +
+            "housing portals, things for sale on marketplaces such as Kleinanzeigen, Vinted and eBay, " +
+            "a product's price in one shop or across shops, and any web page, watched for a change " +
+            "described in words. Every new find is checked against the whole search, first by its " +
+            "fields and then by an AI reading its full text, and a push arrives when one fits. It " +
+            "began as FlatSniper, a Telegram bot for flats.",
+          features: [
+            "Flats and WG rooms on WG-Gesucht, Kleinanzeigen, Immowelt and ImmoScout24",
+            "Things for sale on Kleinanzeigen, Vinted, eBay and more, with what must be and what would be nice",
+            "Preismonitor: a product's price in one shop or across shops, with a push under a chosen price",
+            "Page watch: any web page, for a change described in words",
+            "An AI check of every new find, and a push when one fits",
+            "Application texts for flats",
+          ],
           setup: "", wip: [], ideas: [], changelog: [],
         },
       },
+      // ── MUSTERING: declared provinces, gearing up — not built yet ──────────────
       {
         slug: "aresolus",
         name: "Aresolus",

@@ -555,11 +555,11 @@ DEMO_PROVINCES = {   # slug → what the demo says about it; the ring keeps this
         "features": ["Automatic categories", "Clear charts by month and category", "Image processing for receipts"]},
     "arestemis": {
         "url": ARESTEMIS_DEMO, "install": ARESTEMIS_REQUEST, "domain": "arestemis.de",
-        "blurb": "Flat finding on autopilot.",
-        "about": "Arestemis keeps one search for the flat you want, has an AI check every new listing against it and "
-                 "tells you the moment a match goes live.",
-        "features": ["One search: places, size, rent, move-in date", "An AI check of every new listing",
-                     "Instant alerts for matching listings"]},
+        "blurb": "Searches on autopilot.",
+        "about": "Arestemis runs searches for you: flats, things for sale, a product's price across shops and any web "
+                 "page. It checks every new listing against the whole search and tells you the moment one fits.",
+        "features": ["Flats, things for sale, prices and web pages", "An AI check of every new listing",
+                     "An instant alert when something fits"]},
     "arestoteles": {
         "url": DEMO_REQUEST, "domain": "", "blurb": "A personal wiki, on every device.",
         "about": "Arestoteles keeps detailed notes and fact-based positions, each with the evidence behind it, "
@@ -586,8 +586,8 @@ DEMO_CHRONICLE = [   # newest first, as the hub shows it
                                                        "receipts, right on the phone."},
     {"at": "2026-10-21", "project": "arestoteles", "text": "Arestoteles is finished: positions, evidence and RAG "
                                                            "search on every device."},
-    {"at": "2026-10-18", "project": "arestemis", "text": "Arestemis is finished: an instant alert for every matching "
-                                                         "listing."},
+    {"at": "2026-10-18", "project": "arestemis", "text": "Arestemis is finished: flats, things for sale, prices and "
+                                                         "web pages, with an alert the moment something fits."},
     {"at": "2026-10-02", "project": "aresync", "text": "Aresync is finished: every repository in step on every machine, "
                                                        "each run reported to Aresus."},
     {"at": "2026-09-30", "project": "arestoteles", "text": "Arestoteles started: a personal wiki for positions and the "
