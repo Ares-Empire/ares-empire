@@ -125,6 +125,11 @@ A single full-screen scene — clean, modern, mostly black with gold accents:
 - **Below the circle:** the **chronicle**, as a clean horizontal **timeline**.
 - **EXPAND → EXPANSIONS:** the plans on the same board; open one (or **Claim new ground**) → the CONQUER forge.
 
+What the live hub and the Empire app show comes from the server's `/root/ares-empire/data/state.json`, not from
+this repo. A province marked `"lock": true` there (Aresium, Arestoteles, Arestemis) is written by hand and the nightly
+`empire_sync` skips it: when its text in `web/app/empire-data.js` changes, change it in `state.json` too (back it up
+first). An empty `changelog` shows the province's chronicle entries, as the Empire app always does.
+
 ---
 
 ## Provinces (the project registry)
