@@ -35,10 +35,10 @@
     {
       "slug": "arestemis",
       "name": "Arestemis",
-      "url": "https://www.ares-empire.de/arestemis/contact?topic=access",
+      "url": "https://www.ares-empire.de/arestemis/demo/",
       "logo": "brand/artemis.webp",
       "status": "CONQUERED",
-      "domain": "",
+      "domain": "arestemis.de",
       "blurb": "Flat finding on autopilot.",
       "detail": {
         "about": "Arestemis keeps one search for the flat you want, has an AI check every new listing against it and tells you the moment a match goes live.",
