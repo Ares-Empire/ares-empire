@@ -110,3 +110,37 @@ communication between sessions. The fix is fewer places: derive what git knows, 
 
 Open for Patrik: the timing of the phone screen, and Aresus or the Empire app as its home. Once decided, the EXPAND
 entry in `EMPIRE.md` and `web/app/empire-data.js` change to match.
+
+## Patrik's decisions (2026-11-06)
+
+- **The phone screen comes now, in Aresus.**
+- **Open work goes to its session first.** A session that finds open work belonging to another topic (a fix waiting
+  to merge, a question that session asked) sends it to that topic's session instead of putting it on Patrik's list.
+  Only what needs his own decision or action reaches him. In the global CLAUDE.md since 2026-11-06.
+- **Sessions name themselves:** `name-me <topic>` (aresync `claude/name-me`) turns `name-me aresium` into
+  `mac-aresium` from the next prompt on; a name Patrik gave stays. Live on the MacBook and the server since
+  2026-11-06. The topic in the name is how open work finds its session.
+- The five buried questions are closed.
+
+## The design that follows (briefs 232 and 233)
+
+Because the phone screen comes now, the list lives in Aresus from the start instead of a file in a private repo
+that Aresus would have to copy. The brief counter lives there too: one counter on the server cannot hand out a
+number twice, a file edited on three machines can.
+
+- **One list, two kinds of items, each with a topic.** *Asks* need Patrik: a decision with fixed options, or an
+  action, with a due date when there is one. *Work* belongs to a topic: found by the scan, or left by a session for
+  the next session on that topic.
+- **Where items go.** Work never goes on Patrik's screen. A session that names itself gets its topic's work; a
+  session that sees work for a topic whose session is running sends it there and marks it sent (at most once a day
+  per item). Asks go to the Aresus tab; the answer reaches the asking session with its next prompt, or else the next
+  session on that topic. Work whose topic has had no session for two days shows on Patrik's screen as one line with
+  a count, not as questions.
+- **The scan** runs with every aresync run on the MacBook and the server: branches not merged, worktrees with
+  uncommitted files, commits not pushed, each with its age and its repo as topic. Its items close by themselves when
+  git no longer shows them. Brief status lines are left out of the first version: comparing their free text with
+  git is guesswork, and the branch and worktree checks find the same cases.
+- **A `board` command** (aresync) for sessions: the topic's items, ask, leave work for a topic, mark sent or done,
+  take the next brief number. A start hook prints the counts at every session start.
+- **The Aresus tab "Waiting on you":** the asks, question first; one tap answers, marks done, or opens the asking
+  session in Claude; at most one quiet push a day, only for an ask due within two days or unanswered for a day.

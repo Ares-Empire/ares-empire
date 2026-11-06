@@ -176,8 +176,7 @@ Mirror of `EMPIRE.ideas` — the **EXPAND** view. Open one from the board and it
 - **Empire accounts** — one account for every service and app: sign up with email + password, Patrik approves, every province trusts the login. Plan: [docs/ACCOUNTS.md](docs/ACCOUNTS.md).
 - **iPhone apps** — real native apps installed via TestFlight, starting with Aresium, then widgets. Plan: [docs/IPHONE-APPS.md](docs/IPHONE-APPS.md).
 - **Aresgora** — a public agora: the empire's outward-facing landing for the usable services.
-- **The Watchtower** — one status board: uptime, last deploy and health per conquered service.
-- **The Council** — Claude and Codex sessions on every machine share one work board on the server: who works on which repo, branch and brief, so clashes show before they happen, and what is done or stuck. The Empire app gets a tab with only what needs Patrik: findings with evidence and a decision to make ("a review found five issues: fix them?"); one tap decides, or opens a discussion that goes back to the session that asked. Items come from real work, not ideas made up for their own sake. Sketched with Patrik 2026-11-03.
+- **The Council** — open work and Patrik's decisions in one place, so nothing waits unnoticed once a session moves on. A scan of every repo finds work that was built but never merged or shipped; sessions name themselves by topic, and open work goes to its topic's session, not to Patrik. Only what needs his own decision or action reaches him, in Aresus's "Waiting on you" tab: one tap answers, or opens the session that asked. Planned by two councils (2026-11-03, 2026-11-05: [record](docs/reviews/2026-11-05-work-board.md)); building since 2026-11-06.
 
 ---
 

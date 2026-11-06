@@ -156,8 +156,7 @@
       { title: "Empire accounts", note: "One account for every service and app: sign up with email + password, Patrik approves, every province trusts the login." },
       { title: "iPhone apps", note: "Real native apps via TestFlight, starting with Aresium — then widgets. Code in the empire-ios repo." },
       { title: "Aresgora", note: "A public agora: the empire's outward-facing landing for the services people can actually use." },
-      { title: "The Watchtower", note: "A single status board — uptime, last deploy and health for every conquered service." },
-      { title: "The Council", note: "Claude and Codex sessions on every machine share one work board on the server: who works on which repo, branch and brief, so clashes show before they happen, and what is done or stuck. The Empire app gets a tab with only what needs Patrik: findings with evidence and a decision to make (\"a review found five issues: fix them?\"); one tap decides, or opens a discussion that goes back to the session that asked. Items come from real work, not ideas made up for their own sake. Sketched with Patrik 2026-11-03." },
+      { title: "The Council", note: "Open work and Patrik's decisions in one place, so nothing waits unnoticed once a session moves on. A scan of every repo finds work that was built but never merged or shipped; sessions name themselves by topic, and open work goes to its topic's session, not to Patrik. Only what needs his own decision or action reaches him, in Aresus's “Waiting on you” tab: one tap answers, or opens the session that asked. Building since 2026-11-06." },
     ],
 
     // ── Chronicle: what was done, newest first (Claude Code appends here) ──
