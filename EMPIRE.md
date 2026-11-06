@@ -141,7 +141,7 @@ Mirror of `EMPIRE.projects`. Status vocabulary: `SCOUTED` (idea) → `BESIEGING`
 |---|---|---|---|
 | **Aresium** | CONQUERED | aresium.de | Personal finance from your bank's own exports — imported, sorted and understood; a website and an iPhone app. |
 | **Arestoteles** | CONQUERED | arestoteles.de | Patrik's Weltbild on the phone — positions, topics, mechanisms, events; read, search, edit, discuss with Claude. |
-| **Arestemis** | CONQUERED | arestemis.de (forwards to its demo) | Searches that run for you — flats, things for sale, prices and web pages; an iPhone app, every find checked by an AI, a push when one fits. |
+| **Arestemis** | CONQUERED | arestemis.de (its demo) | Searches that run for you — flats, things for sale, prices and web pages; an iPhone app, every find checked by an AI, a push when one fits. |
 | **Aresync** | BESIEGING | — | Git sync across Windows & Mac — every repo, everywhere, automatically. |
 | **Arescope** | BESIEGING | — | Personal exposure scanner — searches public sources for your own name, emails and photos, an AI rates each finding, fixes are proposed. Works in parts; no phone app planned (2026-10-24). |
 
@@ -157,7 +157,7 @@ repo as a top-level folder, and live services and data volumes depend on their p
 | Province | Login | iPhone app | Repo |
 |---|---|---|---|
 | **Aresium** | **Empire login** (website, hub hand-off and API for the app) | **on Patrik's iPhone** (internal TestFlight, 2026-10-29) | `aresium` |
-| **Arestemis** | **Empire login** (API for the app; a public demo, no website of its own) | **on Patrik's iPhone** (internal TestFlight, 2026-10-31): [docs/ARESTEMIS-APP.md](docs/ARESTEMIS-APP.md) | `Arestemis` |
+| **Arestemis** | **Empire login** (API for the app; its demo at arestemis.de) | **on Patrik's iPhone** (internal TestFlight, 2026-10-31): [docs/ARESTEMIS-APP.md](docs/ARESTEMIS-APP.md) | `Arestemis` |
 | **Aresus** (+ Aresync) | **Empire login** (API for the app, no website; Aresync reports with machine tokens) | **on Patrik's iPhone** (internal TestFlight, 2026-10-31): [docs/ARESUS-APP.md](docs/ARESUS-APP.md) | `aresus`, `aresync` |
 | **Arestoteles** | **Empire login** (API for the app); the website keeps its own login | **on TestFlight** (internal, 2026-11-01): [docs/ARESTOTELES-APP.md](docs/ARESTOTELES-APP.md) | `Arestoteles`, vault `carlsenares/opinions` |
 | **Ares Empire** (hub) | **Empire login** — sign-up, approval and password reset live here; the push service for all apps ([docs/PUSH.md](docs/PUSH.md)) | **on TestFlight** (internal, 2026-11-01): [docs/EMPIRE-APP.md](docs/EMPIRE-APP.md) | `ares-empire` |

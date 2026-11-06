@@ -113,7 +113,7 @@ class GeneratorTests(unittest.TestCase):
                           "https://www.ares-empire.de/arestemis/contact?topic=access",
                           "https://www.ares-empire.de/contact", None, None])
         self.assertEqual([p["url"] for p in demo["projects"]][1:3],
-                         ["https://www.ares-empire.de/arestemis/demo/", "https://www.ares-empire.de/contact"])
+                         ["https://arestemis.de/", "https://www.ares-empire.de/contact"])
         # the demo's band asks for the Ares Empire app on the Empire's contact page
         api = (samples.WEB_SAMPLES.parent / "empire-api.js").read_text(encoding="utf-8")
         self.assertIn(f'<a href="{samples.EMPIRE_REQUEST}" target="_blank" rel="noopener">Get the app</a>', api)

@@ -83,10 +83,10 @@
       {
         slug: "arestemis",
         name: "Arestemis",
-        url: "",
+        url: "https://arestemis.de",
         logo: "brand/artemis.webp",
         status: "CONQUERED",
-        domain: "",
+        domain: "arestemis.de",
         blurb: "Searches that run for you — flats, things for sale, prices and web pages.",
         detail: {
           about: "The huntress. Arestemis runs searches from the iPhone: flats and WG rooms on the " +

@@ -530,8 +530,7 @@ def build(seed: dict | None = None) -> dict[str, object]:
 # The hub for anyone, without an account (webauth/server.py serves it; web/app/empire-api.js loads these two files on
 # /demo). A made-up guest has the apps on the ring, with texts written for strangers and a made-up chronicle: when each
 # was started and finished (Patrik, 2026-10-27). Aresium links its own demo, and its install button its own contact form
-# with "Get the app" chosen (2026-10-30); Arestemis its own demo (www.ares-empire.de/arestemis/demo/, brief 144,
-# 2026-11-06), its install button its own contact page on the hub on "Get the app" (2026-11-01); Arestoteles, without a form of its own, the Empire's contact page; Aresus and Aresync, Patrik's own
+# with "Get the app" chosen (2026-10-30); Arestemis its own demo (arestemis.de since 2026-11-06, brief 144), its install button its own contact page on the hub on "Get the app" (2026-11-01); Arestoteles, without a form of its own, the Empire's contact page; Aresus and Aresync, Patrik's own
 # tools, are shown without a link or an install button. The demo's band asks for the Ares Empire app on the Empire's
 # page (web/app/empire-api.js). Nothing of the real seed's content goes into it: only its words (name, tagline, STATUS)
 # and the provinces' logos.
@@ -542,7 +541,7 @@ DEMO_REQUEST = "https://www.ares-empire.de/contact"   # the Empire's contact pag
 EMPIRE_REQUEST = DEMO_REQUEST + "?topic=access"       # the Ares Empire app (the demo's band, web/app/empire-api.js)
 ARESIUM_REQUEST = "https://aresium.de/contact?topic=access"   # Aresium's own form (aresium src/web/links.ts, GET_APP)
 ARESTEMIS_REQUEST = "https://www.ares-empire.de/arestemis/contact?topic=access"   # its own page (webauth/contact.py)
-ARESTEMIS_DEMO = "https://www.ares-empire.de/arestemis/demo/"   # the Arestemis server's public demo (brief 144)
+ARESTEMIS_DEMO = "https://arestemis.de/"   # the Arestemis server's public demo (brief 144), on its own domain
 ACCOUNTS[DEMO_TOKEN] = {"id": "sampledemo00001", "name": "Guest", "admin": False, "approved": True, "verified": True,
                         "services": ["empire", "aresium", "arestemis", "arestoteles", "aresus", "aresync"],
                         "requested": []}

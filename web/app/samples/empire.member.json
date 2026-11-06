@@ -9,10 +9,10 @@
     {
       "slug": "arestemis",
       "name": "Arestemis",
-      "url": "",
+      "url": "https://arestemis.de",
       "logo": "brand/artemis.webp",
       "status": "CONQUERED",
-      "domain": "",
+      "domain": "arestemis.de",
       "blurb": "Searches that run for you — flats, things for sale, prices and web pages.",
       "detail": {
         "about": "The huntress. Arestemis runs searches from the iPhone: flats and WG rooms on the housing portals, things for sale on marketplaces such as Kleinanzeigen, Vinted and eBay, a product's price in one shop or across shops, and any web page, watched for a change described in words. Every new find is checked against the whole search, first by its fields and then by an AI reading its full text, and a push arrives when one fits. It began as FlatSniper, a Telegram bot for flats.",
