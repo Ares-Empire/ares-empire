@@ -173,6 +173,11 @@
   "chronicle": [
     {
       "at": "2026-11-06",
+      "project": "arestemis",
+      "text": "A search for things now asks what must be and what would be nice: “Muss sein” sorts out listings that clearly break it, “Wäre schön” never does. Sizes, colours and materials come from the sites' own fields, so a size-41 shoe no longer reaches a size-43 search, and clear cases are decided at once without the slower text check. Listings that could not be checked in time no longer vanish: they stay seven days under “Nicht rechtzeitig geprüft”. App build 23."
+    },
+    {
+      "at": "2026-11-06",
       "project": "aresus",
       "text": "The empire keeps its open work in one place now. A scan of every repo finds work that was built but never merged or shipped; Claude sessions name themselves by topic and hand open work to the session on that topic; and only questions that need Patrik reach him, in Aresus's new “For you” tab, where one tap answers. Aresus build 9."
     },
