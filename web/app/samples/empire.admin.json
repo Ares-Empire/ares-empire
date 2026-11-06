@@ -172,6 +172,11 @@
   "addable": [],
   "chronicle": [
     {
+      "at": "2026-11-06",
+      "project": "aresus",
+      "text": "The empire keeps its open work in one place now. A scan of every repo finds work that was built but never merged or shipped; Claude sessions name themselves by topic and hand open work to the session on that topic; and only questions that need Patrik reach him, in Aresus's new “For you” tab, where one tap answers. Aresus build 9."
+    },
+    {
       "at": "2026-11-05",
       "project": "arestemis",
       "text": "Arestemis's Preismonitor reads shipping costs on more sites now, so most offers compare by their real total; a price that only holds with a coupon counts at its normal price; and an offer whose shipping a shop does not state is no longer hidden: it shows in price order with “+ Versand unbekannt”, and its alarm says so, while the price curve keeps only known totals. App build 18."
@@ -551,12 +556,8 @@
       "note": "A public agora: the empire's outward-facing landing for the services people can actually use."
     },
     {
-      "title": "The Watchtower",
-      "note": "A single status board — uptime, last deploy and health for every conquered service."
-    },
-    {
       "title": "The Council",
-      "note": "Claude and Codex sessions on every machine share one work board on the server: who works on which repo, branch and brief, so clashes show before they happen, and what is done or stuck. The Empire app gets a tab with only what needs Patrik: findings with evidence and a decision to make (\"a review found five issues: fix them?\"); one tap decides, or opens a discussion that goes back to the session that asked. Items come from real work, not ideas made up for their own sake. Sketched with Patrik 2026-11-03."
+      "note": "Open work and Patrik's decisions in one place, so nothing waits unnoticed once a session moves on. A scan of every repo finds work that was built but never merged or shipped; sessions name themselves by topic, and open work goes to its topic's session, not to Patrik. Only what needs his own decision or action reaches him, in Aresus's “Waiting on you” tab: one tap answers, or opens the session that asked. Building since 2026-11-06."
     }
   ],
   "pending": 3
