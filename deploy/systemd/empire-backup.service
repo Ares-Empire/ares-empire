@@ -6,6 +6,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
+UMask=0077
 # Runs straight from the checkout, so a pulled change applies the next night (aresync deploys the repo).
 WorkingDirectory=/root/ares-empire
 ExecStart=/usr/bin/python3 /root/ares-empire/backup/empire_backup.py

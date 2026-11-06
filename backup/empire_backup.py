@@ -60,19 +60,22 @@ FILES = [
     ("aresium/personal.json", "/root/aresium/config/personal.json", True),
     ("aresus/machines.json", "/root/aresus/machines.json", True),
     ("secrets/ares-empire.env", "/root/ares-empire/.env", True),
-    ("secrets/push.env", "/root/ares-empire/push/.env", False),
+    ("secrets/push.env", "/root/ares-empire/push/.env", True),
     ("secrets/aresium.env", "/root/aresium/.env", True),
     ("secrets/arestemis.env", "/root/Arestemis/.env", True),
     ("secrets/aresus.env", "/root/aresus/.env", True),
     ("secrets/arestoteles.env", "/opt/arestoteles/.env", True),
+    ("secrets/arestoteles-vault.env", "/root/Arestoteles/vault.env", True),
     ("secrets/aresync-config", "/root/aresync/config", True),
     ("server/Caddyfile", "/etc/caddy/Caddyfile", True),
+    ("server/owner.json", "/root/.config/ares-empire/owner.json", True),
 ]
 
 # Folders copied as they are: (path in the copy, live path). Skipped when the folder does not exist.
 DIRS = [
     ("accounts/storage", "/var/lib/empire-accounts/pb_data/storage"),
     ("server/aresync-hooks", "/root/aresync/hooks"),
+    ("secrets/empire-push", "/etc/empire-push"),
 ]
 
 # The empire's own systemd units (the repos hold most of them, not all), into server/systemd/.
@@ -146,7 +149,8 @@ def copy_sqlite(src: Path, dst: Path) -> dict[str, int]:
             raise BackupError(f"copy of {src} failed its integrity check: {result}")
         tables = [r[0] for r in check.execute(
             "select name from sqlite_master where type = 'table' and name not like 'sqlite_%' order by name")]
-        return {t: check.execute(f'select count(*) from "{t}"').fetchone()[0] for t in tables}
+        return {t: check.execute('select count(*) from "' + t.replace('"', '""') + '"').fetchone()[0]
+                for t in tables}
     finally:
         check.close()
 
@@ -181,14 +185,19 @@ def copy_dir(src: Path, dst: Path) -> bool:
     return True
 
 
-def copy_units(dst: Path, unit_dir: Path = UNIT_DIR) -> int:
+def copy_units(dst: Path, unit_dir: Path | None = None) -> int:
+    unit_dir = unit_dir if unit_dir is not None else UNIT_DIR
     n = 0
     for pattern in UNIT_PATTERNS:
         for unit in sorted(unit_dir.glob(pattern)):
-            if unit.is_file() and not unit.is_symlink():
+            if unit.is_file():
                 dst.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(unit, dst / unit.name)
                 n += 1
+        for dropin in sorted(unit_dir.glob(pattern + ".d")):
+            for conf in sorted(dropin.glob("*.conf")):
+                if copy_file(conf, dst / dropin.name / conf.name, True):
+                    n += 1
     return n
 
 
@@ -205,8 +214,14 @@ def sha256(path: Path) -> str:
 def payload_files(day_dir: Path) -> list[Path]:
     """Every regular file in the copy except the manifest, sorted, relative to the copy's folder."""
     manifest = Path("MANIFEST.json")
-    return sorted(rel for p in day_dir.rglob("*")
-                  if p.is_file() and not p.is_symlink() and (rel := p.relative_to(day_dir)) != manifest)
+    files = []
+    for path in day_dir.rglob("*"):
+        rel = path.relative_to(day_dir)
+        if path.is_symlink() or not (path.is_file() or path.is_dir()):
+            raise BackupError(f"unsupported backup entry {rel}")
+        if path.is_file() and rel != manifest:
+            files.append(rel)
+    return sorted(files)
 
 
 def write_manifest(day_dir: Path, date: str, created: str, counts: dict[str, dict[str, int]]) -> dict:
@@ -244,7 +259,18 @@ def write_archive(day_dir: Path, date: str, out: Path, recipients: Path) -> None
 
 def prune(folder: Path, pattern: re.Pattern, keep: int) -> list[str]:
     """Delete all but the `keep` newest entries whose names match `pattern` (names sort by date). Nothing else."""
-    names = sorted(p.name for p in folder.iterdir() if pattern.match(p.name))
+    names = []
+    for path in folder.iterdir():
+        if path.is_symlink() or not pattern.fullmatch(path.name):
+            continue
+        if not (path.is_dir() if pattern == DAY else path.is_file()):
+            continue
+        try:
+            datetime.strptime(path.name[:10], "%Y-%m-%d")
+        except ValueError:
+            continue
+        names.append(path.name)
+    names.sort()
     removed = names[:-keep] if keep > 0 else names
     for name in removed:
         path = folder / name
@@ -275,6 +301,7 @@ def make_copy(day_dir: Path) -> dict[str, dict[str, int]]:
 
 
 def main() -> int:
+    os.umask(0o077)
     if os.geteuid() != 0:
         print("run as root (empire-backup.service does)", file=sys.stderr)
         return 1

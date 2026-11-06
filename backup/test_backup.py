@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import shutil
 import sqlite3
 import subprocess
@@ -60,6 +61,41 @@ class CopyTests(unittest.TestCase):
         with self.assertRaises(bk.BackupError):
             bk.copy_sqlite(self.tmp / "nope.db", self.tmp / "copy.db")
 
+    def test_sqlite_quoted_table_name(self) -> None:
+        live = self.tmp / "quoted.db"
+        with sqlite3.connect(live) as db:
+            db.execute('create table "a""b" (id integer)')
+        db.close()
+        self.assertEqual(bk.copy_sqlite(live, self.tmp / "copy.db"), {'a"b': 0})
+
+    def test_startup_files_are_in_inventory(self) -> None:
+        self.assertIn(("server/owner.json", "/root/.config/ares-empire/owner.json", True), bk.FILES)
+        self.assertIn(("secrets/empire-push", "/etc/empire-push"), bk.DIRS)
+
+    def test_live_services_require_their_settings(self) -> None:
+        self.assertIn(("secrets/arestoteles-vault.env", "/root/Arestoteles/vault.env", True), bk.FILES)
+        self.assertIn(("secrets/push.env", "/root/ares-empire/push/.env", True), bk.FILES)
+
+    def test_payload_links_fail_instead_of_disappearing(self) -> None:
+        (self.tmp / "file").write_text("made up")
+        (self.tmp / "link").symlink_to("file")
+        with self.assertRaises(bk.BackupError):
+            bk.write_manifest(self.tmp, "2026-10-26", "2026-10-26T00:00:00Z", {})
+
+    def test_unit_overrides_and_link_targets_are_copied(self) -> None:
+        units = self.tmp / "units"
+        units.mkdir()
+        target = self.tmp / "custom.service"
+        target.write_text("[Service]\nExecStart=/bin/true\n")
+        (units / "ares-custom.service").symlink_to(target)
+        dropin = units / "ares-custom.service.d"
+        dropin.mkdir()
+        (dropin / "override.conf").write_text("[Service]\nRestart=always\n")
+        bk.copy_units(self.tmp / "out", units)
+        self.assertEqual((self.tmp / "out/ares-custom.service").read_text(), target.read_text())
+        self.assertEqual((self.tmp / "out/ares-custom.service.d/override.conf").read_text(),
+                         (dropin / "override.conf").read_text())
+
     def test_files_required_and_optional(self) -> None:
         src = self.tmp / "a.env"
         src.write_text("KEY=1\n")
@@ -68,7 +104,7 @@ class CopyTests(unittest.TestCase):
         with self.assertRaises(bk.BackupError):
             bk.copy_file(self.tmp / "missing", self.tmp / "out" / "c", True)
 
-    def test_units_only_empire_files_not_links(self) -> None:
+    def test_units_only_empire_files_including_link_targets(self) -> None:
         units = self.tmp / "units"
         units.mkdir()
         for name in ("aresus.service", "empire-backup.timer", "ares-empire.service", "nametbd2-x.service",
@@ -76,9 +112,10 @@ class CopyTests(unittest.TestCase):
             (units / name).write_text("[Unit]\n")
         (units / "empire-link.service").symlink_to(units / "aresus.service")
         n = bk.copy_units(self.tmp / "out", units)
-        self.assertEqual(n, 4)
+        self.assertEqual(n, 5)
         self.assertEqual(sorted(p.name for p in (self.tmp / "out").iterdir()),
-                         ["ares-empire.service", "aresus.service", "aresync.timer", "empire-backup.timer"])
+                         ["ares-empire.service", "aresus.service", "aresync.timer", "empire-backup.timer",
+                          "empire-link.service"])
 
     def test_make_copy_layout(self) -> None:
         live = self.tmp / "live"
@@ -158,6 +195,15 @@ class ManifestTests(unittest.TestCase):
 
 
 class PruneTests(unittest.TestCase):
+    def test_invalid_names_and_links_do_not_displace_copies(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            (folder / "2026-10-01.tar.gz.age").write_text("keep")
+            (folder / "2026-99-99.tar.gz.age").write_text("unrelated")
+            (folder / "2026-10-02.tar.gz.age").symlink_to("2026-10-01.tar.gz.age")
+            self.assertEqual(bk.prune(folder, bk.ARCHIVE, 1), [])
+            self.assertTrue((folder / "2026-10-01.tar.gz.age").is_file())
+
     def test_keeps_newest_and_touches_nothing_else(self) -> None:
         tmp = Path(tempfile.mkdtemp())
         try:
@@ -187,6 +233,37 @@ class PruneTests(unittest.TestCase):
             self.assertTrue((tmp / ".2026-10-10.partial").exists())
         finally:
             shutil.rmtree(tmp)
+
+
+class ServeTests(unittest.TestCase):
+    def test_only_complete_named_archives_can_be_downloaded(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            script = root / "serve.sh"
+            source = (Path(__file__).parent / "serve.sh").read_text()
+            script.write_text(source.replace("OUTBOX=/var/backups/empire/outbox", f'OUTBOX="{root}"'))
+            logger = root / "logger"
+            logger.write_text("#!/bin/sh\nexit 0\n")
+            logger.chmod(0o700)
+            name = "2026-10-26.tar.gz.age"
+            (root / name).write_bytes(b"invented encrypted bytes")
+
+            def request(command):
+                return subprocess.run(["/bin/sh", str(script)], capture_output=True,
+                                      env={"PATH": str(root) + ":" + os.defpath,
+                                           "SSH_ORIGINAL_COMMAND": command})
+
+            self.assertEqual(request("get " + name).returncode, 2)
+            (root / (name + ".sha256")).write_text("fake checksum")
+            result = request("get " + name)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, b"invented encrypted bytes")
+            for command in ("", "sh", "get ../" + name, "get /" + name,
+                            "get " + name + "; id", "get " + name + "\nwhoami"):
+                with self.subTest(command=command):
+                    result = request(command)
+                    self.assertEqual(result.returncode, 2)
+                    self.assertEqual(result.stdout, b"")
 
 
 if __name__ == "__main__":
