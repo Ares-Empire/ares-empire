@@ -94,8 +94,11 @@ whether portals accept the input lengths some scenarios need; TestFlight binarie
    Advice: no fresh-repo swap for these alone; bundle them with the older real file name already in that history if one is ever done.
    (Board #40.)
 
-**Found on the way** (not a code finding): the Mac's drop agent had lost Full Disk Access since early 2026-11-06,
-so files from the phone waited on the server; Patrik's action (board #43).
+**Found on the way** (not a code finding, corrected the same day): the Mac's drop agent refuses about one pass in five
+with "no access to documents". The cause is not a lost permission: on macOS `/usr/bin/python3` and `/usr/bin/git` are
+the same Xcode helper binary under two names, and after git has run, macOS sometimes credits the drop agent to
+`/usr/bin/git`, which has no Full Disk Access (seen in the TCC log, `responsible_path=/usr/bin/git`). The next pass
+works, so drops arrive a minute later; all four drops so far landed and none were waiting. Fix: see board.
 
 ## Cost
 
