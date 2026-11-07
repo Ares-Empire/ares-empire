@@ -22,8 +22,11 @@ Only what cannot be rebuilt. The code is on GitHub; the Arestoteles vault is pus
 | `MANIFEST.json` | every file's size and SHA-256, row counts per table | made by the job |
 
 Not in it, on purpose: the Arestoteles vault (GitHub), its search index and model (rebuilt), Docker images and Python
-environments (rebuilt), the GitHub login and deploy keys (made again), and nametbd2, a separate project on the same
-server that is not part of the empire.
+environments (rebuilt), the GitHub login and deploy keys (made again), nametbd2, a separate project on the same
+server that is not part of the empire, and Aresus drops waiting for the Mac (`DROP_DIR`: files on their way from the
+phone, encrypted for the Mac). Drops wait minutes, or days while the Mac is off; a server lost in that time loses them,
+and the original stays wherever it was shared from (security sweep 2026-11-07, accepted). After a rebuild the drops
+database starts empty, and its ids never repeat an earlier database's (aresus, brief 246).
 
 **New data:** a service that starts storing data that cannot be rebuilt adds it to the lists at the top of
 `backup/empire_backup.py` (`POSTGRES`, `SQLITE`, `FILES`, `DIRS`) and to this table, in the same change. A required file
