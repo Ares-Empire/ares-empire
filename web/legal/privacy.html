@@ -1,5 +1,5 @@
 <h1>Privacy policy</h1>
-<p class="stand">Last updated: 6 November 2026</p>
+<p class="stand">Last updated: 7 November 2026</p>
 
 <p>This privacy policy describes the processing of personal data when using the websites www.ares-empire.de,
 aresium.de and arestemis.de (the Arestemis demo), the demo pages of the Ares apps, the account server auth.ares-empire.de and the Ares Empire iPhone apps.</p>
@@ -133,6 +133,35 @@ against misuse. The information is deleted once the bank or format has been adde
 months.</p>
 <p>Messages sent with "Contact &amp; support" in Aresium are processed like messages sent with the contact form
 (section 4); the type of message, the app version and the iOS version are sent as well.</p>
+<h3>Arestemis</h3>
+<p>Arestemis runs the searches set up in the app (flats, things for sale, price monitors and watched web pages) on
+the Ares Empire server and reports new listings that fit. For this, the server stores for each user account: the
+searches with everything entered in them (for example places, prices, search words, wishes and their free texts, the
+address of a watched page), the settings (including the optional "About you" text and an own application text), the
+listings found with their state (new, saved, applied, dismissed), the reasons why a listing fits or was filtered out,
+and application texts created in the app. Listings are public data of the sites; a flat listing can name a landlord or
+a flatmate. For things for sale, no seller names are stored.</p>
+<p>"About you" is optional and is used only to check flat listings and to write application texts. Enter only what a
+landlord may know, and no information about health, religion or other special categories of personal data.</p>
+<p>Whether a listing fits is checked by a language model. For this, the server sends the search and the listing to a
+provider of language models: Groq, Inc., USA, and, only for things for sale and only when Groq's daily allowance is used up,
+Cloudflare, Inc., USA. For flats, the "About you" text is sent as well; for things for sale, price monitors and watched
+pages it is not. Groq also receives what an application text is written from (the listing, the own application text,
+"About you" and the contact name in the listing), the sentence typed for "Describe it", the search words for the
+spelling check, and the text of the watched pages and shop pages that the server reads. Both providers process the data on behalf of the controller
+only to produce the answer and do not use it to train models. The model assesses listings, not people; the result is
+shown in the app, and you decide what to do with it.</p>
+<p>To search, the server sends each chosen site the search the way a search on that site would (for example search
+words, price range, place and radius); no account and no person is named. Watched pages and shop pages are read by the
+server, so the site sees only the server. In the app, listing photos load directly from the sites' image
+servers, which therefore receive the iPhone's IP address; "Open listing" opens the site's own page. The sites' privacy
+policies apply to this.</p>
+<p>A search is deleted together with its listings and reasons when it is deleted in the app. Filtered-out listings and
+listings that were not checked in time are kept for 7 days, other listings that no search needs any more for 30 days,
+and the list of listings already seen for 180 days. Price histories of shop pages contain only public prices and are
+kept for a year. "Leave Arestemis" in the app and deleting the user account delete the account's Arestemis data; only
+the account's number is kept, with a marker that prevents an outdated login from restarting its searches.</p>
+<p>The legal basis is Art. 6(1)(b) GDPR (providing the searches you set up).</p>
 <h2>7. Recipients</h2>
 <p>Personal data is transmitted to, or processed on behalf of the controller by, the following recipients:</p>
 <ul>
@@ -141,13 +170,18 @@ months.</p>
     submitted bank formats and bank names),</li>
   <li>IONOS SE, Montabaur, Germany: the controller's email mailbox,</li>
   <li>Apple Distribution International Ltd., Ireland, and Apple Inc., USA: delivery of push notifications,</li>
+  <li>Groq, Inc., USA: checking listings and writing texts with language models in Arestemis (section 6),</li>
+  <li>Cloudflare, Inc., USA: checking things for sale with a language model in Arestemis when Groq's daily allowance
+    is used up (section 6),</li>
 </ul>
 <p>Personal data is not passed on to any other third parties, sold or used for advertising.</p>
 
 <h2>8. Transfers to third countries</h2>
 <p>Resend processes data in the USA. Resend is certified under the EU-U.S. Data Privacy Framework, for which the
 European Commission has adopted an adequacy decision (Art. 45 GDPR). Apple transfers data from the EU to the USA on
-the basis of standard contractual clauses (Art. 46(2)(c) GDPR).</p>
+the basis of standard contractual clauses (Art. 46(2)(c) GDPR). Groq processes data in the USA on the basis of the
+standard contractual clauses in its data processing addendum (Art. 46(2)(c) GDPR). Cloudflare is certified under the
+EU-U.S. Data Privacy Framework (Art. 45 GDPR).</p>
 
 <h2>9. Storage period</h2>
 <p>Personal data is deleted as soon as it is no longer needed for its purpose and no statutory retention obligations
