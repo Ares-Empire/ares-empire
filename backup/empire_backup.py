@@ -76,6 +76,9 @@ DIRS = [
     ("accounts/storage", "/var/lib/empire-accounts/pb_data/storage"),
     ("server/aresync-hooks", "/root/aresync/hooks"),
     ("secrets/empire-push", "/etc/empire-push"),
+    # Arestemis test sets and their labels: hand-made work, not rebuildable (security sweep 2026-11-07). No DB copies.
+    ("arestemis/testset", "/root/arestemis-eval/testset"),
+    ("arestemis/site-eval", "/root/arestemis-eval/site-eval"),
 ]
 
 # The empire's own systemd units (the repos hold most of them, not all), into server/systemd/.

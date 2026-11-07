@@ -13,6 +13,7 @@ Only what cannot be rebuilt. The code is on GitHub; the Arestoteles vault is pus
 | `aresium/personal.json` | Aresium's personal settings (git-ignored) | `/root/aresium/config/` |
 | `accounts/data.db`, `auxiliary.db`, `storage/` | Empire accounts (PocketBase) | `/var/lib/empire-accounts/pb_data/` |
 | `arestemis/arestemis.db` | searches, listings, matches, application texts | `/root/Arestemis/data/` |
+| `arestemis/testset/`, `site-eval/` | the labelled test sets (listing texts with Claude's labels) and every test run's results, see Arestemis `docs/TEST-SET.md` | `/root/arestemis-eval/` |
 | `aresus/aresus.db`, `machines.json` | uptime, incidents, sync runs; machine token hashes | `/root/aresus/` |
 | `push/push.db` | push device registrations | `/var/lib/empire-push/` |
 | `hub/state.json`, `sync-meta.json` | the hub's provinces and chronicle | `/root/ares-empire/data/` |
