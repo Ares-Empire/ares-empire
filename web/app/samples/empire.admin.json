@@ -179,6 +179,11 @@
   "chronicle": [
     {
       "at": "2026-11-07",
+      "project": "aresium",
+      "text": "Aresium reads a Sparkasse's statements as they come, a ZIP of daily CAMT files, and Excel exports, without unzipping or converting first, and sorts a few more cafés, bars, clinics and bike shops by itself (10 fewer misses in the test set, none of Patrik's own payments changed). A review of the new reader by another session found that a crafted Excel file could exhaust the app's memory and that a ZIP could merge two look-alike payments; both were fixed before testers got it. Automatic import was researched: the banks' own FinTS interface can fetch transactions straight from the iPhone with no server in between, once the banking association registers Aresium and Apple's rules for individual developers are clear (aresium/docs/AUTO-IMPORT.md). Build 26 went to Apple's review for testers."
+    },
+    {
+      "at": "2026-11-07",
       "project": "aresync",
       "text": "A file sent from the iPhone that already reached the MacBook no longer shows as “Not sent”. A receipt had landed in Rechnungen, but the phone missed the server's confirmation, sent the file again a day later and took the server's refusal for a failure. Now the app asks the server before it sends a file a second time, and clears such leftovers by itself when it opens. Aresus build 10."
     },
