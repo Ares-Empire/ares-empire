@@ -102,10 +102,15 @@ routerAdd("POST", "/api/empire/leave", (e) => {
   if (typeof service !== "string" || !accounts.services(e.app).includes(service)) {
     throw new BadRequestError(accounts.answer(e, "unknownService"));
   }
-  const record = e.app.findRecordById("users", e.auth.id);
-  record.set("services", accounts.without(accounts.values(record, "services"), [service]));
-  record.set("requested", accounts.without(accounts.values(record, "requested"), [service]));
-  e.app.save(record);
+  // Read, change and save in one transaction: the lists saved are the current ones minus this service, so an
+  // administrator's change saved at the same moment (taking another app away) is never written back over.
+  let record;
+  e.app.runInTransaction((txApp) => {
+    record = txApp.findRecordById("users", e.auth.id);
+    record.set("services", accounts.without(accounts.values(record, "services"), [service]));
+    record.set("requested", accounts.without(accounts.values(record, "requested"), [service]));
+    txApp.save(record);
+  });
   return e.json(200, { services: accounts.values(record, "services"), requested: accounts.values(record, "requested") });
 }, $apis.requireAuth("users"));
 

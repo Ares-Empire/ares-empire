@@ -167,3 +167,45 @@ test("an older service edit preserves a newer approval decision", () => {
   assert.equal(jobs.accessChanged(current, older), true);
   assert.equal(older.getStringSlice("services").join(","), "empire");
 });
+
+test("leaving an app saves the account's current lists, read in the same transaction", () => {
+  const routes = {};
+  const ignore = () => {};
+  const context = {
+    module: { exports: {} },
+    __hooks: path.join(__dirname, "pb_hooks"),
+    require,
+    onRecordCreate: ignore, onRecordUpdate: ignore, onRecordCreateRequest: ignore, onRecordUpdateRequest: ignore,
+    routerUse: ignore,
+    routerAdd: (method, route, handler) => { routes[method + " " + route] = handler; },
+    $apis: { requireAuth: () => null },
+    ForbiddenError: Error, BadRequestError: Error,
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "pb_hooks/accounts.pb.js"), "utf8"), context);
+  // An administrator took Arestemis away while the request ran: a read outside the transaction would still see it.
+  const stale = new Record({ id: "user1", services: ["empire", "arestemis"], requested: [] });
+  const current = new Record({ id: "user1", services: ["empire"], requested: [] });
+  const users = { fields: { getByName: () => ({ values: ["empire", "arestemis", "aresus"] }) } };
+  const saved = [];
+  const transaction = {
+    findRecordById: () => current,
+    findCollectionByNameOrId: () => users,
+    save: (record) => saved.push(record),
+  };
+  const app = {
+    findRecordById: () => stale,
+    findCollectionByNameOrId: () => users,
+    save: (record) => saved.push(record),
+    runInTransaction: (fn) => fn(transaction),
+  };
+  const e = {
+    app,
+    auth: { id: "user1", getBool: () => false },
+    requestInfo: () => ({ body: { service: "empire" } }),
+    json: (status, body) => ({ status, body }),
+  };
+  const answer = routes["POST /api/empire/leave"](e);
+  assert.deepEqual(saved.map((record) => record.getStringSlice("services")), [[]]);
+  // The handler runs in another context, so its objects are compared as JSON.
+  assert.equal(JSON.stringify(answer), JSON.stringify({ status: 200, body: { services: [], requested: [] } }));
+});
