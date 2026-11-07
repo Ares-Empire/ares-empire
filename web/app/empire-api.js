@@ -4,6 +4,25 @@
    (app/samples/empire.demo.json), each app's link from its sample (Aresium's demo, an app's contact page) and a band
    saying it is a demo, whose "Get the app" asks for the Ares Empire app on its contact page. */
 (function () {
+  const HUB_LOOK = "dark";
+  const CONTACT_PATHS = ["/contact", "/kontakt", "/arestemis/contact", "/arestemis/kontakt"];
+  const LOOK_PAGES = new Map([
+    ["aresium.de", null], // Every Aresium page reads the convention.
+    ["arestemis.de", ["/", "/contact", "/kontakt"]],
+    ["www.ares-empire.de", CONTACT_PATHS],
+  ]);
+  // Pass the hub's look for the visit (?look=light|dark); the receiving page never remembers it.
+  function passLook(href) {
+    if (!href) return href;
+    let url;
+    try { url = new URL(href, location.href); } catch (_) { return href; }
+    if (url.protocol !== "https:" && url.protocol !== "http:") return href;
+    const relative = !/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(href);
+    const paths = relative ? CONTACT_PATHS : LOOK_PAGES.get(url.hostname);
+    if (paths === undefined || (paths !== null && !paths.includes(url.pathname))) return href;
+    url.searchParams.set("look", HUB_LOOK);
+    return href.split(/[?#]/, 1)[0] + url.search + url.hash;
+  }
   const demoMode = location.pathname === "/demo";
   const sampleMode = demoMode || location.hostname === "localhost" || location.hostname === "127.0.0.1";
   const params = new URLSearchParams(location.search);
@@ -12,7 +31,8 @@
     const band = document.createElement("div");
     band.className = "demo-band";
     band.innerHTML = '<span class="demo-dot"></span><span><b>Demo</b> · a made-up account to look around</span>' +
-      '<a href="https://www.ares-empire.de/contact?topic=access" target="_blank" rel="noopener">Get the app</a>';   // EMPIRE_REQUEST
+      '<a href="' + passLook("https://www.ares-empire.de/contact?topic=access") +
+      '" target="_blank" rel="noopener">Get the app</a>';   // EMPIRE_REQUEST
     document.body.appendChild(band);
   }
   // ?as=… picks the preview account: admin (the default), member, new-member or requested.
@@ -74,6 +94,7 @@
   }
 
   window.EmpireData = {
+    passLook,
     sampleMode,
     demoMode,
     skipIntro: sampleMode && params.has("skipIntro"),
@@ -113,10 +134,10 @@
     },
     destination(province) {
       // The demo: each app's own link from the sample (Aresium's demo, the others' request form).
-      if (demoMode) return province.url || null;
+      if (demoMode) return passLook(province.url) || null;
       // Connections in EMPIRE.md: only Aresium currently uses the hub hand-off.
       return province.state === "coming-soon" ? null : province.slug === "aresium"
-        ? "/sso?to=" + encodeURIComponent(province.slug) : province.url || null;
+        ? "/sso?to=" + encodeURIComponent(province.slug) : passLook(province.url) || null;
     },
   };
 })();

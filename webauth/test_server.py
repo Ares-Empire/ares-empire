@@ -1172,16 +1172,30 @@ class LegalPageTests(OwnerTestCase):
             with self.subTest(path=path):
                 page = send(path)[1].decode()
                 contact = '/kontakt' if entry.language == 'de' else '/contact'
-                self.assertRegex(page, rf'<nav>.*<a href="{contact}"')
+                self.assertRegex(page, rf'<nav>.*<a href="{contact}\?look=dark"')
                 self.assertNotIn('<script', page)   # the frame has no script since the form left it (2026-11-01)
+
+    def test_contact_links_in_legal_text_pass_the_dark_look(self):
+        with patch.object(server, 'WEB_ROOT', str(WEB)), patch.dict(os.environ, {'LEGAL_PREVIEW': '1'}):
+            for path in legal.PAGES:
+                with self.subTest(path=path):
+                    status, body, _ = send(path)
+                    self.assertEqual(status, 200)
+                    main = re.search(r'<main>(.*?)</main>', body.decode(), re.S).group(1)
+                    links = [urlparse(href) for href in re.findall(r'href="([^"]+)"', main)
+                             if urlparse(href).path in ('/contact', '/kontakt')]
+                    self.assertTrue(links)
+                    for link in links:
+                        self.assertEqual(parse_qs(link.query).get('look'), ['dark'])
 
     def test_the_real_imprint_names_the_contact_form_and_the_policy_covers_it(self):
         with patch.object(server, 'WEB_ROOT', str(WEB)), patch.dict(os.environ, {'LEGAL_PREVIEW': '1'}):
-            self.assertIn('<a class="keep" href="/kontakt">www.ares-empire.de/kontakt</a>', send('/impressum')[1].decode())
-            self.assertIn('<a class="keep" href="/contact">www.ares-empire.de/contact</a>', send('/imprint')[1].decode())
+            self.assertIn('<a class="keep" href="/kontakt?look=dark">www.ares-empire.de/kontakt</a>', send('/impressum')[1].decode())
+            self.assertIn('<a class="keep" href="/contact?look=dark">www.ares-empire.de/contact</a>', send('/imprint')[1].decode())
             for path, form in (('/datenschutz', '/kontakt'), ('/privacy', '/contact')):
                 page = send(path)[1].decode()
-                self.assertIn(f'<a href="{form}">', page)
+                self.assertIn(f'<a href="{form}?look=dark">', page)
+                self.assertIn(f'<a href="https://aresium.de{form}?look=dark">', page)
                 self.assertIn('IONOS', page)
                 self.assertIn('Art. 6', page)
         for name in ('impressum.html', 'imprint.html'):

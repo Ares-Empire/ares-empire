@@ -116,7 +116,8 @@ class GeneratorTests(unittest.TestCase):
                          ["https://arestemis.de/", "https://www.ares-empire.de/contact"])
         # the demo's band asks for the Ares Empire app on the Empire's contact page
         api = (samples.WEB_SAMPLES.parent / "empire-api.js").read_text(encoding="utf-8")
-        self.assertIn(f'<a href="{samples.EMPIRE_REQUEST}" target="_blank" rel="noopener">Get the app</a>', api)
+        self.assertIn(f'passLook("{samples.EMPIRE_REQUEST}")', api)
+        # tools/check-empire-look.mjs also checks the rendered band's address offline.
         # every address is one of the contact pages the hub or aresium.de serves (webauth/contact.py)
         for link in (samples.EMPIRE_REQUEST, samples.ARESTEMIS_REQUEST, samples.DEMO_REQUEST):
             self.assertIn(urlsplit(link).path, contact.PAGES)

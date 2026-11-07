@@ -36,10 +36,11 @@ PAGES = {
     "/imprint": LegalPage("imprint.html", "en", "Imprint", "/impressum"),
 }
 
-# The footer: the pages in the page's language, and the contact page (webauth/contact.py). The language link names the
-# other language in that language.
-NAV = {"de": (("/datenschutz", "Datenschutz"), ("/impressum", "Impressum"), ("/kontakt", "Kontakt")),
-       "en": (("/privacy", "Privacy"), ("/imprint", "Imprint"), ("/contact", "Contact"))}
+# The footer: the pages in the page's language, and the contact page (webauth/contact.py), which opens in these pages'
+# look (?look=dark, read for the visit: web/contact/appearance.js). The language link names the other language in
+# that language.
+NAV = {"de": (("/datenschutz", "Datenschutz"), ("/impressum", "Impressum"), ("/kontakt?look=dark", "Kontakt")),
+       "en": (("/privacy", "Privacy"), ("/imprint", "Imprint"), ("/contact?look=dark", "Contact"))}
 OTHER_LANGUAGE = {"de": ("en", "English"), "en": ("de", "Deutsch")}
 
 # What the frame needs besides the page text: its font (self-hosted, so the pages contact no other host) and licence.
