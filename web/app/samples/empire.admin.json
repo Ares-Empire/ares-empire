@@ -179,6 +179,11 @@
   "chronicle": [
     {
       "at": "2026-11-07",
+      "project": "arestemis",
+      "text": "Arestemis now says what a thing usually costs: for each search it keeps the asking prices of the listings that fit, shows the usual range and the cheapest of the week, and marks a listing as cheap, expensive or unusually cheap (often bait). Its checks got fairer too: a listing is no longer sorted out for a distance it never had or for a wish it simply does not mention, and a Vinted search now asks the site itself for the right size and colour, so its pages show mostly candidates."
+    },
+    {
+      "at": "2026-11-07",
       "project": "empire",
       "text": "Every push now runs the tests. GitHub tests aresium, the hub, Arestoteles and the personal site's owner checks, and the five iPhone apps' unit tests on a simulator; the private services run theirs with one command on the MacBook. The first runs found two real faults (a test file that depended on the time zone, out-of-date hub previews). The iPhone tests no longer depend on how busy the machine is, and Release builds leave out the sample data, checked by a script before each upload."
     },

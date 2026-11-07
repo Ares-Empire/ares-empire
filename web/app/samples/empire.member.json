@@ -69,6 +69,11 @@
   ],
   "chronicle": [
     {
+      "at": "2026-11-07",
+      "project": "arestemis",
+      "text": "Arestemis now says what a thing usually costs: for each search it keeps the asking prices of the listings that fit, shows the usual range and the cheapest of the week, and marks a listing as cheap, expensive or unusually cheap (often bait). Its checks got fairer too: a listing is no longer sorted out for a distance it never had or for a wish it simply does not mention, and a Vinted search now asks the site itself for the right size and colour, so its pages show mostly candidates."
+    },
+    {
       "at": "2026-11-06",
       "project": "arestemis",
       "text": "A search for things now asks what must be and what would be nice: “Muss sein” sorts out listings that clearly break it, “Wäre schön” never does. Sizes, colours and materials come from the sites' own fields, so a size-41 shoe no longer reaches a size-43 search, and clear cases are decided at once without the slower text check. Listings that could not be checked in time no longer vanish: they stay seven days under “Nicht rechtzeitig geprüft”. App build 23."
