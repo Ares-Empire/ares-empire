@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13' # the server's Python (3.13.5 on 2026-11-07)
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24' # the server's Node (v24.22.1 on 2026-11-07)
+      - name: Install test dependencies
+        run: |
+          python -m pip install -r push/requirements.txt requests
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends age
+          command -v age
+          command -v age-keygen
+      - name: Install verified PocketBase 0.40.6
+        run: |
+          set -euo pipefail
+          work=$(mktemp -d)
+          curl --fail --location --retry 3 --output "$work/pocketbase.zip" \
+            https://github.com/pocketbase/pocketbase/releases/download/v0.40.6/pocketbase_0.40.6_linux_amd64.zip
+          echo "0e1f609158ed945f809f8a02ae012aa0427129c66ebb63c1aee76f2c0309373f  $work/pocketbase.zip" | sha256sum --check --strict
+          python -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extract("pocketbase", sys.argv[2])' "$work/pocketbase.zip" "$work"
+          chmod +x "$work/pocketbase"
+          echo "POCKETBASE=$work/pocketbase" >> "$GITHUB_ENV"
+      - run: python3 -m unittest discover -s webauth -p 'test_*.py'
+      - run: python3 -m unittest test_empire_http push.test_push backup.test_backup tools.test_empire_samples tools.test_empire_sync
+      - run: node --test accounts/test_jobs.js
+      - run: bash accounts/test-rules.sh

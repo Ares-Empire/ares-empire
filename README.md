@@ -53,8 +53,23 @@ JetBrains Mono. Each app has a marble bust of its own and one accent colour. The
 
 ```sh
 python3 -m http.server 8099 --directory web               # the hub on its bundled data: http://127.0.0.1:8099
-python3 -m unittest discover -s webauth -p 'test_*.py'     # the web server's tests
-python3 -m unittest tools/test_empire_samples.py           # the sample answers stay current
+# In a shell with age and age-keygen installed, and PocketBase 0.40.6 available:
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install -r push/requirements.txt requests
+python3 -m unittest discover -s webauth -p 'test_*.py'
+python3 -m unittest test_empire_http push.test_push backup.test_backup tools.test_empire_samples tools.test_empire_sync
+node --test accounts/test_jobs.js
+POCKETBASE=/path/to/pocketbase bash accounts/test-rules.sh
 ```
 
 The full server (login, legal pages) and deploying: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+## Tests and CI
+
+GitHub Actions runs all commands in “Run it locally” on every push, pull request and manual start. It installs
+`age` and `age-keygen` (both required, so archive tests cannot silently skip), Python packages and PocketBase
+0.40.6. The Linux amd64 release is checked against its pinned SHA-256 before use. Tests use invented data and
+local fakes; no accounts, push keys, owner file or server configuration are needed.
+
+CI uses the server's Python 3.13 (3.13.5 on 2026-11-07) and Node 24. Local tests use a venv, as above.
