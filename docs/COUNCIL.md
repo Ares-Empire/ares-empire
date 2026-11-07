@@ -42,7 +42,8 @@ drop the seat.
 | **3–4** | login, tokens, money or personal data, a planning council over a new expansion |
 | **5** (maximum) | before other people get it, or before going public |
 
-Mix vendors when Patrik agrees: Claude agents plus Codex (`codex exec -s read-only -m gpt-6-astra`). Different models
+Mix vendors when Patrik agrees: Claude agents plus Codex (`codex exec -s read-only -m <model>`, usually `gpt-6-astra`;
+pick per task as the global CLAUDE.md says). Different models
 miss different things. When he asks for Claude agents, use only Claude.
 
 ## Roles to pick from
