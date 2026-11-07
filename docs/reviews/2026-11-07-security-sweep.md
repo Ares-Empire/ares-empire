@@ -61,7 +61,7 @@ this file until fixed; the seats' full answers are kept locally.
 | S2-2 | Aresync: two runs started together after a crashed run could both run | low–medium | fixed, brief 246, aresync `3015727`: an OS lock released when the run ends, never held by its children (macOS and Linux; the Windows script keeps its own lock, which has the same rare race) |
 | S3-2 | Aresium engine: a crafted Excel file inside the size limits could expand far beyond them | medium | fixed by mac-aresium-import, aresium `4bf74ed` (budgets for cells and table text while the sheet grows); build 25 went only to Patrik, testers get build 26 with the fix |
 | S5-3 | Aresium engine: a ZIP with two statements could merge two bookings that only look alike | low–medium | fixed, aresium `4bf74ed` (a repeated id with a different balance is refused) |
-| S3-1 | Arestoteles: the overall sign-in cap can be used up by others and keep the owner out of the website login for a while (not the app) | medium | question 1 for Patrik |
+| S3-1 | Arestoteles: the overall sign-in cap can be used up by others and keep the owner out of the website login for a while (not the app) | medium | fixed, Arestoteles `93da0ea`: Patrik chose to drop the shared cap (the access key is long and random); 10 tries per address stay, tracked per address with bounded memory |
 | S5-2 | Drops waiting for the Mac are in no backup, and the phone lets go of its copy once the server has it | low | accepted, documented in BACKUP.md: the database is outside the backup on purpose, files wait minutes (days while the Mac is off), and the original stays where it was shared from |
 
 **Checked and fine** (so the next review can skip it): Arestemis route ownership for hunts, matches, saved, recently
