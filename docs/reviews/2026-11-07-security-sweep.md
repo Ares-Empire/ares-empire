@@ -49,9 +49,9 @@ this file until fixed; the seats' full answers are kept locally.
 
 | # | Finding | Sev. | Outcome |
 |---|---|---|---|
-| S1-2 | Arestemis: one account could add wrong prices to a price history other accounts read | medium | accepted by mac-arestemis; Arestemis brief 247 |
-| S1-3 | Arestemis: AI work started by saving searches skipped the per-account allowance and could hold up other accounts | medium | accepted by mac-arestemis; Arestemis brief 247 |
-| S1-1 | Arestemis: some page text could make fact reading slow on the loop the API shares | low–medium | accepted by mac-arestemis; Arestemis brief 247 |
+| S1-2 | Arestemis: one account could add wrong prices to a price history other accounts read | medium | fixed, Arestemis brief 247 `ad875bb`: barcode identities sent by the app get a history of their own; schema 25 copied every curve before retiring the shared keys |
+| S1-3 | Arestemis: AI work started by saving searches skipped the per-account allowance and could hold up other accounts | medium | fixed, brief 247 `ad875bb`: saved work counts against its own per-account allowance at background priority, accounts take turns |
+| S1-1 | Arestemis: some page text could make fact reading slow on the loop the API shares | low–medium | fixed, brief 247 `ad875bb`: fact text capped at 8,192 characters, long digit and space runs dropped, the IKEA scrub moved to the parser worker |
 | S4-2 | Privacy policy: "no seller names are stored", but listing descriptions can contain one | medium | fixed, ares-empire `00425ac` (both languages, PRIVACY.md) |
 | S4-3 | Privacy policy: Cloudflare answers whenever Groq cannot, not only when its daily allowance is used up | low | fixed, `00425ac` (wording; the fallback stays) |
 | S5-4 | Arestemis evaluation labels and test sets were in no backup | low | fixed, `00425ac` (backup lists and BACKUP.md) |
