@@ -84,10 +84,9 @@ permission: [ares-empire.de/contact](https://www.ares-empire.de/contact).
 The licence covers the code. It does not cover the Ares names, the busts, the app icons or the screenshots. Parts from
 others keep their own licences:
 
-- `web/vendor/` ([sources and versions](web/vendor/README.md)): React and React DOM (MIT, notice at the top of
-  [react](web/vendor/react-18.3.1.production.min.js) and [react-dom](web/vendor/react-dom-18.3.1.production.min.js)),
-  Babel (MIT, [LICENSE-babel.txt](web/vendor/LICENSE-babel.txt)) and Lucide (ISC, notice at the top of
-  [lucide](web/vendor/lucide-0.460.0.js)).
+- `web/vendor/` ([sources and versions](web/vendor/README.md)): React and React DOM (MIT,
+  [LICENSE-react.txt](web/vendor/LICENSE-react.txt)), Babel (MIT, [LICENSE-babel.txt](web/vendor/LICENSE-babel.txt))
+  and Lucide (ISC, [LICENSE-lucide.txt](web/vendor/LICENSE-lucide.txt)).
 - `web/fonts/`: Space Grotesk, JetBrains Mono and Cinzel, under the SIL Open Font License 1.1
   ([Space Grotesk](web/fonts/OFL-SpaceGrotesk.txt), [JetBrains Mono](web/fonts/OFL-JetBrainsMono.txt),
   [Cinzel](web/fonts/OFL-Cinzel.txt)).
