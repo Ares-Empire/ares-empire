@@ -178,6 +178,11 @@
   "addable": [],
   "chronicle": [
     {
+      "at": "2026-11-08",
+      "project": "empire",
+      "text": "The public code got a licence and a front page. Aresium, the iPhone apps, the hub, Arestoteles, AresOS and the companions are free to use, change and share for non-commercial purposes (PolyForm Noncommercial 1.0.0); commercial use needs Patrik's permission, and patrikbreeck.com's code stays all rights reserved. Every README now says what its app does today (Aresium reads CSV from 17 banks, CAMT and MT940 from any bank, Excel and ZIP; four iPhone apps share one account, Aresium needs none) and lists the parts from others with their licences. AresOS got a front page with its status, its design moved to its own file. On GitHub the organization shows the Empire's bust, a short description, a front page with the apps' banners and six pinned repos, and a shared repo link shows its banner. patrikbreeck.com's apps page links each app's code."
+    },
+    {
       "at": "2026-11-07",
       "project": "arestemis",
       "text": "Arestemis now says what a thing usually costs: for each search it keeps the asking prices of the listings that fit, shows the usual range and the cheapest of the week, and marks a listing as cheap, expensive or unusually cheap (often bait). Its checks got fairer too: a listing is no longer sorted out for a distance it never had or for a wish it simply does not mention, and a Vinted search now asks the site itself for the right size and colour, so its pages show mostly candidates."
