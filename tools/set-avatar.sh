@@ -1,11 +1,12 @@
 #!/bin/bash
-# Sets the Ares (pab) account picture to the Ares bust, then checks whether
-# avatarsd / iCloud reverts it. Run with: sudo bash set-avatar.sh
+# Sets the Ares (pab) account picture to the Ares bust (brand/ares-avatar.jpg, found from this
+# script's own folder), then checks whether avatarsd / iCloud reverts it.
+# Run from the repo root with: sudo bash tools/set-avatar.sh
 set -u
 ACCT=pab
-IMG=/Users/pab/ares-empire/ares-avatar.jpg
+IMG="$(cd "$(dirname "$0")/.." && pwd)/brand/ares-avatar.jpg"
 
-if [ "$(id -u)" -ne 0 ]; then echo "Please run with sudo: sudo bash set-avatar.sh"; exit 1; fi
+if [ "$(id -u)" -ne 0 ]; then echo "Please run with sudo: sudo bash $0"; exit 1; fi
 if [ ! -f "$IMG" ]; then echo "Avatar image not found: $IMG"; exit 1; fi
 
 echo "=== BEFORE ==="

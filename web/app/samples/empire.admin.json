@@ -15,9 +15,9 @@
       "domain": "aresium.de",
       "blurb": "Personal finance from your bank's own exports — imported, sorted and understood.",
       "detail": {
-        "about": "The empire's personal-finance command. Aresium reads the exports of 25 German banks and PayPal, with no bank login and no aggregator in between, sorts every payment into a category by itself and learns from each correction. It shows spending and income by month and category, the monthly average and the fixed costs. A website and an iPhone app; on the iPhone the data stays on the device.",
+        "about": "The empire's personal-finance command. Aresium reads the exports of 17 banks and PayPal, and CAMT and MT940 files from any bank, with no bank login and no aggregator in between, sorts every payment into a category by itself and learns from each correction. It shows spending and income by month and category, the monthly average and the fixed costs. A website and an iPhone app; on the iPhone the data stays on the device.",
         "features": [
-          "CSV, CAMT and MT940 from 25 German banks, and PayPal",
+          "CSV from 17 banks, CAMT and MT940 from any bank, PayPal, Excel and ZIP files",
           "Sorts by itself with known shops and local places, learns from every correction",
           "Spending and income by month and category, each day's payments",
           "The monthly average and the fixed costs, found on their own",
@@ -196,6 +196,11 @@
       "at": "2026-11-07",
       "project": "aresync",
       "text": "A file sent from the iPhone that already reached the MacBook no longer shows as “Not sent”. A receipt had landed in Rechnungen, but the phone missed the server's confirmation, sent the file again a day later and took the server's refusal for a failure. Now the app asks the server before it sends a file a second time, and clears such leftovers by itself when it opens. Aresus build 10."
+    },
+    {
+      "at": "2026-11-07",
+      "project": "aresync",
+      "text": "Claude's questions to Patrik now reach him as one short push from Aresus (“Claude has a question”, or “Claude is waiting for you” when a session cannot go on without him), never with the question's text, and his answer in the app wakes the session that asked within seconds, even when it sits idle (a small background hook in every session, on the MacBook, the laptop and the server; tested with a real question). An answer he gives in the chat itself now closes the question too, and each question in the app has a field for his own words. Sessions no longer send a push of their own for a question."
     },
     {
       "at": "2026-11-06",

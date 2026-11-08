@@ -5,7 +5,8 @@
 # Ares Empire
 
 The hub of the Ares apps: one account for all of them, the push service behind their notifications, and the overview
-at **[ares-empire.de](https://www.ares-empire.de)**: every app on a ring, with the chronicle of what was built.
+at **[ares-empire.de](https://www.ares-empire.de)** (behind a login; a **[demo](https://www.ares-empire.de/demo)** on
+made-up data for anyone): every app on a ring, with the chronicle of what was built.
 
 [The apps](https://patrikbreeck.com/en/apps/) · [Their iPhone code](https://github.com/Ares-Empire/empire-ios) ·
 [The project map](EMPIRE.md)
@@ -17,7 +18,7 @@ at **[ares-empire.de](https://www.ares-empire.de)**: every app on a ring, with t
 | **The hub website** (`web/`) | The apps on a ring that turns, a board for each, the chronicle as a timeline, and the plans. A phone version too. No build step: React and Babel are served from the repository itself. |
 | **Accounts** (`accounts/`) | One account for every app, on PocketBase: sign-up, email confirmation, approval, password reset, and access per app. [docs/ACCOUNTS.md](docs/ACCOUNTS.md) |
 | **The web server** (`webauth/`) | The login gate, the hub's API, and the legal and contact pages in English and German. Python's standard library only. |
-| **Push** (`push/`) | One service that sends every iPhone app's notifications through Apple's push service. [docs/PUSH.md](docs/PUSH.md) |
+| **Push** (`push/`) | One service that sends the notifications of the Arestemis, Aresus and Ares Empire iPhone apps through Apple's push service. [docs/PUSH.md](docs/PUSH.md) |
 | **Backups** (`backup/`) | The nightly encrypted backup of the data that cannot be rebuilt. [docs/BACKUP.md](docs/BACKUP.md) |
 | **The map** ([`EMPIRE.md`](EMPIRE.md)) | The projects, the shared design language, how the apps are built, and the chronicle. |
 
@@ -26,9 +27,9 @@ at **[ares-empire.de](https://www.ares-empire.de)**: every app on a ring, with t
 | App | What it is | Code |
 |---|---|---|
 | **Aresium** | Personal finance from bank exports | [aresium](https://github.com/Ares-Empire/aresium) |
-| **Arestemis** | Searches that run for you: flats, things for sale, prices, pages | iPhone app in [empire-ios](https://github.com/Ares-Empire/empire-ios) |
+| **Arestemis** | Searches that run for you: flats, things for sale, prices, pages ([demo](https://arestemis.de)) | iPhone app in [empire-ios](https://github.com/Ares-Empire/empire-ios) |
 | **Arestoteles** | A personal knowledge map, searched by meaning | [Arestoteles](https://github.com/Ares-Empire/Arestoteles) |
-| **Aresus** | The watchtower over the server, the services and the machines' sync | iPhone app in [empire-ios](https://github.com/Ares-Empire/empire-ios) |
+| **Aresus** | The watchtower over the server, the services and the machines' sync; files from the iPhone to the Mac | iPhone app in [empire-ios](https://github.com/Ares-Empire/empire-ios) |
 | **Ares Empire** | This hub, and its iPhone app | here, and [empire-ios](https://github.com/Ares-Empire/empire-ios) |
 
 ## Screenshots
@@ -73,3 +74,20 @@ GitHub Actions runs all commands in “Run it locally” on every push, pull req
 local fakes; no accounts, push keys, owner file or server configuration are needed.
 
 CI uses the server's Python 3.13 (3.13.5 on 2026-11-07) and Node 24. Local tests use a venv, as above.
+
+## License
+
+Free to use, change and share for non-commercial purposes, such as study, research, hobby projects, schools and
+charities, under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). Commercial use, also inside a company, needs
+permission: [ares-empire.de/contact](https://www.ares-empire.de/contact).
+
+The licence covers the code. It does not cover the Ares names, the busts, the app icons or the screenshots. Parts from
+others keep their own licences:
+
+- `web/vendor/` ([sources and versions](web/vendor/README.md)): React and React DOM (MIT, notice at the top of
+  [react](web/vendor/react-18.3.1.production.min.js) and [react-dom](web/vendor/react-dom-18.3.1.production.min.js)),
+  Babel (MIT, [LICENSE-babel.txt](web/vendor/LICENSE-babel.txt)) and Lucide (ISC, notice at the top of
+  [lucide](web/vendor/lucide-0.460.0.js)).
+- `web/fonts/`: Space Grotesk, JetBrains Mono and Cinzel, under the SIL Open Font License 1.1
+  ([Space Grotesk](web/fonts/OFL-SpaceGrotesk.txt), [JetBrains Mono](web/fonts/OFL-JetBrainsMono.txt),
+  [Cinzel](web/fonts/OFL-Cinzel.txt)).

@@ -26,8 +26,9 @@ is on Patrik's iPhone through internal TestFlight. The comfort items Patrik appr
 Empire app were uploaded on 2026-11-01 (Arestoteles with its bust free of the watermark, everywhere), so all five apps
 reach Patrik's iPhone through internal TestFlight.
 
-**Next up (2026-10-27):** Aresium for other people is built (phone mode: their data on their iPhone, 25 banks, 2,815
-known shops, no AI; [docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) → Progress). Privacy policy section live
+**Next up (2026-10-27):** Aresium for other people is built (phone mode: their data on their iPhone, no AI; by
+2026-11-08 CSV from 17 banks, CAMT and MT940 from any bank, 3,150 known shops and about 265,000 OpenStreetMap places;
+[docs/ARESIUM-FOR-OTHERS.md](docs/ARESIUM-FOR-OTHERS.md) → Progress). Privacy policy section live
 (2026-10-27). The payment page in plain words and import-first are
 merged (briefs 27–28). On Patrik's iPhone since 2026-10-29 (internal TestFlight). Before friends get it: external TestFlight, which Apple reviews; friends get the TestFlight link directly (no account, no hub step).
 

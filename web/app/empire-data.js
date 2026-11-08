@@ -37,13 +37,13 @@
         // tidy empty state for what isn't filled in yet. `changelog` falls back to the chronicle
         // entries tagged with this slug.
         detail: {
-          about: "The empire's personal-finance command. Aresium reads the exports of 25 German banks " +
-            "and PayPal, with no bank login and no aggregator in between, sorts every payment into a " +
-            "category by itself and learns from each correction. It shows spending and income by month " +
-            "and category, the monthly average and the fixed costs. A website and an iPhone app; on the " +
-            "iPhone the data stays on the device.",
+          about: "The empire's personal-finance command. Aresium reads the exports of 17 banks and PayPal, " +
+            "and CAMT and MT940 files from any bank, with no bank login and no aggregator in between, sorts " +
+            "every payment into a category by itself and learns from each correction. It shows spending and " +
+            "income by month and category, the monthly average and the fixed costs. A website and an iPhone " +
+            "app; on the iPhone the data stays on the device.",
           features: [
-            "CSV, CAMT and MT940 from 25 German banks, and PayPal",
+            "CSV from 17 banks, CAMT and MT940 from any bank, PayPal, Excel and ZIP files",
             "Sorts by itself with known shops and local places, learns from every correction",
             "Spending and income by month and category, each day's payments",
             "The monthly average and the fixed costs, found on their own",
