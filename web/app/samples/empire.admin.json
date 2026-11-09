@@ -178,6 +178,11 @@
   "addable": [],
   "chronicle": [
     {
+      "at": "2026-11-09",
+      "project": "aresus",
+      "text": "Files sent from the iPhone to the MacBook can now be as large as Aresus allows (200 MB): the web server in front of it refused every upload over 4 MB, so three of seven photos shared at once never arrived. A broken-off upload now ends cleanly on the server, and the app sends a file again as a new drop when the server no longer has it, instead of failing for good. Aresus also stopped taking any Linux machine for the server: AresOS, the laptop's own Linux, had raised a \"has not reported\" alarm after 30 minutes in Windows; the server is now marked as such, and every other machine only turns inactive after three days."
+    },
+    {
       "at": "2026-11-08",
       "project": "empire",
       "text": "The public code got a licence and a front page. Aresium, the iPhone apps, the hub, Arestoteles, AresOS and the companions are free to use, change and share for non-commercial purposes (PolyForm Noncommercial 1.0.0); commercial use needs Patrik's permission, and patrikbreeck.com's code stays all rights reserved. Every README now says what its app does today (Aresium reads CSV from 17 banks, CAMT and MT940 from any bank, Excel and ZIP; four iPhone apps share one account, Aresium needs none) and lists the parts from others with their licences. AresOS got a front page with its status, its design moved to its own file. On GitHub the organization shows the Empire's bust, a short description, a front page with the apps' banners and six pinned repos, and a shared repo link shows its banner. patrikbreeck.com's apps page links each app's code."
