@@ -178,6 +178,11 @@
   "addable": [],
   "chronicle": [
     {
+      "at": "2026-11-12",
+      "project": "arestemis",
+      "text": "Arestemis can now search for a look, not only for words. For a search with a described look, Claude looks at each listing's photos, scores how close it comes to that look and says why; listings below the chosen minimum go to Filtered out with that reason. Thumbs up or down on a finding or a filtered-out listing teach it what is meant. Such a search also works through everything already for sale, ten listings at a time behind new ones, and its text checks run on Claude Haiku, so the other searches keep the free models. In the app, every listing page now opens with its photos."
+    },
+    {
       "at": "2026-11-09",
       "project": "aresus",
       "text": "Files sent from the iPhone to the MacBook can now be as large as Aresus allows (200 MB): the web server in front of it refused every upload over 4 MB, so three of seven photos shared at once never arrived. A broken-off upload now ends cleanly on the server, and the app sends a file again as a new drop when the server no longer has it, instead of failing for good. Aresus also stopped taking any Linux machine for the server: AresOS, the laptop's own Linux, had raised a \"has not reported\" alarm after 30 minutes in Windows; the server is now marked as such, and every other machine only turns inactive after three days."

@@ -69,6 +69,11 @@
   ],
   "chronicle": [
     {
+      "at": "2026-11-12",
+      "project": "arestemis",
+      "text": "Arestemis can now search for a look, not only for words. For a search with a described look, Claude looks at each listing's photos, scores how close it comes to that look and says why; listings below the chosen minimum go to Filtered out with that reason. Thumbs up or down on a finding or a filtered-out listing teach it what is meant. Such a search also works through everything already for sale, ten listings at a time behind new ones, and its text checks run on Claude Haiku, so the other searches keep the free models. In the app, every listing page now opens with its photos."
+    },
+    {
       "at": "2026-11-07",
       "project": "arestemis",
       "text": "Arestemis now says what a thing usually costs: for each search it keeps the asking prices of the listings that fit, shows the usual range and the cheapest of the week, and marks a listing as cheap, expensive or unusually cheap (often bait). Its checks got fairer too: a listing is no longer sorted out for a distance it never had or for a wish it simply does not mention, and a Vinted search now asks the site itself for the right size and colour, so its pages show mostly candidates."
