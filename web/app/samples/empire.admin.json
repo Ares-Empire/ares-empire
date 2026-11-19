@@ -178,6 +178,11 @@
   "addable": [],
   "chronicle": [
     {
+      "at": "2026-11-19",
+      "project": "aresium",
+      "text": "Money paid back can now count either way: a switch in Settings decides whether a payment linked as paid back comes off the totals, as before, or whether both payments count in full, as spent and as received, in their categories too. A short line under the totals and on a category's page says which way it counts and how much was paid back. Both the iPhone app (build 27) and aresium.de have it. Settings → Fonts & licences in the app now also shows the licences of the four code packages its engine includes, and the engine's build stops when a package's licence would be missing."
+    },
+    {
       "at": "2026-11-12",
       "project": "arestemis",
       "text": "Arestemis can now search for a look, not only for words. For a search with a described look, Claude looks at each listing's photos, scores how close it comes to that look and says why; listings below the chosen minimum go to Filtered out with that reason. Thumbs up or down on a finding or a filtered-out listing teach it what is meant. Such a search also works through everything already for sale, ten listings at a time behind new ones, and its text checks run on Claude Haiku, so the other searches keep the free models. In the app, every listing page now opens with its photos."
