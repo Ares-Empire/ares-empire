@@ -36,7 +36,7 @@ Weltbild: his Obsidian vault of topics, positions, mechanisms, events and questi
   one day while the vault stays private. The vault's name must not start with "ares" (the empire sync would make it a
   province).
 - **Sync:** the server keeps its own clone (`/var/lib/arestoteles/vault`, deploy key with write access, added
-  2026-10-24), pulls every minute, commits app edits as "<owner name> (Arestoteles app)" (name from the [owner file](PRIVACY.md#owner-file)) and pushes. The laptops get
+  2026-10-24), pulls every minute, commits app edits under the author set in the server's `vault.env` (`ARESTOTELES_AUTHOR_NAME`/`_EMAIL`, today "<owner name> (Arestoteles app)") and pushes. The laptops get
   them through the Obsidian Git plugin (pull on open, push every 10 minutes); Aresync stays out of the vault (two
   committers on one repo would conflict).
 - **The trading code is deleted** (owner: no use for it; git keeps the history). Kept: the website (`web/`,
