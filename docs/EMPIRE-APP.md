@@ -1,7 +1,7 @@
 # The Empire on the phone — decision record
 
 **Decided 2026-10-24** with the owner. Status (2026-10-24): **built** — the phone website is live, the iPhone app
-(`empire-ios/Empire`) works on the simulator; TestFlight waits for Apple (open items: `empire-ios/CLAUDE.md` → Open). Builds on [IPHONE-APPS.md](IPHONE-APPS.md) (native SwiftUI apps
+(`empire-ios/Empire`) is on TestFlight since 2026-11-01 (notes and open items: `empire-ios/docs/apps/Empire.md`). Builds on [IPHONE-APPS.md](IPHONE-APPS.md) (native SwiftUI apps
 in `empire-ios`, TestFlight) and [ACCOUNTS.md](ACCOUNTS.md) (Empire accounts in PocketBase).
 
 ## What the Empire is on a phone

@@ -17,9 +17,10 @@ province is added or its state changes, update *both* this file and the manifest
 
 Six iPhone apps are on TestFlight, all on the shared standard ([docs/IPHONE-APPS.md](docs/IPHONE-APPS.md) → Every
 app has): the Empire app, Aresium, Arestemis, Aresus with Aresync, Arestoteles (all since 2026-11-01) and Arestia, the
-owner's flat (since 2026-11-19, no Ares account, its data outside every repo). Aresium is also open to outside testers
+owner's flat (since 2026-11-20, no Ares account, its data outside every repo). Aresium is also open to outside testers
 through a public TestFlight link; their data stays on their iPhone. Files go from the iPhone to the MacBook through
-Aresus's Aresync tab ([docs/ARESYNC-DROP.md](docs/ARESYNC-DROP.md)). The big steps of 2026-10-25 (light mode,
+Aresus's Aresync tab ([docs/ARESYNC-DROP.md](docs/ARESYNC-DROP.md)); receipts filed with their inventory line
+(its step 2) are next. The big steps of 2026-10-25 (light mode,
 TestFlight, Aresium for other people, Aresync file sharing) are done. **Next:** new apps, each built on the standard
 from its first screen. Open items: the board, `empire-ios` → open phone checks, [PRIVACY.md](docs/PRIVACY.md) → To do.
 
@@ -30,7 +31,7 @@ from its first screen. Open items: the board, `empire-ios` → open phone checks
 - Aresus and Aresync stay the owner's own tools and never go to others (owner, 2026-10-25).
 - Builds for the owner go through internal TestFlight (no Apple review). An app that goes to other people (external
   testers or the App Store) is reviewed by Apple, and its demo account gets an extra address on the owner's domain.
-  Outside testers get the TestFlight link directly: no account, no hub step.
+  Aresium's outside testers get the TestFlight link directly: no account, no hub step.
 
 ---
 
@@ -58,7 +59,7 @@ Every province may get a website and an iPhone app ([docs/IPHONE-APPS.md](docs/I
 **A good structure is worth more work now** (owner, 2026-10-23; in full in the global CLAUDE.md, "Apps: good
 structure is worth more work now"): when the quick way (a workaround, copying logic into a second place) would make
 later changes slower or cause bugs, choose the better structure, even if it takes longer now. Judgment, not a rule to
-merge things. Restructure in steps that keep the live service working, show the new version gives the same results,
+merge things; separate pieces are fine when they are simpler. Restructure in steps that keep the live service working; before switching, show the new version gives the same results,
 then delete the old code; when it is much bigger than the task, tell the owner what, why and how big first. Example:
 Aresium's website calculated its numbers in the browser; an iPhone app would have had to copy them, so they moved to
 the server first ([IPHONE-APPS.md](docs/IPHONE-APPS.md), step 3).

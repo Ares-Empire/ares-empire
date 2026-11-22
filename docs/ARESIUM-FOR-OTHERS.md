@@ -13,7 +13,7 @@ approves can use the app for their own money, with their data on their own iPhon
 ## Already decided (owner)
 
 - **Their data stays on their iPhone:** imports, categories, storage. No bank data on any server of ours. The owner's own
-  data stays on the server for aresium.de (2026-10-25; [PRIVACY.md](PRIVACY.md) → Facts, `empire-ios/CLAUDE.md` → Open 5).
+  data stays on the server for aresium.de (2026-10-25; [PRIVACY.md](PRIVACY.md) → Facts, `empire-ios/docs/apps/Aresium.md` → Decisions).
 - **A plan and tests first** (2026-10-25): imports from other banks; suggested categories people change and extend;
   sorting learned from their own corrections; auto-sort for the rest only if they switch it on (Apple's on-device
   model, or a server that stores nothing); each layer measured on the owner's own transactions before choosing. Changed 2026-10-26: our server only, Groq, nothing stored (D2).

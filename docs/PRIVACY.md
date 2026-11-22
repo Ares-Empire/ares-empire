@@ -175,7 +175,7 @@ AV-Vertrag).
 - The above is the owner's own data (server mode, the owner list): personal use by one person (Art. 2(2)(c) GDPR), not
   described in the public pages.
 - **Everyone else: phone mode, no account** (built 2026-10-27, briefs 15, 18, 22; D7 in
-  [ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md); `empire-ios/CLAUDE.md` → "Aresium phone mode"). Aresium opens without
+  [ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md); `empire-ios/docs/apps/aresium/storage-and-engine.md` → "Aresium phone mode"). Aresium opens without
   a login. The bank files and everything read from them (payments with the bank's original row, the other party's
   IBAN, balances), the chosen categories, learned rules and confirmed column layouts are read, sorted and stored on
   the iPhone: SwiftData, one store per iPhone (`Application Support/Aresium/local/`), file protection complete, not

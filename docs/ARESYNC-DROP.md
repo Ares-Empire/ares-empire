@@ -10,7 +10,7 @@ swipe (aresus brief 92, empire-ios brief 93, Aresus build 3). In progress: Aresu
 send screen inside it, uploads in a background session that go on after the share sheet closes, dropping files onto
 the Aresync tab, a second pick adding to the first (empire-ios briefs 94 merged, 100 the look). Receipts (step 2)
 come after. Server: `~/aresus`; Mac: `~/aresync`; app: `empire-ios/Aresus` (its Aresync tab). Replaces
-`empire-ios/CLAUDE.md` → Open 11 ("Aresync file sharing from the phone").
+`empire-ios/docs/apps/Aresus.md` → Aresync drops.
 
 ## What it is
 

@@ -1,7 +1,7 @@
 # iPhone apps — decision record
 
 **Decided 2026-10-23.** Status (2026-11-22): six apps in `empire-ios` are on TestFlight (the Empire app, Aresium,
-Arestemis, Aresus, Arestoteles, Arestia), with push; Aresium also reaches outside testers through a public link.
+Arestemis, Aresus, Arestoteles, Arestia); the Empire app, Arestemis and Aresus get push notifications, Aresium sends local messages; Aresium also reaches outside testers through a public link.
 
 ## The decision
 
@@ -67,6 +67,7 @@ worth trying once the app is shared with a real group of users.
   its login creates an account and resets a password, an account without this app can ask for access, so nobody
   needs the Empire app. A new app whose server keeps data per account adds `DELETE /api/<service>/me` and its
   internal deletion route, so leaving the app and deleting the account reach it.
+  Exceptions: Aresium opens without a login (phone mode), and Arestia has no Ares account.
 - **Its name at the end of the main screen**, seen only when scrolling down (`WordmarkBand`, shared).
 - **English and German** ([LANGUAGES.md](LANGUAGES.md)).
 - **Light and dark** (owner, 2026-10-24: part of the standard, before any new app; built 2026-10-25 for all apps
