@@ -1,6 +1,6 @@
 /// <reference path="../pb_data/types.d.ts" />
 // Contact & support from the apps (2026-10-24): a signed-in account sends a message (a problem, an idea, a question),
-// `pb_hooks/feedback.pb.js` mails it to Patrik, and he reads them all in the admin UI.
+// `pb_hooks/feedback.pb.js` mails it to the owner, and he reads them all in the admin UI.
 //
 // - Only a verified, approved account may create one, and only as itself. Nobody but a superuser can list, view,
 //   change or delete them (the API rules below are null = superusers only).

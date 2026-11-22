@@ -1,6 +1,6 @@
 /// <reference path="../pb_data/types.d.ts" />
 // Bank requests from Aresium (migration 1793600000_bank_requests.js): someone whose bank is not in Aresium's bank
-// guide sends its name, so Patrik knows which banks to add. PocketBase runs each handler in its own scope, so every
+// guide sends its name, so the owner knows which banks to add. PocketBase runs each handler in its own scope, so every
 // handler loads the modules it needs itself.
 
 // Before a create is saved: refuse a bank's name that looks like personal data (an IBAN, an email address, a date, an
@@ -11,7 +11,7 @@ onRecordCreateRequest((e) => {
   e.next();
 }, "bank_requests");
 
-// After a create: mail the request to Patrik (lib/mail.js) with what to do about it. A failed email is logged and the
+// After a create: mail the request to the owner (lib/mail.js) with what to do about it. A failed email is logged and the
 // record stays (he still finds it in the admin UI); it never fails the create.
 onRecordAfterCreateSuccess((e) => {
   e.next();

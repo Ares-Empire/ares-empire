@@ -11,7 +11,7 @@ onRecordCreateRequest((e) => {
   e.next();
 }, "bank_formats");
 
-// After a create: mail the format to Patrik (lib/mail.js), with the command that turns it into a bank profile. A
+// After a create: mail the format to the owner (lib/mail.js), with the command that turns it into a bank profile. A
 // failed email is logged and the record stays (he still finds it in the admin UI); it never fails the create.
 onRecordAfterCreateSuccess((e) => {
   e.next();

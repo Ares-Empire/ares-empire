@@ -343,7 +343,7 @@ ADMIN_REFUSAL = [
     ('fr, de;q=0', 'This is the administrator account; it cannot leave an app or be deleted here.'),
 ]
 
-# Patrik in these checks: a made-up superuser address (superusers at example.com get no account emails).
+# The owner in these checks: a made-up superuser address (superusers at example.com get no account emails).
 OWNER = 'owner@ares-empire.test'
 LEAVE = '/api/empire/leave'
 FAKE = os.environ['RULES_TMP'] + '/fake'
@@ -578,10 +578,10 @@ try:
           signed.get('requested') == ['arestemis'] and signed.get('language') == 'de' and
           signed.get('approved') is False and signed.get('services') == [])
     new = new_mails(mark, 1)
-    check('a sign-up is mailed to Patrik with the apps it asked for and its language', len(new) == 1 and
+    check('a sign-up is mailed to the owner with the apps it asked for and its language', len(new) == 1 and
           new[0]['To'] == OWNER and subjects(new) == ['New Ares account: app-signup@example.com asks for Arestemis']
           and 'Language: German' in html(new[0]) and 'recordId=' + signed.get('id', '?') in html(new[0]))
-    check('a sign-up is not pushed (Patrik gets the email; 2026-10-26)', no_push(push_mark))
+    check('a sign-up is emailed only (owner, 2026-10-26)', no_push(push_mark))
     push_mark = len(pushes())
     for label, body in [('its record id', {'id': 'chosenaccount01'}), ('an unknown app', {'requested': ['nope']}),
                         ('an unknown language', {'language': 'fr'})]:
@@ -592,7 +592,7 @@ try:
     check('a refused sign-up is not pushed', no_push(push_mark))
     mark = len(mails())
     by_hand = create('admin-ui@example.com', requested=['empire', 'aresium'], language='en')
-    check('an account made in the admin UI is not mailed to Patrik', quiet(mark))
+    check('an account made in the admin UI is not mailed to the owner', quiet(mark))
     check('... nor pushed', no_push(push_mark))
     mark = len(mails())
     status, website = call('POST', '/api/collections/users/records', {
@@ -636,10 +636,10 @@ try:
           asked.get('requested') == ['arestemis'] and asked.get('language') == 'de' and
           asked.get('services') == ['empire'])
     new = new_mails(mark, 1)
-    check('an access request is mailed to Patrik', len(new) == 1 and new[0]['To'] == OWNER and
+    check('an access request is mailed to the owner', len(new) == 1 and new[0]['To'] == OWNER and
           subjects(new) == ['Ares access request: user@example.com asks for Arestemis'] and
           'Has: Ares Empire' in html(new[0]) and 'Language: German' in html(new[0]))
-    check('an access request is not pushed (Patrik gets the email)', no_push(push_mark))
+    check('an access request is not pushed (the owner gets the email)', no_push(push_mark))
     mark = len(mails())
     push_mark = len(pushes())
     status, _ = call('PATCH', '/api/collections/users/records/' + normal['id'],
@@ -717,7 +717,7 @@ try:
     check('leaving an app it does not have changes nothing', status == 200 and again == left)
     check('leaving is not mailed', quiet(mark))
 
-    # Notifications: only "your apps are ready", to the account itself (Patrik gets sign-ups and requests by email,
+    # Notifications: only "your apps are ready", to the account itself (the owner gets sign-ups and requests by email,
     # 2026-10-26); a push service that refuses or does not answer never fails the request.
     asking = create('asking@example.com', approved=True, verified=True, services=['empire'], name='')
     asking_token = login('users', 'asking@example.com')
@@ -752,7 +752,9 @@ try:
     new = new_mails(mark, 1)
     check('the verification email is in English and German', len(new) == 1 and
           subjects(new) == ['Confirm your Ares account · Bestätige dein Ares-Konto'] and all(part in html(new[0]) for part in (
-              'Confirm email address', 'E-Mail-Adresse bestätigen', '/_/#/auth/confirm-verification/')))
+              'Confirm email address', 'E-Mail-Adresse bestätigen', '/_/#/auth/confirm-verification/',
+              'Then your account is approved, and you get an email',
+              'Danach wird dein Konto freigegeben, und du bekommst eine E-Mail')))
     mark = len(mails())
     must('POST', '/api/collections/users/request-password-reset', {'email': 'user@example.com'})
     new = new_mails(mark, 1)
@@ -760,13 +762,13 @@ try:
           subjects(new) == ['Reset your Ares password · Setze dein Ares-Passwort zurück'] and all(part in html(new[0]) for part in (
               'Choose a new password', 'Neues Passwort wählen', '/_/#/auth/confirm-password-reset/')))
 
-    # Contact & support (feedback): sent by the account itself, mailed to Patrik, read only by superusers.
+    # Contact & support (feedback): sent by the account itself, mailed to the owner, read only by superusers.
     mark = len(mails())
     status, sent = call('POST', FEEDBACK, feedback(normal['id']), user_token)
     check('user can send own feedback', status == 200 and sent.get('user') == normal['id'])
     kept = new_mails(mark, 1)
     mail = kept[-1] if kept else None
-    check('feedback is mailed to Patrik, Reply-To the account', len(kept) == 1 and
+    check('feedback is mailed to the owner, Reply-To the account', len(kept) == 1 and
           mail['To'] == 'owner@example.org' and mail['Reply-To'] == 'user@example.com' and
           mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
           mail['Subject'] == '[Arestoteles] Idea: Fictional idea: search could also look inside the panels.')
@@ -824,13 +826,13 @@ try:
     must('PATCH', '/api/settings', {'rateLimits': {'enabled': False}}, supertoken)
     check('the 11th feedback within the hour is refused (429)', statuses == [200] * 10 + [429])
 
-    # The website's contact form (contact): open to everyone, mailed to Patrik, read only by superusers.
+    # The website's contact form (contact): open to everyone, mailed to the owner, read only by superusers.
     before = len(mails())
     status, written = call('POST', CONTACT, contact())
     check('anyone can send the contact form, without a login', status == 200 and written.get('email') == 'visitor@example.com')
     kept = mails(at_least=before + 1)
     mail = kept[-1] if len(kept) > before else None
-    check('a contact message is mailed to Patrik, Reply-To the given email', mail is not None and
+    check('a contact message is mailed to the owner, Reply-To the given email', mail is not None and
           mail['To'] == 'owner@example.org' and mail['Reply-To'] == 'visitor@example.com' and
           mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
           mail['Subject'] == '[Website] Contact: Fictional question about the imprint.')
@@ -976,14 +978,14 @@ try:
     check('another address can still write', another == 200)
 
     # Bank formats shared from Aresium (bank_formats): open to everyone, checked again on the server (nothing that
-    # looks like personal data), mailed to Patrik with the command that adds the bank, read only by superusers.
+    # looks like personal data), mailed to the owner with the command that adds the bank, read only by superusers.
     before = len(mails())
     status, shared = call('POST', FORMATS, bank_format())
     check('anyone can share a bank format, without a login', status == 200 and shared.get('bank') == 'Fictional Bank'
           and shared.get('layout') == layout() and shared.get('language') == 'en')
     kept = mails(at_least=before + 1)
     mail = kept[-1] if len(kept) > before else None
-    check('a shared format is mailed to Patrik, without a Reply-To', mail is not None and
+    check('a shared format is mailed to the owner, without a Reply-To', mail is not None and
           mail['To'] == 'owner@example.org' and mail['Reply-To'] is None and
           mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
           mail['Subject'] == 'Aresium: bank format for Fictional Bank')
@@ -1131,7 +1133,7 @@ try:
     check('another address can still share one', another == 200)
 
     # Bank requests from Aresium's bank guide (bank_requests): a bank's name, open to everyone, refused when it looks
-    # like personal data (the same check as a bank format's name, lib/personal-data.js), mailed to Patrik with what to
+    # like personal data (the same check as a bank format's name, lib/personal-data.js), mailed to the owner with what to
     # do, read only by superusers.
     before = len(mails())
     status, wish = call('POST', REQUESTS, bank_request(), headers=['Accept-Language: de-DE,de;q=0.9,en;q=0.8'])
@@ -1139,7 +1141,7 @@ try:
           and wish.get('app_version') == '1.0 (12)' and wish.get('language') == 'de' and bool(wish.get('created')))
     kept = mails(at_least=before + 1)
     mail = kept[-1] if len(kept) > before else None
-    check('a bank request is mailed to Patrik, without a Reply-To', mail is not None and
+    check('a bank request is mailed to the owner, without a Reply-To', mail is not None and
           mail['To'] == 'owner@example.org' and mail['Reply-To'] is None and
           mail['From'] == 'Ares Empire <noreply@ares-empire.de>' and
           mail['Subject'] == '[Aresium] Bank wish: Fictional Bank')
@@ -1286,7 +1288,7 @@ try:
     mark = len(mails())
     ran = run_deletions(lambda: jobs(second)['arestemis']['attempts'] == 2)
     new = new_mails(mark, 1)
-    check('a job still failing a day after the deletion is mailed to Patrik', ran and len(new) == 1 and
+    check('a job still failing a day after the deletion is mailed to the owner', ran and len(new) == 1 and
           new[0]['To'] == OWNER and subjects(new) == ['Ares account deletion stuck: Arestemis'] and
           second in html(new[0]) and jobs(second)['arestemis']['reported'] is True)
     mark = len(mails())
@@ -1490,6 +1492,20 @@ def update_rule(names, admin_may_change):
     return ('(id = @request.auth.id && ' + OWN + ') || (@request.auth.admin = true && id != @request.auth.id && ' +
             ' && '.join('@request.body.' + name + ':isset = false' for name in untouchable) + ')')
 PY
+# Simulate an existing installation with the old wording and a local addition to the body.
+migrate_down 'verification approval copy'
+python3 - <<'PY'
+import json, os, sqlite3
+with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
+    options = json.loads(db.execute('SELECT options FROM _collections WHERE name = ?', ('users',)).fetchone()[0])
+    template = options['verificationTemplate']
+    template['body'] += '\n<p>Local support information</p>'
+    with open(os.environ['RULES_TMP'] + '/verification-options.json', 'w') as saved:
+        json.dump(options, saved)
+    template['body'] = template['body'].replace('Then your account is approved', 'Then Alex approves the account')
+    template['body'] = template['body'].replace('Danach wird dein Konto freigegeben', 'Danach gibt Alex das Konto frei')
+    db.execute('UPDATE _collections SET options = ? WHERE name = ?', (json.dumps(options), 'users'))
+PY
 # access_jobs down: keep deletion jobs, remove access jobs and the two fields.
 migrate_down 'access jobs'
 python3 - <<'PY'
@@ -1504,7 +1520,7 @@ ok = not {'operation', 'app'} & {field['name'] for field in fields} and bool(row
 print(('PASS' if ok else 'FAIL') + ' migration down keeps deletion jobs and removes access jobs and fields')
 sys.exit(0 if ok else 1)
 PY
-# Apply just the new migration to existing deletion jobs, then roll it back again for the older migration checks.
+# Apply the two latest migrations, then roll them back again for the older migration checks.
 if ! "$POCKETBASE" migrate up --dir "$RULES_TMP/data" --migrationsDir "$RULES_ROOT/pb_migrations" \
   --hooksDir "$RULES_TMP/hooks" >"$RULES_TMP/up.log" 2>&1; then
   cat "$RULES_TMP/up.log" >&2
@@ -1514,13 +1530,20 @@ python3 - <<'PY'
 import json, os, sqlite3, sys
 with open(os.environ['RULES_TMP'] + '/old-jobs.json') as saved:
     before = json.load(saved)
+with open(os.environ['RULES_TMP'] + '/verification-options.json') as saved:
+    expected_options = json.load(saved)
 with sqlite3.connect(os.environ['RULES_TMP'] + '/data/data.db') as db:
     rows = db.execute('SELECT id, account, service, attempts, done, last_error, reported FROM deletions ORDER BY id').fetchall()
     operations = {row[0] for row in db.execute('SELECT operation FROM deletions')}
+    options = json.loads(db.execute('SELECT options FROM _collections WHERE name = ?', ('users',)).fetchone()[0])
 ok = [list(row) for row in rows] == before and operations == {'delete'}
 print(('PASS' if ok else 'FAIL') + ' migration up preserves existing deletion jobs and sets their operation')
-sys.exit(0 if ok else 1)
+copy_updated = options['verificationTemplate'] == expected_options['verificationTemplate']
+copy_updated = copy_updated and options['resetPasswordTemplate'] == expected_options['resetPasswordTemplate']
+print(('PASS' if copy_updated else 'FAIL') + ' migration up refreshes the saved approval wording in both languages')
+sys.exit(0 if ok and copy_updated else 1)
 PY
+migrate_down 'verification approval copy again'
 migrate_down 'access jobs again'
 # contact_app_kind down: the contact form's app, kind, version and system are gone, a message needs text
 # again, and the messages already sent stay.

@@ -16,8 +16,8 @@ onRecordUpdate((e) => {
   e.next();
 }, "users");
 
-// Someone signed up (on the website or in an app) → ask Patrik to approve, with the apps it asked for: an email to the
-// superusers (no push: Patrik, 2026-10-26).
+// Someone signed up (on the website or in an app) → ask the owner to approve, with the apps it asked for: an email to the
+// superusers only (owner, 2026-10-26).
 onRecordCreateRequest((e) => {
   e.next(); // saves the record; throws on validation errors, so nothing below runs then
   if (e.hasSuperuserAuth()) return; // created by hand in the admin UI
@@ -39,7 +39,7 @@ onRecordCreateRequest((e) => {
   }
 }, "users");
 
-// After an update: an approved account asked for more apps → tell Patrik (an email to the superusers); an account was
+// After an update: an approved account asked for more apps → tell the owner (an email to the superusers); an account was
 // approved or given more apps → tell the person (an email in its language, a notification in the Empire app). A failed
 // email or notification is logged; it never fails the update.
 onRecordUpdateRequest((e) => {

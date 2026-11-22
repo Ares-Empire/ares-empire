@@ -1,6 +1,6 @@
 /* The look of the hub's contact pages (/contact and /arestemis/contact, each also in German; webauth/contact.py):
    dark until switched with the header's button, then the last choice, remembered in this browser for both pages (the
-   apps' light and dark, Settings → Appearance; the websites open dark, Patrik 2026-10-26). Loaded first in <head>, so
+   apps' light and dark, Settings → Appearance). The websites open dark (owner, 2026-10-26). Loaded first in <head>, so
    the page opens in its look without a flash of the other one. The storage can be missing or blocked (private
    windows): the page is then dark and still switches, it only forgets.
    A page that links here can pass its own look for the visit, ?look=light or ?look=dark (patrikbreeck.com's apps page

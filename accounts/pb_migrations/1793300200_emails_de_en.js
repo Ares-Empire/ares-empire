@@ -8,12 +8,12 @@ const VERIFICATION = {
   body: `<p>Hello,</p>
 <p>please confirm that this email address belongs to your Ares account:</p>
 <p><a class="btn" href="{APP_URL}/_/#/auth/confirm-verification/{TOKEN}" target="_blank" rel="noopener">Confirm email address</a></p>
-<p>Then Patrik approves the account, and you get an email as soon as it is ready. If you didn't create an Ares account, ignore this email.</p>
+<p>Then your account is approved, and you get an email as soon as it is ready. If you didn't create an Ares account, ignore this email.</p>
 <hr>
 <p>Hallo,</p>
 <p>bitte bestätige, dass diese E-Mail-Adresse zu deinem Ares-Konto gehört:</p>
 <p><a class="btn" href="{APP_URL}/_/#/auth/confirm-verification/{TOKEN}" target="_blank" rel="noopener">E-Mail-Adresse bestätigen</a></p>
-<p>Danach gibt Patrik das Konto frei, und du bekommst eine E-Mail, sobald es bereit ist. Wenn du kein Ares-Konto angelegt hast, ignoriere diese E-Mail.</p>
+<p>Danach wird dein Konto freigegeben, und du bekommst eine E-Mail, sobald es bereit ist. Wenn du kein Ares-Konto angelegt hast, ignoriere diese E-Mail.</p>
 <p>Ares Empire</p>`,
 };
 

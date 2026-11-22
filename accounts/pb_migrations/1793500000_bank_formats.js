@@ -2,7 +2,7 @@
 // Bank formats shared from Aresium (2026-10-27, brief 21): when Aresium does not know someone's bank, they confirm how
 // the file reads, type the bank's name and tap Send. The app sends only the file's format (a `CsvLayout` from the
 // engine's `shareableLayout`: separator, header names, which column means what, date and number style), never a
-// payment, amount, IBAN or name. `pb_hooks/bank-formats.pb.js` checks each one again and mails it to Patrik, and
+// payment, amount, IBAN or name. `pb_hooks/bank-formats.pb.js` checks each one again and mails it to the owner, and
 // Claude adds the bank for everyone with the next app update.
 //
 // - Create is open to everyone (createRule ""), like the contact form: no Ares account is needed to send. Nobody but a

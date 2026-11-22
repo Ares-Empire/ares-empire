@@ -1,6 +1,6 @@
 /// <reference path="../../pb_data/types.d.ts" />
 // Bank formats shared from Aresium (migration 1793500000_bank_formats.js, hook bank-formats.pb.js): the server's check
-// of a shared format, and the email that brings it to Patrik. Loaded by the handlers with
+// of a shared format, and the email that brings it to the owner. Loaded by the handlers with
 // `require(`${__hooks}/lib/bank-formats.js`)`.
 //
 // A format is the engine's `CsvLayout` (aresium `src/engine/readers/types.ts`) as `shareableLayout` returns it: no
@@ -136,7 +136,7 @@ function refuseUnsafe(e) {
   throw new BadRequestError(SENTENCES[kind][language], { layout: new ValidationError(code, detail) });
 }
 
-// ── The email to Patrik ──────────────────────────────────────────────────────
+// ── The email to the owner ──────────────────────────────────────────────────────
 
 // A profile id from the bank's name, as bank-profiles.ts names them: "Sparda-Bank Berlin" → "sparda-bank-berlin".
 function profileId(bank) {
@@ -151,7 +151,7 @@ function shellWord(text) {
   return "'" + String(text).replace(/'/g, "'\\''") + "'";
 }
 
-/** The email about a new format record: {subject, text}, sent to Patrik with mail.sendSupport(). */
+/** The email about a new format record: {subject, text}, sent to the owner with mail.sendSupport(). */
 function email(app, record) {
   const mail = require(`${__hooks}/lib/mail.js`);
   const bank = record.getString("bank");

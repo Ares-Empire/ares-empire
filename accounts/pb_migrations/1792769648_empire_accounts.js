@@ -1,7 +1,7 @@
 /// <reference path="../pb_data/types.d.ts" />
 // Empire accounts: who may log in, and into which services.
 //
-// - New sign-ups start unapproved. Only a superuser (Patrik, in the admin UI) can set
+// - New sign-ups start unapproved. Only a superuser (the owner, in the admin UI) can set
 //   `approved` or `services`; the API rules below refuse both fields from normal users.
 // - Logging in needs a verified email AND approval (authRule).
 // - `services` lists the provinces an account may use. Each service checks it.

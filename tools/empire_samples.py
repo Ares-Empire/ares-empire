@@ -344,7 +344,7 @@ ACCOUNTS = {  # token → the account record auth-refresh returns
 SAMPLE_CATALOG = {"aresium": {"users": "coming-soon"}, "arestemis": {"users": "open"}}
 # A made-up install link for Arestemis (apps.json has none until there is a TestFlight link).
 SAMPLE_INSTALL = {"arestemis": "https://example.com/testflight/arestemis"}
-WAITING = [  # accounts waiting for Patrik (fictional example.com addresses)
+WAITING = [  # accounts waiting for the owner (fictional example.com addresses)
     {"id": "samplesignup001", "email": "alex@example.com", "name": "Alex Rowan", "created": CREATED,
      "approved": False, "verified": True, "services": [], "requested": ["empire", "arestemis"]},
     {"id": "samplesignup002", "email": "jo@example.com", "name": "", "created": "2026-10-25 07:12:00.000Z",
@@ -529,8 +529,8 @@ def build(seed: dict | None = None) -> dict[str, object]:
 # ── The public demo (www.ares-empire.de/demo) ─────────────────────────────────
 # The hub for anyone, without an account (webauth/server.py serves it; web/app/empire-api.js loads these two files on
 # /demo). A made-up guest has the apps on the ring, with texts written for strangers and a made-up chronicle: when each
-# was started and finished (Patrik, 2026-10-27). Aresium links its own demo, and its install button its own contact form
-# with "Get the app" chosen (2026-10-30); Arestemis its own demo (arestemis.de since 2026-11-06, brief 144), its install button its own contact page on the hub on "Get the app" (2026-11-01); Arestoteles, without a form of its own, the Empire's contact page; Aresus and Aresync, Patrik's own
+# was started and finished (owner, 2026-10-27). Aresium links its own demo, and its install button its own contact form
+# with "Get the app" chosen (2026-10-30); Arestemis its own demo (arestemis.de since 2026-11-06, brief 144), its install button its own contact page on the hub on "Get the app" (2026-11-01); Arestoteles, without a form of its own, the Empire's contact page; Aresus and Aresync, the owner's own
 # tools, are shown without a link or an install button. The demo's band asks for the Ares Empire app on the Empire's
 # page (web/app/empire-api.js). Nothing of the real seed's content goes into it: only its words (name, tagline, STATUS)
 # and the provinces' logos.
@@ -615,7 +615,7 @@ def demo_seed() -> dict:
 
 def _demo_apps():
     """The committed apps.json, with the guest's way to get each app: the province's own "install" (an address, or False
-    for none: Patrik's own tools), else the hub's contact form."""
+    for none: the owner's own tools), else the hub's contact form."""
     apps = _load_committed_apps()
     return {slug: {**apps.get(slug, {"scheme": None}), "install": says.get("install", DEMO_REQUEST) or None}
             for slug, says in DEMO_PROVINCES.items()}

@@ -80,7 +80,7 @@ class HubTests(OwnerTestCase):
             'admin-one': {'id': 'adminone0000001', 'name': 'Admin', 'admin': True,
                           'approved': True, 'services': ['empire'], 'requested': []},
         }
-        # Waiting for Patrik: a new sign-up (email not confirmed yet), and an approved account asking for two more apps.
+        # Waiting for the owner: a new sign-up (email not confirmed yet), and an approved account asking for two more apps.
         self.pending = [{'id': 'pending00000001', 'name': 'New', 'email': 'new@example.com',
                          'created': '2026-10-24 12:00:00Z', 'approved': False, 'verified': False, 'admin': False,
                          'services': [], 'requested': ['arestemis']},
@@ -407,7 +407,7 @@ class HubTests(OwnerTestCase):
                 self.assertEqual(server.login('fixture@example.com', 'password', '192.0.2.10')[2], 503)
 
     def test_the_ring_is_every_app_the_account_has(self):
-        # Patrik gave this account two provinces; one of them is not in the catalog at all.
+        # The owner gave this account two provinces; one of them is not in the catalog at all.
         self.records['user-two']['services'] = ['empire', 'private', 'other']
         status, data, _ = self.request(token='user-two')
         self.assertEqual(status, 200)
@@ -581,8 +581,8 @@ class HubTests(OwnerTestCase):
                 self.assertTrue(calls[2][0].startswith('/api/collections/users/records?'))
                 self.assertNotIn(account_id, [p['id'] for p in self.pending])
 
-    def test_decision_acts_only_on_the_requests_patrik_saw(self):
-        # Patrik's card showed Aresium; Aresus was asked for after he looked.
+    def test_decision_acts_only_on_the_requests_the_owner_saw(self):
+        # The owner's card showed Aresium; Aresus was asked for after he looked.
         status, data, _ = self.request('/api/empire/approvals/asking000000002', token='admin-one', method='POST',
                                        body={'approve': True, 'requested': ['aresium']})
         self.assertEqual(status, 200)
@@ -601,8 +601,8 @@ class HubTests(OwnerTestCase):
         self.assertEqual(self.calls[-2][1], {'requested-': ['aresus']})
         self.assertEqual([p['id'] for p in data['approvals']], ['pending00000001'])
 
-    def test_first_approval_grants_only_what_patrik_saw(self):
-        # An admin added Aresus to a sign-up after Patrik looked: the account server would grant all of `requested` on
+    def test_first_approval_grants_only_what_the_owner_saw(self):
+        # An admin added Aresus to a sign-up after the owner looked: the account server would grant all of `requested` on
         # approval, so the hub takes out what he did not see.
         self.pending[0]['requested'] = ['arestemis', 'aresus']
         status, data, _ = self.request('/api/empire/approvals/pending00000001', token='admin-one', method='POST',
@@ -944,7 +944,7 @@ class DataAndTransportTests(OwnerTestCase):
                 self.assertEqual(set(app), {'scheme', 'install'})
                 self.assertTrue(server.SLUG.fullmatch(slug))
                 self.assertEqual(app['scheme'], slug + '://')
-                # null until Patrik has the app's TestFlight link (later its App Store link)
+                # null until the owner has the app's TestFlight link (later its App Store link)
                 self.assertTrue(app['install'] is None or app['install'].startswith('https://'), app['install'])
         self.assertEqual(server.load_apps(), {slug: dict(app) for slug, app in apps.items()})
 
@@ -1089,7 +1089,7 @@ class LegalPageTests(OwnerTestCase):
         self.assertEqual(headers['Content-Language'], 'en')
 
     def test_the_legal_pages_stay_out_of_search_results(self):
-        # Patrik, 2026-11-02: they name him and his address; reachable from every page, but not listed in searches.
+        # The pages name the owner and his address. Every page links to them, and they stay out of search (owner, 2026-11-02).
         for path in legal.PAGES:
             with self.subTest(path=path):
                 self.assertIn(b'<meta name="robots" content="noindex, follow" />', send(path)[1])
@@ -1202,7 +1202,7 @@ class LegalPageTests(OwnerTestCase):
             self.assertNotIn('lead to confirm', (WEB / 'legal' / name).read_text())
 
     def test_the_real_pages_read_as_legal_documents(self):
-        # Patrik (2026-10-25): neutral statements, "Sie" where the reader is addressed; never "ich"/"du" or "I"/"my".
+        # Neutral statements, "Sie" where the reader is addressed (owner, 2026-10-25). Avoid "ich"/"du" and "I"/"my".
         informal = {'de': re.compile(r'\b(?i:ich|mich|mir|mein\w*|du|dich|dir|dein\w*)\b'),
                     'en': re.compile(r'\bI\b|\b(?i:me|my|mine|myself)\b')}
         for entry in legal.PAGES.values():

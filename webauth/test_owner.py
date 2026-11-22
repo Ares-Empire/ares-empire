@@ -33,7 +33,7 @@ class OwnerTests(OwnerTestCase):
         for path in contact.PAGES:
             with self.subTest(path=path):
                 page = contact.render(path, None, WEB)[0].decode()
-                self.assertNotIn(DETAILS["name"], page)   # only the legal pages name him (Patrik, 2026-11-02)
+                self.assertNotIn(DETAILS["name"], page)   # only the legal pages name him (owner, 2026-11-02)
                 self.assertIn('href="mailto:' + DETAILS["email"] + '"', page)
                 self.assertNotIn("{{OWNER_", page)
 

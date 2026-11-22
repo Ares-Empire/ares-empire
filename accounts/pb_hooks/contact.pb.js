@@ -9,7 +9,7 @@ onRecordCreateRequest((e) => {
   e.next();
 }, "contact");
 
-// After a create: mail it to Patrik (lib/mail.js), with Reply-To the address the visitor gave (checked by the email
+// After a create: mail it to the owner (lib/mail.js), with Reply-To the address the visitor gave (checked by the email
 // field) so he can answer from his inbox. A failed email is logged and the record stays (he still finds it in the
 // admin UI); it never fails the create.
 onRecordAfterCreateSuccess((e) => {

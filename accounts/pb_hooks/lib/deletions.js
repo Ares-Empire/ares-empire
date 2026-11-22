@@ -1,6 +1,6 @@
 // Deleting an account reaches every service that keeps data per account (docs/ACCOUNTS.md → Accounts in every app).
 // `plan` and `planAccess` write jobs into `deletions`; every 5 minutes `run` calls each open job on localhost.
-// A job still failing after a day is mailed to Patrik once.
+// A job still failing after a day is mailed to the owner once.
 // Loaded by the handlers with `require(`${__hooks}/lib/deletions.js`)`.
 
 // The services with per-account data, where they listen on this host, and their names in emails. An environment
@@ -123,7 +123,7 @@ function call(job) {
   }
 }
 
-/** Mails the superusers (Patrik) about a stuck job; true once sent. */
+/** Mails the superusers about a stuck job so the owner is alerted; true once sent. */
 function alert(app, job) {
   const mail = require(`${__hooks}/lib/mail.js`);
   try {

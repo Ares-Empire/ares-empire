@@ -1,5 +1,5 @@
 /// <reference path="../pb_data/types.d.ts" />
-// One more service an account can be given (2026-10-24): the Arestoteles app (Patrik's Weltbild vault on the phone).
+// One more service an account can be given (2026-10-24): the Arestoteles app (the owner's Weltbild vault on the phone).
 // Like every service, only a superuser or an admin sets it.
 const ADDED = ["arestoteles"];
 

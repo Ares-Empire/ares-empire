@@ -104,7 +104,7 @@
     // What the "+" offers for an app the account does not have (docs/API-EMPIRE.md): "ask" (open, not asked for yet),
     // "asked" (waiting for approval) or "soon" (coming soon, cannot be asked for yet).
     offer: (province) => province.access === "requested" ? "asked" : province.state === "open" ? "ask" : "soon",
-    // Ask for access to one app of the "+" (POST /api/empire/request); answers the fresh hub data. Patrik approves it.
+    // Ask for access to one app of the "+" (POST /api/empire/request); answers the fresh hub data. The owner approves it.
     async ask(service) {
       if (!sampleMode) return validate(await request("/api/empire/request", { service }));
       const data = await sampleData();

@@ -5,11 +5,11 @@
 // sends none of them and works as before.
 //
 // - `app`: the app the message is about, the same values as feedback's `app`. Empty: the general website form.
-// - `kind`: what it is about, feedback's kinds plus `access` (asking for the app; Patrik answers with the install link).
+// - `kind`: what it is about, feedback's kinds plus `access` (asking for the app; the owner answers with the install link).
 // - `app_version` and `system`: for the iPhone apps' Contact & support without a login (as feedback's), so a later
 //   build can send them as fields; until then it ends its message with a footer, which pb_hooks/contact.pb.js still
 //   reads. `app_version` holds only the characters of a version ("1.0 (12)"), `system` one line ("iOS 27.0 · iPhone").
-// - `message` may be empty, but only when asking for the app (an email address is all Patrik needs to send the install
+// - `message` may be empty, but only when asking for the app (an email address is all the owner needs to send the install
 //   link); every other message must have text. pb_hooks/contact.pb.js checks that, since a field cannot depend on
 //   another one. A message that is there still needs a character that is not a space.
 const APPS = ["empire", "aresium", "arestemis", "aresus", "arestoteles"];
