@@ -1,5 +1,5 @@
 /// <reference path="../../pb_data/types.d.ts" />
-// The contact collection's checks and its email to Patrik (pb_hooks/contact.pb.js; migrations 1793200000_contact.js and
+// The contact collection's checks and its email to the owner (pb_hooks/contact.pb.js; migrations 1793200000_contact.js and
 // 1793700000_contact_app_kind.js). Three senders write to it, all without a login:
 // - an app's own contact page on the web: name, email, message, language, `app` and `kind`. Aresium's on aresium.de
 //   (/contact, /kontakt), and since 2026-11-01 on the hub the Ares Empire's (www.ares-empire.de/contact, /kontakt; app
@@ -10,7 +10,7 @@
 //   as if it were `app`, `app_version`, `system` and `kind`; a later build can send those as fields instead.
 // Not a hook itself: only files ending in .pb.js are loaded as hooks.
 
-// The apps' names and the kinds as Patrik's emails say them (the same words as feedback.pb.js, plus asking for the app).
+// The apps' names and the kinds as the owner's emails say them (the same words as feedback.pb.js, plus asking for the app).
 const APPS = {
   empire: "Ares Empire", aresium: "Aresium", arestemis: "Arestemis", aresus: "Aresus", arestoteles: "Arestoteles",
 };
@@ -53,7 +53,7 @@ function footer(message) {
   };
 }
 
-/** The email to Patrik about a new contact record: {subject, text, replyTo}. */
+/** The email to the owner about a new contact record: {subject, text, replyTo}. */
 function email(app, record) {
   const mail = require(`${__hooks}/lib/mail.js`);
   const german = record.getString("language") === "de";

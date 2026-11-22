@@ -101,7 +101,7 @@ OPEN_PATHS = frozenset({"/login", "/login/email", "/signup", "/forgot", "/logout
                         "/brand/ares-bust-login.webp", "/brand/ares-bust-icon.png"}) | legal.ASSET_PATHS | LOGIN_FONTS \
     | contact.ASSET_PATHS
 
-# The public demo (www.ares-empire.de/demo, Patrik 2026-10-27): the hub for anyone, without an account. It is
+# The public demo at www.ares-empire.de/demo is the hub for anyone, without an account (owner, 2026-10-27). It is
 # index.html with the demo's words (app/samples/demo-empire.js) in place of the real seed, and app/empire-api.js loads
 # the made-up guest (app/samples/empire.demo.json); tools/empire_samples.py --web writes both. The page's own files are
 # open for it, read from index.html so a new script is covered; the real seed (app/empire-data.js: the provinces,
@@ -439,13 +439,13 @@ def require_pb(status: int, forbidden: str = "no_access") -> None:
     raise APIError(503, "Account service unavailable, try again in a minute.")
 
 
-# What waits for Patrik: new sign-ups, and approved accounts that asked for more apps (docs/ACCOUNTS.md → Accounts in
+# What waits for the owner: new sign-ups, and approved accounts that asked for more apps (docs/ACCOUNTS.md → Accounts in
 # every app). `requested` holds only apps the account does not have yet (the account server keeps it so).
 WAITING = "approved = false || requested:length > 0"
 
 
 def pending_accounts(token: str, client_ip: str, count_only: bool = False):
-    """The accounts waiting for Patrik, each {id, email, name, created, requested, approved, verified} (verified: the
+    """The accounts waiting for the owner, each {id, email, name, created, requested, approved, verified} (verified: the
     email address is confirmed; login needs it too), or with `count_only` how many there are."""
     items = []
     page = 1
@@ -470,7 +470,7 @@ def pending_accounts(token: str, client_ip: str, count_only: bool = False):
 
 
 def pending_count(token: str, client_ip: str) -> int | None:
-    """How many accounts wait for Patrik; None when the account server cannot say (the hub data comes without it)."""
+    """How many accounts wait for the owner; None when the account server cannot say (the hub data comes without it)."""
     try:
         return pending_accounts(token, client_ip, count_only=True)
     except APIError as e:
@@ -480,7 +480,7 @@ def pending_count(token: str, client_ip: str) -> int | None:
 
 def empire_data(record: dict, token: str, client_ip: str, language: str = "en") -> dict:
     """GET /api/empire for this account (docs/API-EMPIRE.md). The ring (`projects`) is every province the account has:
-    an admin every province, anyone else the provinces in its `services` (Patrik grants them). `addable` (the "+") is
+    an admin every province, anyone else the provinces in its `services` (the owner grants them). `addable` (the "+") is
     the rest of the catalog, each with whether the account has asked for it."""
     state, catalog, apps = load_state(), catalog_states(load_catalog()), load_apps()
     admin = record.get("admin") is True
@@ -514,7 +514,7 @@ def empire_data(record: dict, token: str, client_ip: str, language: str = "en") 
 def request_access(record: dict, token: str, client_ip: str, body: dict, language: str = "en") -> dict:
     """POST /api/empire/request {service}: the account asks for one app of the "+" (an `open` catalog province). It
     writes the account's own `requested` with its own token, like the apps' "Ask for access" (docs/ACCOUNTS.md →
-    Accounts in every app); the account server then tells Patrik (pb_hooks/accounts.pb.js). Asking again for an app
+    Accounts in every app); the account server then tells the owner (pb_hooks/accounts.pb.js). Asking again for an app
     already asked for changes nothing. Answers the fresh GET /api/empire."""
     if set(body) != {"service"} or not isinstance(body["service"], str):
         raise APIError(400, "Say which app to ask for.")
@@ -550,7 +550,7 @@ def request_access(record: dict, token: str, client_ip: str, body: dict, languag
 
 
 def decision_of(body: dict) -> tuple[str, list[str] | None]:
-    """{approve: true} or {decline: true}, optionally with `requested` (the apps Patrik saw on the card) →
+    """{approve: true} or {decline: true}, optionally with `requested` (the apps the owner saw on the card) →
     ("approve" | "decline", those apps or None)."""
     action = {key: value for key, value in body.items() if key != "requested"}
     # `is True`: JSON numbers must not count as true (in Python 1 == True).
@@ -577,7 +577,7 @@ def decide_approval(account_id: str, token: str, client_ip: str, body: dict) -> 
         raise APIError(503, "Account service returned an unreadable response.")
     current = strings_of(account, "requested")
     # The requests this decision is about: the account's requests as read just now, and when the app sends
-    # `requested` (what Patrik saw on the card) only those he saw. A request made after he looked is neither granted
+    # `requested` (what the owner saw on the card) only those he saw. A request made after he looked is neither granted
     # nor declined: it stays in `requested` and comes back in the list. The "+" and "-" forms change only the values
     # named, so a request made between this read and the write below stays as well.
     chosen = current if seen is None else [s for s in current if s in seen]
@@ -585,7 +585,7 @@ def decide_approval(account_id: str, token: str, client_ip: str, body: dict) -> 
         change = {"approved": True, "services+": chosen}
         unseen = [s for s in current if s not in chosen]
         if account.get("approved") is not True and unseen:
-            # A first approval grants everything still in `requested` (accounts.pb.js), so what Patrik did not see
+            # A first approval grants everything still in `requested` (accounts.pb.js), so what the owner did not see
             # leaves it. An account that is not approved cannot log in, so only an admin can have changed it.
             change["requested-"] = unseen
         status, _ = pb_call(path, change, token=token, client_ip=client_ip, method="PATCH")

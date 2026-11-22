@@ -1,5 +1,5 @@
 /// <reference path="../pb_data/types.d.ts" />
-// Contact & support from the apps (migration 1793100000_feedback.js): every new feedback record is mailed to Patrik
+// Contact & support from the apps (migration 1793100000_feedback.js): every new feedback record is mailed to the owner
 // (lib/mail.js), with Reply-To the account's email so he can answer straight from his inbox. A failed email is logged and
 // the record stays (he still finds it in the admin UI); it never fails the create.
 

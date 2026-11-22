@@ -1,5 +1,5 @@
 /// <reference path="../pb_data/types.d.ts" />
-// The website's contact form (2026-10-25, brief E7): anyone can write to Patrik from www.ares-empire.de/kontakt or
+// The website's contact form (2026-10-25, brief E7): anyone can write to the owner from www.ares-empire.de/kontakt or
 // /contact, without an account; the imprint names it as the second quick way to reach him. `pb_hooks/contact.pb.js`
 // mails each message to him, and he reads them all in the admin UI.
 //

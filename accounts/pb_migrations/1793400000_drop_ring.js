@@ -1,5 +1,5 @@
 /// <reference path="../pb_data/types.d.ts" />
-// The ring is every app an account has (Patrik, 2026-10-25; docs/EMPIRE-APP.md → Whose ring shows what): the hub
+// The ring is every app an account has (owner, 2026-10-25). See docs/EMPIRE-APP.md → Whose ring shows what. The hub
 // builds it from `services`, so the saved `ring` of migration 1792800000_admin_ring.js goes, with what it held (data
 // minimisation, docs/PRIVACY.md). Nothing else reads it.
 //

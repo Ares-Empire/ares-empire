@@ -1,5 +1,5 @@
-"""The contact pages the hub serves, open to everyone, each in English and German (Patrik, 2026-11-01: Arestemis and the
-Empire get pages in the style of Aresium's own, aresium.de/contact):
+"""The contact pages the hub serves, open to everyone, each in English and German (owner, 2026-11-01). Arestemis and the
+Empire get pages in the style of Aresium's own, aresium.de/contact:
 
 - the Ares Empire's, www.ares-empire.de/contact and /kontakt: the Empire's general contact (the imprint names it) and
   where people ask for the Ares Empire app;
@@ -12,7 +12,7 @@ Contact & support in the apps (empire-ios Shared/Support) and in the app's own l
 (web/shared/forms/contact-form.css) are shared with aresium.de byte for byte; the looks are web/contact/<app>.css on
 web/contact/hub.css. The browser posts straight to the account server's open `contact` collection (docs/ACCOUNTS.md →
 Website contact form), with the app as `app` and the topic as `kind`. The words address no one: no "you", no "du" or
-du-imperatives (Patrik, 2026-10-31).
+du-imperatives (owner, 2026-10-31).
 
 A page collects personal data, so it is served only while the privacy policy in its language is (webauth/legal.py).
 Nothing comes from other hosts, and its Content-Security-Policy (CSP) allows only this server and the account server.

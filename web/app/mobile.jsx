@@ -114,7 +114,7 @@
   }
 
   // The "+": the other apps open to users, each with what can be done (EmpireData.offer). Asking puts the app into the
-  // account's requests; Patrik approves, and the app then joins the ring.
+  // account's requests; the owner approves, and the app then joins the ring.
   function MoreApps({ apps, busy, onAsk }) {
     if (!apps.length) return <div className="em-empty-state"><Glyph name="Check" size={28} /><h2>Nothing more to ask for.</h2>
       <p>No other apps are open yet.</p></div>;

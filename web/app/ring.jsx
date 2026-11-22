@@ -43,7 +43,7 @@
     const real = addSlot ? [...(projects || []), { slug: "__add", add: true, name: addSlot.label }] : (projects || []);
     // The wheel has at least six places, so its tabs sit as close as six would. Three to five tabs repeat round it, so
     // it turns all the way round (drag, scroll, arrows never stop) with a tab on either side of the front from the
-    // start (Patrik, 2026-10-27). One or two (one province and the "+" place) keep their places and stop at both ends:
+    // start (owner, 2026-10-27). One or two (one province and the "+" place) keep their places and stop at both ends:
     // repeated, a tab would meet itself.
     const short = real.length < 3;
     const copies = short ? 1 : Math.ceil(6 / real.length);

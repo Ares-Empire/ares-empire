@@ -4,7 +4,7 @@
 // calls each open job until the service confirms. Superusers only (the API rules are null).
 //
 // `account` is the deleted account's id (text: the account itself is gone). `reported` (CONTRACT ADDITION) remembers
-// that Patrik was mailed about a job still failing after a day, so he is mailed once.
+// that the owner was mailed about a job still failing after a day, so he is mailed once.
 const SERVICES = ["arestemis", "push"];
 
 migrate((app) => {

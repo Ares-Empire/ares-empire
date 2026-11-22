@@ -111,7 +111,7 @@
     {
       "at": "2026-11-02",
       "project": "arestemis",
-      "text": "Arestemis explains itself now: a tour of eight steps, shown once after the first login and again from Settings, walks through sample searches in the app's own language, from starting a search to what a Preismonitor and a page watch are for. Patrik asked for it when \"Webseite beobachten\" read as too vague; the tour's frame is shared with Aresium's, whose tour looks exactly as before. App build 13."
+      "text": "Arestemis explains itself now: a tour of eight steps, shown once after the first login and again from Settings, walks through sample searches in the app's own language, from starting a search to what a Preismonitor and a page watch are for. The tour was added because \"Webseite beobachten\" read as too vague, and the tour's frame is shared with Aresium's, whose tour looks exactly as before. App build 13."
     },
     {
       "at": "2026-11-02",
@@ -141,7 +141,7 @@
     {
       "at": "2026-10-31",
       "project": "arestemis",
-      "text": "Arestemis is on Patrik's iPhone, and its notifications arrive by push, so its Telegram copy is switched off. After his first look its sentences no longer mention the AI (the search fields are “filled in automatically”), and the hunt's start button says “Suche starten”; both reached the phone with build 2."
+      "text": "Arestemis is on an iPhone, and its notifications arrive by push, so its Telegram copy is switched off. After the first iPhone test its sentences no longer mention the AI (the search fields are “filled in automatically”), and the hunt's start button says “Suche starten”; both reached the phone with build 2."
     },
     {
       "at": "2026-10-24",

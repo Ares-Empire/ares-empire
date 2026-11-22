@@ -1,8 +1,8 @@
 /// <reference path="../pb_data/types.d.ts" />
 // Bank requests from Aresium (2026-10-27, brief 26): in Aresium's bank guide, someone whose bank is not listed sends
-// its name to Patrik in two taps, so he knows which banks to add. Only the name the person typed, the app's version
+// its name to the owner in two taps, so he knows which banks to add. Only the name the person typed, the app's version
 // and language; no account, no file, no payment. `pb_hooks/bank-requests.pb.js` refuses a name that looks like personal
-// data and mails each request to Patrik.
+// data and mails each request to the owner.
 //
 // - Create is open to everyone (createRule ""), like the bank formats: no Ares account is needed to send. Nobody but a
 //   superuser can list, view, change or delete them (null).

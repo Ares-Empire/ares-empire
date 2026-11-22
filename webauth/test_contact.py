@@ -127,7 +127,7 @@ class PageTests(OwnerTestCase):
             self.assertIn(f'"{topic}"', kinds)
 
     def test_the_words_address_no_one(self):
-        # Patrik, 2026-10-31: no "you"/"your", no "du"/"dein" or du-imperatives; also in what the script swaps in.
+        # No "you"/"your", no "du"/"dein" or du-imperatives, including text the script swaps in (owner, 2026-10-31).
         for app in contact.APPS:
             for topic in contact.TOPICS:
                 self.assertNotRegex(contact.page(app, 'en', topic), r'(?i)\b(you|your|yours|you\'re)\b')
@@ -135,7 +135,7 @@ class PageTests(OwnerTestCase):
                                     r'(?i)\b(du|dich|dir|dein\w*|frag|schreib|gib|versuch|sende|melde)\b')
 
     def test_the_pages_never_name_the_owner(self):
-        # Patrik, 2026-11-02: a search for his name brought up the contact page. His name is only on the legal pages,
+        # A search for the owner's name brought up the contact page (owner, 2026-11-02). His name is only on the legal pages,
         # which search engines are asked to leave out (web/legal/page.html).
         for app in contact.APPS:
             for language in ('en', 'de'):

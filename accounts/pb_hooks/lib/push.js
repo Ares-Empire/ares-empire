@@ -1,7 +1,7 @@
 /// <reference path="../../pb_data/types.d.ts" />
 // The notification the account server sends through the push service (docs/PUSH.md → Who sends what): an account
-// gets one when it was approved or given more apps, about itself only. Patrik gets sign-ups and access requests by
-// email, not as notifications (Patrik, 2026-10-26). Each notification carries English and German (`localized.de`); the push
+// gets one when it was approved or given more apps, about itself only. The owner gets sign-ups and access requests by
+// email, not as notifications (owner, 2026-10-26). Each notification carries English and German (`localized.de`); the push
 // service picks per device. accounts.pb.js sends them next to the emails; a notification that fails is logged
 // ("push failed") and never fails or undoes the request. Not a hook itself (only files ending in .pb.js are); a handler
 // loads it with `require(`${__hooks}/lib/push.js`)`.

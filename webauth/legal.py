@@ -1,7 +1,7 @@
 """The legal pages: privacy policy and imprint, in German and English, open to everyone (no login).
 
 They are the one exception to "websites stay English" (legal pages in Germany are German), with the contact pages
-(webauth/contact.py). The text lives in `web/legal/<name>.html` (body only, what Patrik approves); `web/legal/page.html`
+(webauth/contact.py). The text lives in `web/legal/<name>.html` (body only, what the owner approves); `web/legal/page.html`
 is the frame in the hub's look, its footer linking the contact page in the page's language (`/kontakt`, `/contact`).
 A page that still holds a draft marker is not served (404), so merging a draft never publishes it; set
 LEGAL_PREVIEW=1 to look at drafts locally. The contact pages collect personal data, so they are served only while
