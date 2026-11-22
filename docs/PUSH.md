@@ -1,6 +1,6 @@
 # Empire push — one push service for every app
 
-**Decided 2026-10-24** with Patrik, for the Arestemis and Aresus apps (Telegram retires once push works on the phone).
+**Decided 2026-10-24** with the owner, for the Arestemis and Aresus apps (Telegram retires once push works on the phone).
 Status (2026-10-24): **deployed** as `empire-push.service`, a dry run until the APNs key exists; Aresus and Arestemis send through it. Code: `push/` in this repo; Swift side:
 `empire-ios/Shared/Push/`.
 
@@ -162,9 +162,9 @@ installing the hub unit; Caddy's buffering and read timeouts are configured sepa
 | Aresus | `de.ares-empire.aresus` | each owner (`EMPIRE_ALLOWED_USERS`) | an issue opens or is fixed, an Aresync run fails |
 | Account server (2026-10-25) | `de.ares-empire.empire` | the account itself | it was approved, or given more apps |
 
-**The account server's notification** (Patrik, 2026-10-25/26; `accounts/pb_hooks/lib/push.js`, sent from
+**The account server's notification** (owner, 2026-10-25/26; `accounts/pb_hooks/lib/push.js`, sent from
 `accounts.pb.js` next to the email, [ACCOUNTS.md → Notifications](ACCOUNTS.md#notifications-2026-10-25)): only to an
-account about itself. Sign-ups and access requests reach Patrik by email, not as notifications (Patrik, 2026-10-26).
+account about itself. Sign-ups and access requests reach the owner by email, not as notifications (owner, 2026-10-26).
 
 ```json
 {"app": "de.ares-empire.empire", "to": {"user": "<account id>"},

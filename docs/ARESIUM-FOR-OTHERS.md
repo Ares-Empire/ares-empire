@@ -1,24 +1,24 @@
 # Aresium for other people — plan
 
-**Draft 2026-10-26** (Claude, for Patrik); Patrik's answers the same evening (two rounds) are in "Decisions". Nothing here is built
+**Draft 2026-10-26** (Claude, for the owner); the owner's answers the same evening (two rounds) are in "Decisions". Nothing here is built
 yet. Measurements **M1–M5** come before the choices that depend on them. **Version 1 is the basics** (phone mode,
-imports, categories, sorting); receipts are version 2 (Patrik, 2026-10-26). Server: `~/aresium`; app: `empire-ios/Aresium`.
+imports, categories, sorting); receipts are version 2 (owner, 2026-10-26). Server: `~/aresium`; app: `empire-ios/Aresium`.
 
 ## What it is
 
-Aresium is Patrik's finance dashboard (aresium.de and the iPhone app): bank and PayPal exports go in, every payment
-gets a category, and the app shows where the money goes by month and category. "For other people" means anyone Patrik
+Aresium is the owner's finance dashboard (aresium.de and the iPhone app): bank and PayPal exports go in, every payment
+gets a category, and the app shows where the money goes by month and category. "For other people" means anyone the owner
 approves can use the app for their own money, with their data on their own iPhone.
 
-## Already decided (Patrik)
+## Already decided (owner)
 
-- **Their data stays on their iPhone:** imports, categories, storage. No bank data on any server of ours. Patrik's own
+- **Their data stays on their iPhone:** imports, categories, storage. No bank data on any server of ours. The owner's own
   data stays on the server for aresium.de (2026-10-25; [PRIVACY.md](PRIVACY.md) → Facts, `empire-ios/CLAUDE.md` → Open 5).
 - **A plan and tests first** (2026-10-25): imports from other banks; suggested categories people change and extend;
   sorting learned from their own corrections; auto-sort for the rest only if they switch it on (Apple's on-device
-  model, or a server that stores nothing); each layer measured on Patrik's own transactions before choosing. Changed 2026-10-26: our server only, Groq, nothing stored (D2).
+  model, or a server that stores nothing); each layer measured on the owner's own transactions before choosing. Changed 2026-10-26: our server only, Groq, nothing stored (D2).
 - **Receipts** (2026-10-26, new): take a photo of a receipt in the app; it adds it to the right payment and sorts the
-  items into categories. **Version 2**, after the basics; no photos kept (Patrik, 2026-10-26).
+  items into categories. **Version 2**, after the basics; no photos kept (owner, 2026-10-26).
 - Import stays in the app (2026-10-23). The privacy policy gets Aresium's section before anyone else gets it
   ([PRIVACY.md](PRIVACY.md) → the rule).
 
@@ -32,7 +32,7 @@ From the code on 2026-10-26 (`~/aresium`, `empire-ios/Aresium`):
   Duplicates are refused by `(source, externalId)` (`core.ts`). The app parses nothing: it reads the file as UTF-8 and
   sends the text to `POST /api/import`.
 - **Sorting:** (1) keyword rules on every import (`src/sync/categorize.ts`); (2) an AI pass by hand only (`npm run ai`,
-  Groq `llama-3.3-70b`, `src/enrich/llm.ts`); (3) Patrik's own changes (Switch/Add). Each transaction records who set
+  Groq `llama-3.3-70b`, `src/enrich/llm.ts`); (3) the owner's own changes (Switch/Add). Each transaction records who set
   its category (`categorySource`: rule, llm, manual); every Switch is logged in `CategoryCorrection`.
 - **Categories:** one flat list of 22 (`scripts/seed-categories.ts`), names partly German, partly English ("Drogerie",
   "Groceries"); icons and colours fixed per name in code (`src/data/queries.ts` → `CAT_META`). One category per
@@ -40,17 +40,17 @@ From the code on 2026-10-26 (`~/aresium`, `empire-ios/Aresium`):
 - **Numbers:** the server computes the whole dashboard (`src/data/dashboard.ts`, `GET /api/data` version 2); the app
   and the website only display it. The app keeps it in memory; on the phone only the widget's totals are saved.
 - **One user:** no owner column anywhere, one import lock, a personal config (`config/personal.json`), an AI prompt
-  about Patrik. Access is limited to `EMPIRE_ALLOWED_USERS`.
+  about the owner. Access is limited to `EMPIRE_ALLOWED_USERS`.
 
 ## The plan, part by part
 
 ### 1. One app, two modes
 
-Patrik keeps **server mode** (as today). Everyone else gets **phone mode**: the same screens, with the data and the
+The owner keeps **server mode** (as today). Everyone else gets **phone mode**: the same screens, with the data and the
 calculations on the phone. The Aresium server tells the app which mode an account has (the owner list decides) and
 serves no data to anyone else.
 
-**Changed 2026-10-31:** Patrik moved his data to the phone too (he imported his bank files in phone mode, and the
+**Changed 2026-10-31:** the owner moved his data to the phone too (he imported his bank files in phone mode, and the
 phone has what server mode lacks: renaming, adding up, Mitteilungen). Logging in to another Ares app had switched his
 Aresium to server mode and hid the phone's data. Now the server answers `phone` for every account, his too; an
 owner-list account gets `server` only when its id is in `APP_SERVER_MODE_USERS` on the server (empty). The website
@@ -82,7 +82,7 @@ parsers, duplicates, rules, dashboard, recurring payments). **D1** decides how t
 - **Bank CSVs differ in layout:** column names and order, `;` or `,`, decimal commas, date formats, one amount column
   or separate debit/credit columns, account details in lines above the table, and the text encoding (many German bank
   CSVs are Windows-1252 / ISO-8859-1, not UTF-8; the app reads only UTF-8 today, which breaks umlauts).
-- **Flexible reading, with AI only for the layout** (Patrik, 2026-10-26: no list of people or banks yet, so be
+- **Flexible reading, with AI only for the layout** (owner, 2026-10-26: no list of people or banks yet, so be
   flexible): the app finds the table and the encoding itself; known layouts are recognised by their header line; for
   an unknown one, an AI maps the **column names** to date, amount, text, counterparty and so on (the header line holds
   no one's payments, so nothing personal leaves the phone). The app then checks the mapping against the values (dates
@@ -100,18 +100,18 @@ parsers, duplicates, rules, dashboard, recurring payments). **D1** decides how t
 - **Several accounts per person** (current account, card, PayPal): the accounts table exists, but the balance line
   assumes one bank account; fix. Money moved between one's own accounts is found by matching (same amount, opposite
   sign, within a few days, own IBAN) and counted as Transfer, like PayPal top-ups today.
-- **Not now:** automatic bank access. FinTS straight from the phone is possible (Patrik's roadmap, phase 4) but needs a
+- **Not now:** automatic bank access. FinTS straight from the phone is possible (the owner's roadmap, phase 4) but needs a
   product registration with the German banking association and TAN handling. Account-access providers (PSD2
   aggregators) run on someone else's server and break the rule above, so no.
 
 ### 4. Categories
 
-Decided by Patrik (2026-10-26): **a solid list to choose from, nothing preselected.** On first start (and later in
+Decided by the owner (2026-10-26): **a solid list to choose from, nothing preselected.** On first start (and later in
 Aresium's settings) a clear screen lists the default categories in groups; people tick the ones they want and type
 names to add their own. Their list (defaults ticked plus their own) is what sorting uses, and what the app sends with
 an auto-sort request.
 
-- **The default list** (draft for Patrik's OK; each with an English and a German name, shown in the app's language, an
+- **The default list** (draft for the owner's OK; each with an English and a German name, shown in the app's language, an
   icon and a colour; the kind decides how it counts):
 
   | Group | Categories (English · German) |
@@ -127,7 +127,7 @@ an auto-sort request.
   | Income | Salary & side jobs · Gehalt & Nebenjob; BAföG & scholarships · BAföG & Stipendium; Parents & family · Eltern & Familie; Kindergeld · Kindergeld; Selling things · Verkäufe; Interest & dividends · Zinsen & Dividenden; Other income · Sonstige Einnahmen |
   | Other | Other · Sonstiges |
 
-- **Two built in, not on the list** (Claude's addition, for Patrik's OK): **Own transfers** (money between one's own
+- **Two built in, not on the list** (Claude's addition, for the owner's OK): **Own transfers** (money between one's own
   accounts, never counted, so nothing is counted twice) and **Not sorted** (what nothing could sort yet, shown as a
   to-do). Money back under a spending category counts as a refund, as today.
 - **Default categories follow the app's language** (stored by id); one's own keep the name as typed. Own categories
@@ -135,7 +135,7 @@ an auto-sort request.
 - **People change it later:** tick more, untick (its payments move to another category or to Not sorted), rename,
   merge, pick icon and colour. Icons and colours are stored per category, not fixed by name in code.
 - **Splits** (version 2, with receipts): one payment divided into parts with their own category and amount.
-- Flat list, as today (no subcategories). Patrik's own categories in server mode stay as they are.
+- Flat list, as today (no subcategories). The owner's own categories in server mode stay as they are.
 
 ### 5. Sorting: three layers
 
@@ -149,7 +149,7 @@ Every category shows where it came from (starter rule, learned, auto, you), as t
    merchant (the name cleaned of card numbers, cities and dates) and asks once: "Also the 12 other payments to
    REWE?". Future payments from that merchant follow. Own rules ("text contains …") as today. This layer should sort
    most payments, because a few merchants make up most of them (M2 checks this).
-3. **Not in version 1** (D2 changed 2026-10-26, see Decisions). As first planned: **auto-sort through our server, one switch in Aresium's settings, off by default** (Patrik, 2026-10-26: easier,
+3. **Not in version 1** (D2 changed 2026-10-26, see Decisions). As first planned: **auto-sort through our server, one switch in Aresium's settings, off by default** (owner, 2026-10-26: easier,
    works on every iPhone, only a few friends will use it). For what layers 1 and 2 leave open:
    - The app sends the person's category list and the open payments (date, amount, text, counterparty; a random
      reference per payment, no bank ids) to a new Aresium route; the server asks the AI model, sends back one category
@@ -163,11 +163,11 @@ Every category shows where it came from (starter rule, learned, auto, you), as t
      sent to our server and an AI to be sorted; nothing is stored"); the privacy policy explains it; the netcup
      processing agreement (AVV) is updated (it says "no financial data" today); Groq's data processing terms are
      accepted. Switching it on is the person's consent.
-   - Apple's on-device model is not used (Patrik, 2026-10-26: our server is easier and works on every phone).
+   - Apple's on-device model is not used (owner, 2026-10-26: our server is easier and works on every phone).
 
 ### 6. Receipts
 
-**Version 1 (Patrik, 2026-10-27: "lets do it"; D8, briefs 30–31).** The import button becomes Apple's usual menu:
+**Version 1 (owner, 2026-10-27: "lets do it"; D8, briefs 30–31).** The import button becomes Apple's usual menu:
 Choose file, Scan receipt (Apple's document scanner), Choose photo. The iPhone reads the receipt (Vision, on the phone;
 the register's QR code when there is one); the engine (`readReceipt`) picks out the shop, date, total, currency and
 card or cash, in the common European languages and English; a check window ("Does this look right?", like an unknown
@@ -190,7 +190,7 @@ bank file) shows them and the category the shop list gives. No photo is kept, on
   words and the number and date styles of German, English, French, Italian, Spanish, Dutch and Portuguese. A receipt in
   another currency is never joined by itself (its bank payment is in euros); paid in cash, the check window asks for
   the amount in euros.
-- Phone mode first; Patrik's server mode gets it once the server has a place for receipts (the engine's code is
+- Phone mode first; the owner's server mode gets it once the server has a place for receipts (the engine's code is
   shared). The privacy policy gets one sentence before friends see it.
 
 **Version 2 (the original idea below):** the items, splitting a receipt into categories.
@@ -238,9 +238,9 @@ and are read exactly.
   server and Groq, nothing stored); the account. App Store privacy label: only the account (email) is collected; no financial data.
 - Apple reviews an app before external testers get it: a demo account plus a made-up bank file for the reviewer
   (`empire-ios/docs/APP-STORE.md`).
-- ~~Then Aresium goes from "coming soon" to open in the hub catalog; Patrik approves people as for every app.~~
-  Dropped (Patrik, 2026-10-27): without an account (D7) friends need no hub, no Ares account and no approval; they get
-  the TestFlight link from Patrik. Opening Aresium in the hub would give accounts the `aresium` service, which the
+- ~~Then Aresium goes from "coming soon" to open in the hub catalog; the owner approves people as for every app.~~
+  Dropped (owner, 2026-10-27): without an account (D7) friends need no hub, no Ares account and no approval; they get
+  the TestFlight link from the owner. Opening Aresium in the hub would give accounts the `aresium` service, which the
   privacy text rules out (`PRIVACY.md` → To do 6). The hub keeps it as coming soon; at most it later becomes a plain
   download link.
 - When a file cannot be read, Contact & support offers to send only the bank's name and the file's header line, never
@@ -266,18 +266,18 @@ My additions, each with what I would do. Several are in the parts above already.
 | 12 | **Widgets in phone mode** | They read the phone's snapshot as today; small change |
 | 13 | **The website:** others have nothing on aresium.de | Say so on the site's login: "Aresium for others is the iPhone app" |
 | 14 | **Leaving or deleting** removes the phone's data | After offering an export (part 2) |
-| 15 | **Currencies other than the euro: not supported yet** (Patrik, 2026-10-27) | Looked at once the first person with a non-euro account wants Aresium. Today the readers keep each payment's currency, but the dashboard adds amounts as plain numbers and the app writes every amount in euros: a CHF or GBP account shows "€", and two currencies at once are added together. Fine already: card payments abroad on a euro account (the bank books euros) and PayPal's foreign purchases (its conversion rows). The fix when needed: the main currency from the bank files shown everywhere and other currencies kept apart (about half a day), then converting at the ECB's daily rates into one chosen currency (1–2 days; the rates download needs a sentence in the privacy policy) |
+| 15 | **Currencies other than the euro: not supported yet** (owner, 2026-10-27) | Looked at once the first person with a non-euro account wants Aresium. Today the readers keep each payment's currency, but the dashboard adds amounts as plain numbers and the app writes every amount in euros: a CHF or GBP account shows "€", and two currencies at once are added together. Fine already: card payments abroad on a euro account (the bank books euros) and PayPal's foreign purchases (its conversion rows). The fix when needed: the main currency from the bank files shown everywhere and other currencies kept apart (about half a day), then converting at the ECB's daily rates into one chosen currency (1–2 days; the rates download needs a sentence in the privacy policy) |
 
 ## Decisions
 
-Answered by Patrik on 2026-10-26:
+Answered by the owner on 2026-10-26:
 
-- **D1 — How the phone gets the logic:** Patrik left it to Claude ("what makes the most sense overall"). **One
+- **D1 — How the phone gets the logic:** the owner left it to Claude ("what makes the most sense overall"). **One
   engine:** today's TypeScript parsers, rules and dashboard become pure functions (no database, no Node-only parts);
   the server runs them in Node as now, and the app runs the same file in JavaScriptCore, Apple's built-in JavaScript
   engine (allowed in App Store apps when the code ships inside the app). Why: a fix or a new bank lands once, both
-  places give the same numbers, and Patrik's server, website and scripts keep working. Rejected: a second copy in Swift
-  (two copies that must stay identical, every change twice); moving Patrik to phone mode as well (one engine, but it
+  places give the same numbers, and the owner's server, website and scripts keep working. Rejected: a second copy in Swift
+  (two copies that must stay identical, every change twice); moving the owner to phone mode as well (one engine, but it
   changes his website imports, the Groq pass and the Telegram bot). **Condition:** M5 shows it runs fast enough on the
   phone (apps get JavaScriptCore without its fastest mode); if not, a Swift copy with shared test files. **Confirmed by M5 (2026-10-26).**
 - **D2 — Auto-sort route:** our server only, with Groq (part 5, layer 3). One switch, off by default.
@@ -285,36 +285,36 @@ Answered by Patrik on 2026-10-26:
 - **D4 — Receipts:** version 2; photos not kept.
 - **D5 — First people and banks:** not known yet → flexible reading, with AI on the column names for unknown layouts
   (part 3).
-- **D6 — Answer key for measuring:** the categories known to be right: the 1,003 set by Patrik's own keyword rules and
-  the 52 he set by hand (1,055 payments). The 123 the Groq pass set and the 68 without a category stay out; Patrik
-  checks them later only if a larger test set is needed. This set suits a new user well: without Patrik's rules,
+- **D6 — Answer key for measuring:** the categories known to be right: the 1,003 set by the owner's own keyword rules and
+  the 52 he set by hand (1,055 payments). The 123 the Groq pass set and the 68 without a category stay out; the owner
+  checks them later only if a larger test set is needed. This set suits a new user well: without the owner's rules,
   auto-sort would see payments like these.
 
-Patrik approved the default list (2026-10-26).
+The owner approved the default list (2026-10-26).
 
-**D2 changed 2026-10-26 (Patrik: "makes sense"): version 1 has no server sorting.** After the legal check
+**D2 changed 2026-10-26 (owner: "makes sense"): version 1 has no server sorting.** After the legal check
 (`PRIVACY.md` → "Opening Aresium: legal check", kept on branch `codex/03-aresium-privacy`) and M3: the server route needs
 more than the AVV and the policy (Groq's contract and a transfer assessment for the USA, explicit consent for sensitive
 booking texts, people named in booking texts, a record of processing, and possibly a DPIA, which in Germany would also
 require a data protection officer, § 38 BDSG), while M3 shows it saves about 4 fixes a month. Version 1 sorts with the
 shop rules, learning and the PayPal rule; nothing about payments leaves the phone, the AVV stays as it is, and the
 policy's Aresium section says the data stays on the iPhone. Apple's on-device model can come later as the optional
-switch. The Groq client stays in `aresium/src/sort/` (also usable for Patrik's own server).
+switch. The Groq client stays in `aresium/src/sort/` (also usable for the owner's own server).
 
-**D7 — No account for phone mode (Patrik, 2026-10-27, after trying the first run).** Phone mode needs no Ares account:
+**D7 — No account for phone mode (owner, 2026-10-27, after trying the first run).** Phone mode needs no Ares account:
 the account gave a friend nothing (their data never leaves the phone) and cost them a sign-up, an email confirmation
 and waiting for approval; Apple's guideline 5.1.1(v) also asks apps without account features to work without a login.
 Instead an optional lock: Face ID and/or an own 6-digit code. With an own code set, the iPhone's code cannot
-open Aresium or reset the code (Patrik agreed, 2026-10-27); a forgotten code means deleting Aresium's data. One store per phone. Patrik's server mode stays,
+open Aresium or reset the code (the owner agreed, 2026-10-27); a forgotten code means deleting Aresium's data. One store per phone. The owner's server mode stays,
 through the shared Ares login of the other apps. Who can use Aresium is then simply who has the TestFlight link, which
 costs nothing on our side. The other apps keep accounts: they keep data on our server or cost money per person
 (Arestemis's AI checks). Brief 22.
 
-**D8 — Receipts, version 1 (Patrik, 2026-10-27).** Shop, date, total and card or cash, matched to the bank payment
-so nothing counts twice; asked when the amounts differ ("smart to ask", Patrik); cash taken out of the withdrawals;
+**D8 — Receipts, version 1 (owner, 2026-10-27).** Shop, date, total and card or cash, matched to the bank payment
+so nothing counts twice; asked when the amounts differ ("smart to ask", the owner); cash taken out of the withdrawals;
 no photo kept; items later (part 6).
 
-**D9 — Cash beyond the bank, and correcting receipts (Patrik, 2026-10-28, after trying receipts).** Cash that never
+**D9 — Cash beyond the bank, and correcting receipts (owner, 2026-10-28, after trying receipts).** Cash that never
 came from the bank (a gift, money from selling something) is entered by hand, both ways: cash spent works like a cash
 receipt without a photo; cash received counts as income in its category and is a source that cash spending can come
 from, like a withdrawal. Where a cash payment came from can be chosen per receipt or entry (automatic otherwise: the
@@ -325,28 +325,28 @@ view and never counts in the totals. The default category holding the withdrawal
 card or cash, category), also after saving; a corrected shop name is remembered for the next receipt read the same
 way, the category per shop as a Switch; totals and card or cash are not learned. Briefs 32 (engine) and 33 (app).
 
-**After Patrik's first test (2026-10-27):** a guide per bank on how to get the file (brief 19: the steps; the screen
+**After the owner's first test (2026-10-27):** a guide per bank on how to get the file (brief 19: the steps; the screen
 comes later), a tour over made-up data that highlights the real buttons, an unknown-file window that shows the first
 payments and asks "Does this look right?" (several readings from the engine, brief 20), and sending an unknown bank's
 format (never a payment) to us in two taps so Claude can add the bank for everyone (engine: brief 20; the inbox on the
 account server: brief 21). Fixed on the way: "Not sorted" counted money coming in as negative spending (brief 20).
 
-**After Patrik's second test (2026-10-27):** a first screen ("No data yet", Import data, Start tour) in place of
+**After the owner's second test (2026-10-27):** a first screen ("No data yet", Import data, Start tour) in place of
 made-up data, a lighter tour that also shows the lock and Contact & support, "my bank is missing" in the guide
 (brief 25, merged). Then: Import data opens the file first and the category picker follows the import while no
 category is chosen, so people see their own payments land while they tick (until then the picker came first;
-Patrik, 2026-10-27), with each category's count in the picker, nothing preselected (brief 27, merged); the payment page in
+the owner, 2026-10-27), with each category's count in the picker, nothing preselected (brief 27, merged); the payment page in
 plain words (brief 28, merged). The hub step is dropped (part 7). The language follows the iPhone (German iPhone: German,
 any other: English), as in every app.
 
 ## Measurements before choosing
 
-Patrik's transactions are exported from the server to a folder on the MacBook outside every repo, used for the
+The owner's transactions are exported from the server to a folder on the MacBook outside every repo, used for the
 measurements and never committed; only scripts tested on made-up data touch them, and only summary numbers are read
 back. The answer key is D6 (1,055 payments).
 
 - **M1 — Starter rules:** what share of payments they sort, and how many of those correctly.
-- **M2 — Learning from corrections:** replay Patrik's payments in date order as if he were a new user who fixes every
+- **M2 — Learning from corrections:** replay the owner's payments in date order as if he were a new user who fixes every
   wrong category; count the fixes needed (first month, first 100 payments, in total), with and without starter rules.
   This shows how much work a new user has.
 - **M3 — Auto-sort:** correct share, time and cost per payment for the server route (Groq), both for a new user
@@ -360,7 +360,7 @@ back. The answer key is D6 (1,055 payments).
     by themselves, 77–97% right. Learning alone, without the shop rules: 490 fixes. The shop rules cut the work by
     two thirds.
   - **M3 (Groq, `openai/gpt-oss-120b`; `llama-3.3-70b-versatile` is no longer available to the account):** on what
-    the shop rules leave open for a new user, 31% right with Patrik's own list, 38% with the default list. In the
+    the shop rules leave open for a new user, 31% right with the owner's own list, 38% with the default list. In the
     monthly replay, Groq saves 60–63 fixes over 14 months (263 → 203), about 4 a month. About 1 s per payment;
     about $0.01 for all.
   - **M3 with NVIDIA (2026-10-27, `nvidia/nemotron-3-ultra-550b-a55b`, the best of the hub key's 85 models that
@@ -373,13 +373,13 @@ back. The answer key is D6 (1,055 payments).
     98.4% right; 315 payments (30%) found as own transfers, 100% right. A new user fixes **51 payments in 14 months**
     (was 158): 9 in the first month, 13 in the first 100, then about 3 a month. Learning alone would be 377. What stays
     unsorted on day one is personal (money from parents, own tools, private PayPal sellers).
-  - **Main error source in all layers:** Patrik imports both his bank and his PayPal export, so the bank's PayPal lines
+  - **Main error source in all layers:** the owner imports both his bank and his PayPal export, so the bank's PayPal lines
     are transfers for him (`isPaypalBankFunding` on the server), while their text names the shop ("Ihr Einkauf bei
     Vinted"); learning and the AI put them under the shop's category (Transfer → Clothes 68 times in M3). The engine
     needs the server's PayPal rule (a person who imports both: bank-side PayPal lines are own transfers). Measure
     again after it.
 - **M4 — Receipts (version 2):** 20–30 real receipts from different shops (REWE, Aldi, Lidl, Edeka, dm, Rossmann, a bakery, a
-  restaurant), photographed by Patrik: items read correctly, totals that check out, items sorted correctly, seconds per
+  restaurant), photographed by the owner: items read correctly, totals that check out, items sorted correctly, seconds per
   receipt; whether the QR code is there and readable.
 - **M5 — Engine test run (D1):** today's parsers and dashboard bundled into one JavaScript file and run in
   JavaScriptCore on the simulator, on the existing test files (`AresiumTests/server-dashboard.sample.json` and the
@@ -398,12 +398,12 @@ The results go into this file before the choices that depend on them.
 1. ~~**Own transfers between accounts pair too easily**~~ (done: a pair needs the IBAN or both texts saying so, `src/engine/sorting/transfers.ts`; checked 2026-11-07): equal opposite amounts within 3 days on two accounts can be
    unrelated (a 20.00 purchase and a friend's 20.00). Require the counterparty's IBAN to be the person's other account
    (the bank readers of brief 14 deliver IBANs), or leave the pair unsorted.
-2. ~~**Income counts incoming own transfers**~~: fixed and live 2026-10-27 (Patrik agreed): transfer categories count
-   as neither spending nor income; on Patrik's data total income 37,566 → 26,664, spending unchanged.
+2. ~~**Income counts incoming own transfers**~~: fixed and live 2026-10-27 (the owner agreed): transfer categories count
+   as neither spending nor income; on the owner's data total income 37,566 → 26,664, spending unchanged.
 3. **The bench sorts one payment at a time,** so the new structural rules never run in it; switch it to one
    `sortPayments` call over all payments, then measure M1–M2 again (also for the bigger shop list, brief 13).
 4. ~~**English PayPal exports**~~ (done: `ENGLISH_FUNDING` in `src/engine/paypal.ts`; checked 2026-11-07): their funding rows ("Bank Deposit to PP Account") are not left out yet; only the German
-   wording is. Add it (Patrik's numbers do not change; check with the parity script idea).
+   wording is. Add it (the owner's numbers do not change; check with the parity script idea).
 
 **From brief 14 (bank readers, 2026-10-27):**
 
@@ -423,7 +423,7 @@ The results go into this file before the choices that depend on them.
 12. **comdirect** (brief 19): a file with several accounts is read only in its first section (the guide says to
     export one account at a time).
 
-**From brief 13 (shop list, 2026-10-27):** 288 → 2,815 names. Measured on Patrik's payments: share sorted unchanged
+**From brief 13 (shop list, 2026-10-27):** 288 → 2,815 names. Measured on the owner's payments: share sorted unchanged
 (64%; his leftovers are personal), share right 95.2% → 93.8%, mostly the PayPal double import (handled by the
 structural rule once the bench runs it, brief 16) plus two real weaknesses fixed in brief 17 (direction of the money,
 branch numbers). Licence: name-suggestion-index is BSD-3-Clause; its notice goes on the apps' Fonts & licences page
@@ -431,11 +431,11 @@ branch numbers). Licence: name-suggestion-index is BSD-3-Clause; its notice goes
 
 ## Progress (2026-10-27)
 
-Built and merged, all by Claude agents (Patrik, 2026-10-27), each checked by Claude:
+Built and merged, all by Claude agents (owner, 2026-10-27), each checked by Claude:
 - The engine: dashboard source, PayPal and own-transfer rules (parity on the real data: identical), `/api/mode` (live),
   25 bank layouts plus CAMT/MT940 and a guessed layout for unknown CSVs, the default categories with their look, 2,815
   known shops with directions and branch numbers (M1 98.4% right, M2 51 fixes in 14 months).
-- Income without own transfers (live on aresium.de, Patrik agreed).
+- Income without own transfers (live on aresium.de, the owner agreed).
 - The app's phone mode (brief 15): the engine in JavaScriptCore, storage per account, import, sorting, learning,
   categories, export/restore, the data lifecycle; server mode unchanged.
 - Running: brief 18, the look of the new screens and their German.
@@ -450,14 +450,14 @@ before leaving; ZIP files.
 
 ## Order of work and rough size
 
-Rough sizes in focused work days (Claude with Codex), not counting Patrik's time.
+Rough sizes in focused work days (Claude with Codex), not counting the owner's time.
 
-1. ~~**Decisions D1–D6**~~ (Patrik, 2026-10-26); the default list waits for his OK.
+1. ~~**Decisions D1–D6**~~ (owner, 2026-10-26); the default list waits for his OK.
 2. **Measuring bench, answer key, M1–M2** (Codex: export and replay scripts; Claude checks). 1–2 days.
 3. **M5 engine test run**, then pull the engine out of the server into pure functions, with the server switching to it
    only after it gives identical numbers on the real data. 3–5 days.
 4. **Phone mode:** storage, import of VR Bank / PayPal / CAMT on the phone, dashboard from the phone's engine, export,
-   logout without deleting. Checked by importing Patrik's own files on the test account: the same numbers as
+   logout without deleting. Checked by importing the owner's own files on the test account: the same numbers as
    aresium.de. 5–8 days.
 5. **Categories you can edit, learned sorting, starter rules, flexible bank reading** (part 3). 5–8 days.
 6. **Auto-sort** after M3. 2–3 days.

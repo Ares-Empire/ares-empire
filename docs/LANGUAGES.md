@@ -1,6 +1,6 @@
 # Languages — decision record
 
-**Decided 2026-10-24 (Patrik):** every Empire app speaks **English and German**, the current ones and every future one.
+**Decided 2026-10-24 (owner):** every Empire app speaks **English and German**, the current ones and every future one.
 A new app has both from its first screen; no screen ships in only one of them.
 
 ## Which language an app shows
@@ -9,10 +9,10 @@ A new app has both from its first screen; no screen ships in only one of them.
   for every other language).
 - **Each app's Settings → Language** chooses for that app: like the iPhone, English or Deutsch. It is the same setting
   as iOS's own per-app Language (Settings → Apps → *the app*), which iOS only shows when the phone lists two or more
-  languages (tested on iOS 27, 2026-10-24); so the apps offer it themselves (Patrik asked "how do I switch?", the
+  languages (tested on iOS 27, 2026-10-24); so the apps offer it themselves (the owner asked "how do I switch?", the
   earlier "no switch in the apps" rule is replaced).
 - Choosing another language asks first, in the language it switches to ("Switch to English?" / "Auf Deutsch
-  umstellen?"), with Cancel in the current one, then the app restarts inside itself in that language (Patrik,
+  umstellen?"), with Cancel in the current one, then the app restarts inside itself in that language (the owner,
   2026-10-25): back on its main screen, the servers' sentences and the device's notification language switch with it,
   and its widget follows. Words iOS draws itself inside the app (the Cut/Copy menu on selected text) follow at its next
   launch.
@@ -24,7 +24,7 @@ errors, status words and lines, summaries, notifications, and the AI's notes abo
 
 **Not translated:** what people or other services wrote (listings, applications, transactions and their categories,
 commit subjects, log lines), names (Aresium, WG-Gesucht, provinces), and the hub's chronicle and province texts: they stay English, also
-inside the German apps (Patrik, 2026-10-24: not worth writing every entry twice).
+inside the German apps (owner, 2026-10-24: not worth writing every entry twice).
 
 ## How it reads
 
@@ -54,9 +54,9 @@ password-reset emails are fixed templates that cannot follow a field: they carry
 
 ## Websites
 
-The websites (hub, Aresium) stay English only (Patrik, 2026-10-24). Their API calls send `Accept-Language: en`, so a
+The websites (hub, Aresium) stay English only (owner, 2026-10-24). Their API calls send `Accept-Language: en`, so a
 German browser still gets English from the servers. Exceptions, in both languages with a page per language: the legal
-pages (privacy policy, imprint) and the contact forms, whose words address no one: no "you", no "du" (Patrik,
+pages (privacy policy, imprint) and the contact forms, whose words address no one: no "you", no "du" (the owner,
 2026-10-31): Aresium's at aresium.de/contact and /kontakt since 2026-10-30, and on the hub since 2026-11-01 the Ares
 Empire's at /contact and /kontakt and Arestemis's at /arestemis/contact and /arestemis/kontakt.
 

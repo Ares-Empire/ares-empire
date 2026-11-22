@@ -40,7 +40,7 @@ python3 -m http.server 8099 --directory web    # → http://localhost:8099
   (`?topic=access`) and for questions, problems and ideas, in the app's own look, light or dark (`webauth/contact.py`,
   the looks in `web/contact/`). They share the sending and the layout with aresium.de/contact byte for byte
   (`web/shared/forms/`, README there), are served only while the privacy policy in their language is, and post from the
-  browser straight to the account server's open `contact` collection, which mails Patrik
+  browser straight to the account server's open `contact` collection, which mails the owner
   ([docs/ACCOUNTS.md](ACCOUNTS.md) → Website contact form).
 
 **Source of truth** — [`EMPIRE.md`](../EMPIRE.md) (narrative) + `web/app/empire-data.js`

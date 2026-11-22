@@ -1,7 +1,7 @@
 # iPhone apps — decision record
 
-**Decided 2026-10-23.** Status (2026-10-24): **Aresium, the Empire app, Arestemis and Aresus built** in `empire-ios`,
-running on the simulator with one shared login; TestFlight and push wait for Apple to approve the developer account.
+**Decided 2026-10-23.** Status (2026-11-22): six apps in `empire-ios` are on TestFlight (the Empire app, Aresium,
+Arestemis, Aresus, Arestoteles, Arestia), with push; Aresium also reaches outside testers through a public link.
 
 ## The decision
 
@@ -11,14 +11,14 @@ running on the simulator with one shared login; TestFlight and push wait for App
   features above, and React Native would replace SwiftUI while still not sharing screens with the
   React website. What is shared instead: all logic on the server (one API) and one design
   ([EMPIRE.md → How we build apps](../EMPIRE.md#how-we-build-apps-web--ios)).
-- Patrik gets the **paid Apple Developer Program** membership (99 USD/year, shown in EUR at
+- The owner gets the **paid Apple Developer Program** membership (99 USD/year, shown in EUR at
   sign-up). The free Apple ID route was rejected: those apps stop opening after 7 days and
   need a re-install from the Mac every week.
 - Apps are installed through **TestFlight**, not the public App Store.
 - Every app speaks **English and German** from its first screen, following the iPhone's language
   ([LANGUAGES.md](LANGUAGES.md), 2026-10-24).
 - The apps log in with an **Ares Empire account** from day one (see [ACCOUNTS.md](ACCOUNTS.md)),
-  even while Patrik is the only user, so sharing later is a server-only change.
+  even while the owner is the only user, so sharing later is a server-only change.
 - Code lives in one repo for all iPhone apps: **[`empire-ios`](https://github.com/Ares-Empire/empire-ios)**.
   Each app talks to its service's existing API; the services stay where they are.
 - iPhone work happens with **Claude Code on the MacBook** (Xcode only runs on macOS), so
@@ -26,8 +26,8 @@ running on the simulator with one shared login; TestFlight and push wait for App
 
 ## iPhone features: check for every app
 
-When an app is built or extended, check which of these fit it (Patrik, 2026-10-24: "remember to check if an app we
-built can benefit from iPhone features"). Note the answer in the app's decision record, also when it is "none".
+When an app is built or extended, check which of these fit it (owner, 2026-10-24). Note the answer in the app's
+decision record, also when it is "none".
 
 - Widgets (home and lock screen), interactive widgets and Control Center controls (do something without opening the app)
 - Live Activities (a running thing on the lock screen and Dynamic Island: a hunt, an incident, a sync)
@@ -38,7 +38,7 @@ built can benefit from iPhone features"). Note the answer in the app's decision 
 - Apple's on-device AI (Foundation Models, iOS 26; iPhone 15 Pro or newer): private classification and summaries
   without data leaving the phone
 
- (checked 2026-10-23 against Apple's docs)
+## Facts checked (2026-10-23, against Apple's docs)
 
 | Claim | Verified | Source |
 |---|---|---|
@@ -59,7 +59,7 @@ worth trying once the app is shared with a real group of users.
 ## Every app has (the standard, 2026-10-24)
 
 - **Settings** behind a gear icon in the header: the app's own settings, language (asks, then the app restarts
-  inside itself in the new one), notifications (apps that send them), contact & support (a form that reaches Patrik by
+  inside itself in the new one), notifications (apps that send them), contact & support (a form that reaches the owner by
   email), privacy policy, imprint, font licences, version, and the account: change password, log out, leave this app
   (its access and its data), delete the Ares account. Built once in `empire-ios/Shared/`; a new app only adds its own
   section.
@@ -69,11 +69,11 @@ worth trying once the app is shared with a real group of users.
   internal deletion route, so leaving the app and deleting the account reach it.
 - **Its name at the end of the main screen**, seen only when scrolling down (`WordmarkBand`, shared).
 - **English and German** ([LANGUAGES.md](LANGUAGES.md)).
-- **Light and dark** (Patrik, 2026-10-24: "we will add it and its best to do it before making more apps so it can
-  become a part of standard design"; built 2026-10-25 for all five apps and both widgets). Settings → Appearance: like
+- **Light and dark** (owner, 2026-10-24: part of the standard, before any new app; built 2026-10-25 for all apps
+  and both widgets). Settings → Appearance: like
   the iPhone, light, dark. Every colour is a light/dark pair in the shared design (`empire-ios/Shared/Design`), so a
   new app built from it has both from its first screen. Widgets follow the home screen. Rules and details:
-  `empire-ios/CLAUDE.md` → Light mode.
+  `empire-ios/docs/SHARED.md` → Light mode.
 
 ## A new app touches (checklist)
 
@@ -91,30 +91,31 @@ for every new app:
   the server's `data/state.json` (and a chronicle line in both); `webauth/catalog.json` if other accounts may ask for
   it.
 - **Accounts:** the service name in the account server's `services`/`requested` options and `NAMES`
-  (`accounts/pb_hooks/lib/accounts.js` and a migration). An app that holds only Patrik's data also gets the owner list
+  (`accounts/pb_hooks/lib/accounts.js` and a migration). An app that holds only the owner's data also gets the owner list
   `EMPIRE_ALLOWED_USERS` in its server (like Aresium, Arestoteles, Aresus), so approving a request cannot open it.
 - **Push:** the app-to-service map ([PUSH.md](PUSH.md)), if it sends notifications.
 - **Its server:** `DELETE /api/<service>/me` and the internal deletion route if it keeps data per account; its data
   in the nightly backup if it cannot be rebuilt ([BACKUP.md](BACKUP.md) → New data); its province in Aresus
   (`aresus/checks.yaml`); the server's Aresync `REPOS` and a deploy hook.
-- **Privacy:** its row in [PRIVACY.md](PRIVACY.md), and its section in the public policy before anyone but Patrik gets
+- **Privacy:** its row in [PRIVACY.md](PRIVACY.md), and its section in the public policy before anyone but the owner gets
   it.
 - **Its contact form on the web**, once others can get it: one form for asking for the app and for questions, in the
   app's look, on its website (as Aresium's aresium.de/contact), or on the hub for an app without one (as Arestemis's
   www.ares-empire.de/arestemis/contact; [ACCOUNTS.md](ACCOUNTS.md) → Website contact form → A new app's form); then its
   "get the app" links (patrikbreeck.com `content/apps.json` → `request`, the hub's demo) point there.
 
+## TestFlight in practice
 
 - A new build stays installable for 90 days. We ship updates far more often than that while
   building, so it does not run out. Uploads can be automated later (Xcode Cloud is included
   with the membership, or a script on the Mac).
 - Updating on the phone: open TestFlight, tap *Update* (TestFlight can also update automatically).
-- Sharing with friends later: add them as external testers (invite link, first build reviewed
-  once), with their own Empire account.
+- Sharing with others: external testers through a public link; Apple reviews the first build of a version. Aresium's
+  outside testers need no Ares account.
 
 ## Order of work
 
-1. Empire accounts on the server ([ACCOUNTS.md](ACCOUNTS.md)), just Patrik for now. ✅
+1. Empire accounts on the server ([ACCOUNTS.md](ACCOUNTS.md)), just the owner for now. ✅
 2. Aresium accepts an Empire login for its API (`/api/data`, `/api/transaction/…`, `/api/import`). ✅
 3. Aresium: move the dashboard calculations from the browser (`web/public/app/data.js`: month totals,
    balances, chart series, category totals) to the server, so `/api/data` sends ready numbers and the
@@ -122,14 +123,14 @@ for every new app:
    Still one request per page load, so switching months stays instant (1,246 transactions on 2026-10-23:
    milliseconds on the server). Before switching, the old and new calculation must give identical numbers
    on the real data. Agreed 2026-10-23.
-4. ✅ (simulator; TestFlight pending) `empire-ios`: the Aresium app (login, dashboard, transactions, recategorise, import via share
-   sheet), then a widget. **Import stays in the app** (Patrik: very handy on the phone). **Template:** the
+4. ✅ (TestFlight since 2026-10-29) `empire-ios`: the Aresium app (login, dashboard, transactions, recategorise, import via share
+   sheet), then a widget. **Import stays in the app** (owner, 2026-10-23). **Template:** the
    mobile website (`aresium/web/public/app/mobile.jsx`) has the layout, gestures and spacing worked out;
    the SwiftUI screens follow it, compared side by side on the simulator (mobile site in the simulator's
    Safari vs the app).
-5. Later: Aresium for other people, their data on their iPhone, not the server (decided 2026-10-25; EMPIRE.md → Now and next).
-6. ✅ (simulator; TestFlight pending) The Empire itself on the phone: [EMPIRE-APP.md](EMPIRE-APP.md) (throne room, per-user ring, approvals).
-7. ✅ (simulator; TestFlight pending) Arestemis ([ARESTEMIS-APP.md](ARESTEMIS-APP.md)) and Aresus with Aresync
+5. ✅ Aresium for other people, their data on their iPhone, not the server (owner, 2026-10-25; EMPIRE.md → Now).
+6. ✅ (TestFlight since 2026-11-01) The Empire itself on the phone: [EMPIRE-APP.md](EMPIRE-APP.md) (throne room, per-user ring, approvals).
+7. ✅ (TestFlight since 2026-10-30 and 2026-10-31) Arestemis ([ARESTEMIS-APP.md](ARESTEMIS-APP.md)) and Aresus with Aresync
    ([ARESUS-APP.md](ARESUS-APP.md)), on one push service for all apps ([PUSH.md](PUSH.md)), 2026-10-24.
 
 ## Links

@@ -1,6 +1,6 @@
 # Shared contact form
 
-The Ares apps' contact pages on the web are one form in different looks (Patrik, 2026-10-30 and 2026-11-01): Aresium's
+The Ares apps' contact pages on the web are one form in different looks (owner, 2026-10-30 and 2026-11-01): Aresium's
 (aresium.de/contact), the Ares Empire's (www.ares-empire.de/contact) and Arestemis's (www.ares-empire.de/arestemis/contact),
 each also in German and each with `?topic=access` for asking for the app. What they share lives here, once:
 

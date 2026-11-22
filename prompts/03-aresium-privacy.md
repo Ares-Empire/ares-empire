@@ -5,10 +5,10 @@ Branch: `codex/03-aresium-privacy` · Worktree: `~/ares-empire-03-aresium-privac
 
 ## Goal
 
-Aresium (the finance app) will open to a few of Patrik's friends. Get everything privacy-related ready before that:
+Aresium (the finance app) will open to a few of the owner's friends. Get everything privacy-related ready before that:
 the public policy's Aresium section in German and English (ready to insert, not live yet), the internal inventory, and
 a clear answer to "does the processing agreement (AVV) with netcup need updating, and what else is legally needed",
-including Groq as the AI provider. Patrik decides and clicks in the providers' panels; you prepare and check.
+including Groq as the AI provider. The owner decides and clicks in the providers' panels; you prepare and check.
 
 ## Rules (this repo has no AGENTS.md; these apply)
 
@@ -36,7 +36,7 @@ including Groq as the AI provider. Patrik decides and clicks in the providers' p
   counterparty, with a random reference, plus the person's category names. The server asks Groq (Groq, Inc., USA; model
   `llama-3.3-70b`), returns a category per payment, and stores nothing: no database row, no request body in any log.
   Groq's Zero Data Retention will be switched on. Rate-limited per account.
-- Patrik's own Aresium data stays on the server as today (his own data, not in the public policy).
+- The owner's own Aresium data stays on the server as today (his own data, not in the public policy).
 
 ## Build
 
@@ -71,7 +71,7 @@ including Groq as the AI provider. Patrik decides and clicks in the providers' p
 
 ## Settled: do not re-open
 
-- Auto-sort goes through our server and Groq (Patrik, 2026-10-26); no on-device model.
+- Auto-sort goes through our server and Groq (owner, 2026-10-26); no on-device model.
 - The public text goes live only when Aresium opens to others (the policy describes what really happens; it does not
   name Aresium today). Nothing in the live `datenschutz.html` / `privacy.html` changes in this brief.
 

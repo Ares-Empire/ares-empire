@@ -7,7 +7,7 @@ Version 1 sent the same `projects` / `ideas` / `chronicle` to everyone. Version 
 decides what this account sees; clients only display it. The three version-1 fields keep their names and shapes, so
 the desktop hub keeps working; everything new is added.
 
-**CONTRACT CHANGE (2026-10-25, Patrik: the ring shows every app the account has):** the ring is the account's
+**CONTRACT CHANGE (2026-10-25, the owner: the ring shows every app the account has):** the ring is the account's
 `services`, no longer a saved ring. Every province gets `install` and `access`; `POST /api/empire/request` asks for an
 app of the "+"; `POST /api/empire/ring` and the account's `ring` field are gone. Still version 2: the rest is
 additive.
@@ -17,7 +17,7 @@ interface EmpireData {
   version: 2;
   me: { id: string; name: string; admin: boolean };
   projects: Province[];      // the ring: every province THIS account has, in hub order (admin: every province; others:
-                             // the provinces whose slug is in the account's `services`, which Patrik grants)
+                             // the provinces whose slug is in the account's `services`, which the owner grants)
   addable: Province[];       // others: the catalog provinces (open or coming soon) the account does not have (the "+");
                              // admin: []
   chronicle: ChronicleEntry[]; // admin: everything; others: entries about the provinces in `projects` ("what's new")
@@ -39,7 +39,7 @@ interface Province {         // version-1 project fields, unchanged …
                                 // the App Store later): only in projects, only when one is set (webauth/apps.json);
                                 // always null in addable
   access: "granted" | "requested" | "none"; // (2026-10-25) projects: always "granted"; addable: "requested" when
-                                // the slug is in the account's `requested` (waiting for Patrik), else "none"
+                                // the slug is in the account's `requested` (waiting for the owner), else "none"
 }
 interface ChronicleEntry { at: string; project: string | null; text: string } // version 1; project null: the empire
 interface Idea { title: string; note: string }                                // version 1
@@ -47,8 +47,8 @@ interface Idea { title: string; note: string }                                //
 
 ### Hub data: always in this shape
 
-The provinces, expansions and chronicle come from `data/state.json` on the server, which empire_sync writes and Patrik
-edits by hand (EMPIRE.md → The Chronicle). The server brings it to the shape above in one place (`hub_state()` in
+The provinces, expansions and chronicle come from `data/state.json` on the server, which empire_sync writes and the owner
+edits by hand (CHRONICLE.md). The server brings it to the shape above in one place (`hub_state()` in
 `webauth/server.py`) before any answer, so a hand edit can never break an app's decoding:
 
 - Exactly the fields above, nothing else (empire_sync's `lock` and any other extra field stay on the server).
@@ -92,8 +92,8 @@ interface Decision {         // CONTRACT ADDITION (2026-10-25): the app needs no
 `{"service": "<slug>"}` puts the app into the account's own `requested`, with the account's own token, as the apps'
 "Ask for access" does ([ACCOUNTS.md → Accounts in every app](ACCOUNTS.md#accounts-in-every-app)). The hub reads the
 account first (`services`, `requested`; the login check's copy may be a minute old), then sends
-`{"requested+": [slug]}`, so every other request stays, also one made meanwhile. The account server then tells Patrik
-by email (no notification: Patrik, 2026-10-26); his approval grants it, the person gets a notification and an email, and the app joins their ring.
+`{"requested+": [slug]}`, so every other request stays, also one made meanwhile. The account server then tells the owner
+by email (no notification: the owner, 2026-10-26); his approval grants it, the person gets a notification and an email, and the app joins their ring.
 
 - `200`: the fresh `EmpireData`; the app is now in `addable` with `access: "requested"`.
 - Asking again for an app already asked for writes nothing and answers `200` the same way.
@@ -103,7 +103,7 @@ by email (no notification: Patrik, 2026-10-26); his approval grants it, the pers
 
 `POST /api/empire/ring` is gone (`404 not_found`), and with it the saved ring.
 
-**`requested` in the decision** (CONTRACT ADDITION, 2026-10-25): the apps the card showed when Patrik decided. With
+**`requested` in the decision** (CONTRACT ADDITION, 2026-10-25): the apps the card showed when the owner decided. With
 it, the decision acts only on requests that are on the card and still asked for: approve grants those, decline
 withdraws those; a request made after he looked stays waiting and comes back in `approvals`. For a sign-up (not
 approved yet), approving takes the unseen requests out of `requested`, since the account server grants everything left
@@ -153,7 +153,7 @@ English.
 `webauth/catalog.json` (committed; not in `data/state.json`, which the empire sync rewrites) lists, per province slug,
 `users: "open" | "coming-soon"`: the apps other accounts see in the "+" (`open` ones can be asked for, `coming-soon`
 ones are shown and cannot). A province not listed (or with any other value) is private: nobody can ask for it. It can
-still be in an account's ring when Patrik gives the account its service. Today: `{"aresium": {"users": "coming-soon"}}`.
+still be in an account's ring when the owner gives the account its service. Today: `{"aresium": {"users": "coming-soon"}}`.
 Opening a province to others needs its privacy-policy section first ([PRIVACY.md](PRIVACY.md) → the rule).
 
 ## Apps

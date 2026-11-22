@@ -1,12 +1,12 @@
 # 02: Per-account hub data, the ring, approvals (accounts + hub server)
 
-Status: merged 2026-10-24; migration applied to the live accounts server; hub server switched after Patrik set admin.
+Status: merged 2026-10-24; migration applied to the live accounts server; hub server switched after the owner set admin.
 Branch: `codex/02-hub-api` · Worktree: `../ares-empire-02-hub-api` · Model: `gpt-6.1-sol`, effort `high`
 
 ## Goal
 
 The server side of `docs/EMPIRE-APP.md`: each account gets its own hub data (`/api/empire` version 2), can add and
-remove provinces in its ring, and Patrik approves new accounts from the hub and the phone, with his own login. No
+remove provinces in its ring, and the owner approves new accounts from the hub and the phone, with his own login. No
 superuser password on the hub or in any app.
 
 ## Read first

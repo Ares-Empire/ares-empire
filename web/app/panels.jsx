@@ -423,7 +423,7 @@ BESIEGING — under active build.
 ## How it joins the empire
 - Registered in the manifest as \`${slug}\` (web/app/empire-data.js → projects[]).
 - When it goes live: status → CONQUERED, add a domain + a logo at brand/${slug}.png.
-- Append a line to the EMPIRE.md Chronicle whenever you do meaningful work here.
+- Append a line to the Chronicle (CHRONICLE.md) whenever you do meaningful work here.
 - Its apps speak English and German from the first screen (../../docs/LANGUAGES.md).
 
 ## Notes
@@ -444,7 +444,7 @@ TODO — stack, deploy, domain.
     const manifestEntry =
       `{ slug: "${slug}", name: "${name}", url: "", logo: "brand/${slug}.png", status: "BESIEGING", domain: "", blurb: ${JSON.stringify(blurb)} },`;
     const handoff =
-      `claude "Build the province '${name}' for the Ares Empire: create projects/${slug}/ with the CLAUDE.md below, append its entry to web/app/empire-data.js (projects[]) and a dated line to the EMPIRE.md Chronicle, then 'git init' the province."`;
+      `claude "Build the province '${name}' for the Ares Empire: create projects/${slug}/ with the CLAUDE.md below, append its entry to web/app/empire-data.js (projects[]) and a dated line to CHRONICLE.md, then 'git init' the province."`;
 
     const take = () => {
       onConquered && onConquered({

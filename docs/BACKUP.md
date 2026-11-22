@@ -1,7 +1,7 @@
 # Backups
 
 **Status (2026-10-25): live.** Every night the server makes a copy of the empire's data that cannot be rebuilt;
-the MacBook fetches it with Aresync (Patrik's choice: free, no new provider; the Mac is the copy outside netcup).
+the MacBook fetches it with Aresync (the owner's choice: free, no new provider; the Mac is the copy outside netcup).
 
 ## What is in a copy
 
@@ -9,7 +9,7 @@ Only what cannot be rebuilt. The code is on GitHub; the Arestoteles vault is pus
 
 | Folder in the copy | What | From |
 |---|---|---|
-| `aresium/aresium.pgdump` | Patrik's Aresium database (transactions, categories, rules, corrections) | `pg_dump` of `aresium-db-1` |
+| `aresium/aresium.pgdump` | The owner's Aresium database (transactions, categories, rules, corrections) | `pg_dump` of `aresium-db-1` |
 | `aresium/personal.json` | Aresium's personal settings (git-ignored) | `/root/aresium/config/` |
 | `accounts/data.db`, `auxiliary.db`, `storage/` | Empire accounts (PocketBase) | `/var/lib/empire-accounts/pb_data/` |
 | `arestemis/arestemis.db` | searches, listings, matches, application texts | `/root/Arestemis/data/` |
@@ -49,7 +49,7 @@ that goes missing fails the nightly run on purpose, so a moved file is noticed t
 - **age** (Debian package on the server, Homebrew on the Mac). The server has only the Mac's **public** key
   (`/etc/empire-backup/recipients.txt`): it can make copies but never read one.
 - The **secret key** is in the Mac's login Keychain (item "Ares Empire backup key", account `age`) and must also be in
-  Patrik's password manager: without it the Mac's copies cannot be opened. Show it with
+  the owner's password manager: without it the Mac's copies cannot be opened. Show it with
   `security find-generic-password -s "Ares Empire backup key" -a age -w`.
 - The Mac logs in as user `empire-backup` with `~/.ssh/empire_backup`. That key can only run `backup/serve.sh`
   (installed as `/usr/local/lib/empire-backup/serve`): `list` and `get NAME`, nothing else; no shell, no forwarding.

@@ -1,8 +1,8 @@
 # Aresync drop: from the phone to the MacBook — plan
 
-**Draft 2026-11-01** (Claude, for Patrik), with Patrik's answers from the same evening in "Decided".
+**Draft 2026-11-01** (Claude, for the owner), with the owner's answers from the same evening in "Decided".
 
-**Status (2026-11-02):** **it works on the phone.** Patrik's first file (a PDF to Sort later) landed on the Mac on
+**Status (2026-11-02):** **it works on the phone.** The owner's first file (a PDF to Sort later) landed on the Mac on
 2026-11-02 with Aresus build 2, after macOS gave `/usr/bin/python3` Full Disk Access (switching on Python.app does not
 count: macOS checks the launcher the agent starts). Built since: delete any drop with a swipe (server: `DELETE` in any
 state), the push says "<name> delivered", new folders made in the picker where you browse, the sheet closes with one
@@ -14,23 +14,23 @@ come after. Server: `~/aresus`; Mac: `~/aresync`; app: `empire-ios/Aresus` (its 
 
 ## What it is
 
-Send any file or photo from the iPhone to the MacBook, from anywhere. It lands in the folder Patrik picks, under the
+Send any file or photo from the iPhone to the MacBook, from anywhere. It lands in the folder the owner picks, under the
 name he picks, or in one fallback folder that says "this still needs sorting". Receipts go into the receipts folder
 (Rechnungen) with their line in its `INVENTORY.md`. A push says where each file landed.
 
 No Claude session sorts anything. The Mac only does a few fixed things: create a folder, write the new file under a
 checked name, add a receipt's inventory line.
 
-## Decided (Patrik, 2026-11-01)
+## Decided (owner, 2026-11-01)
 
 - **Through the server, not git.** Git would keep every photo in history forever, and the repos must stay
   publishable (no personal data in any repo).
-- **In Aresus's Aresync tab**, plus the iPhone's share button. Aresus and Aresync stay Patrik's own tools.
+- **In Aresus's Aresync tab**, plus the iPhone's share button. Aresus and Aresync stay the owner's own tools.
 - **Targets: Documents and Downloads** on the MacBook, nothing else.
 - **A fallback folder** when nothing was chosen, nothing fitted, or the chosen folder no longer exists:
-  `Documents/Zu sortieren` (made on first use; Claude's pick of name and place, Patrik can rename it in the Mac's
+  `Documents/Zu sortieren` (made on first use; Claude's pick of name and place, the owner can rename it in the Mac's
   config).
-- **Patrik picks folder, new folder and name** on the phone; suggestions only fill these in, he confirms.
+- **The owner picks folder, new folder and name** on the phone; suggestions only fill these in, he confirms.
 - **Receipts go into Rechnungen and get their `INVENTORY.md` line**, including whether the receipt is for the
   Steuererklärung.
 - **Windows laptop: later or never.** Not in this plan.
@@ -96,7 +96,7 @@ Each step works on its own. Step 3 is built only if steps 1 and 2 leave too much
    file (a receipt → Rechnungen, a PDF from Files → where the last PDF went). The name starts as the file's own name,
    with the date in front for photos.
 2. **Receipts, still no AI.** "Receipt" on the send screen opens the iPhone's document scanner (or takes a photo),
-   the phone makes a PDF and reads it with Aresium's reader: shop, date, total. Patrik types only the item (the
+   the phone makes a PDF and reads it with Aresium's reader: shop, date, total. The owner types only the item (the
    optional "What is it" line). The name follows Rechnungen's pattern by itself. How Aresus gets the reader: the same
    engine build that Aresium uses, or a receipt-only build of it from `~/aresium` (decide when building; never a
    second copy of the reading logic).
@@ -135,13 +135,13 @@ it. At tax time, the rows that say Steuer are the list of what to claim.
 
 ## Privacy
 
-Aresus and Aresync are Patrik's only and never go to others, so the privacy policy needs no new section. Drops and the
+Aresus and Aresync are the owner's only and never go to others, so the privacy policy needs no new section. Drops and the
 folder list are left out of the nightly backup: a drop lives on the server only until the Mac has it, and the list is
 rebuilt by the Mac. In step 3 the text of a file goes to Groq, as Arestemis's listings do.
 
 ## Building it
 
-Design by Claude, the rest by Codex (Patrik, 2026-10-31); each part checked before the next.
+Design by Claude, the rest by Codex (owner, 2026-10-31); each part checked before the next.
 
 1. **Server** (`~/aresus`): drop storage with age, the app routes (send, list of my drops, folder list) and the Mac
    routes (folder list in, waiting drops, file, done), the reminder, the push. Contract in `docs/API.md` there.
@@ -149,7 +149,7 @@ Design by Claude, the rest by Codex (Patrik, 2026-10-31); each part checked befo
    the receipt inventory line (with tests on a copy of the inventory's format, never the real folder).
 3. **App** (`empire-ios/Aresus`): the send screen in the Aresync tab (design first), the share extension (files and
    photos), the waiting/landed list, the offline queue. Then step 2 (receipts). The share extension shows the send
-   screen itself: iOS gives a share extension no way to open its app (Patrik agreed, 2026-11-02). The drop code lives
+   screen itself: iOS gives a share extension no way to open its app (the owner agreed, 2026-11-02). The drop code lives
    in `Aresus/AresusDrops/`, compiled into the app and the extension; the queue is in Aresus's own App Group
    `group.de.ares-empire.aresus`.
 4. **Live test** on the phone: a photo, a PDF from Files, a receipt for each choice, a vanished folder, the Mac asleep
@@ -165,5 +165,5 @@ Design by Claude, the rest by Codex (Patrik, 2026-10-31); each part checked befo
 
 ## Not planned
 
-- The Windows laptop (Patrik, 2026-11-01: later or never).
+- The Windows laptop (owner, 2026-11-01: later or never).
 - Renaming or moving files that are already on the Mac.

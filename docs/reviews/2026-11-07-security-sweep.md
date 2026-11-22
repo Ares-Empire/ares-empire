@@ -1,9 +1,9 @@
 # Security, privacy and data-loss sweep (review council, 2026-11-07)
 
-**Kind:** Review (`docs/COUNCIL.md`). **Asked by:** Patrik, 2026-11-07, after about 90 Arestemis briefs, Aresium's
+**Kind:** Review (`docs/COUNCIL.md`). **Asked by:** the owner, 2026-11-07, after about 90 Arestemis briefs, Aresium's
 public TestFlight and arestemis.de's "Ask for access" since the last security review (brief 219, 2026-11-03).
 **Outcome: Corrected.** No finding changes what gets built or why; none was critical. Two small decisions went to
-Patrik (below).
+the owner (below).
 
 ## Subject (frozen)
 
@@ -34,7 +34,7 @@ session (each seat got the other four answers and checked them against the code)
 | Seat | Role | Question |
 |---|---|---|
 | S1 | Security: Arestemis | Can an account holder, or someone who controls a page Arestemis reads, make the server do what it should not (access between accounts, SSRF, untrusted content, AI providers)? |
-| S2 | Security: the shared core | Can an outsider or another account use accounts, hub, push, contact forms, Aresus or Aresync to reach what is not theirs, or lock Patrik out? |
+| S2 | Security: the shared core | Can an outsider or another account use accounts, hub, push, contact forms, Aresus or Aresync to reach what is not theirs, or lock the owner out? |
 | S3 | Security: Arestoteles, Aresium, iPhone apps | Where does untrusted input reach something it should not in code other people now run? |
 | S4 | Privacy | What personal data or secrets are where they should not be, and does the privacy policy match the code? |
 | S5 | Data loss | Where can data that cannot be rebuilt be lost, or a write fail, without anyone being told? |
@@ -59,9 +59,9 @@ this file until fixed; the seats' full answers are kept locally.
 | S2-1 | Accounts: leaving an app could, in the same moment as an administrator's change, write back an app the administrator had just taken away | low | fixed, ares-empire `9f1e28b` (one transaction, unit test) |
 | S5-1 | Drops: after the server's drop database starts afresh (it is outside the backup on purpose), the Mac could confirm a new drop as an older one and the new file was deleted unread | high impact, rare | fixed, brief 246: the Mac acknowledges only a landed file whose size and SHA-256 match (aresync `3015727`); a fresh drops database starts its ids at the current time in milliseconds (aresus `12b4097`) |
 | S2-2 | Aresync: two runs started together after a crashed run could both run | low–medium | fixed, brief 246, aresync `3015727`: an OS lock released when the run ends, never held by its children (macOS and Linux; the Windows script keeps its own lock, which has the same rare race) |
-| S3-2 | Aresium engine: a crafted Excel file inside the size limits could expand far beyond them | medium | fixed by mac-aresium-import, aresium `4bf74ed` (budgets for cells and table text while the sheet grows); build 25 went only to Patrik, testers get build 26 with the fix |
+| S3-2 | Aresium engine: a crafted Excel file inside the size limits could expand far beyond them | medium | fixed by mac-aresium-import, aresium `4bf74ed` (budgets for cells and table text while the sheet grows); build 25 went only to the owner, testers get build 26 with the fix |
 | S5-3 | Aresium engine: a ZIP with two statements could merge two bookings that only look alike | low–medium | fixed, aresium `4bf74ed` (a repeated id with a different balance is refused) |
-| S3-1 | Arestoteles: the overall sign-in cap can be used up by others and keep the owner out of the website login for a while (not the app) | medium | fixed, Arestoteles `93da0ea`: Patrik chose to drop the shared cap (the access key is long and random); 10 tries per address stay, tracked per address with bounded memory |
+| S3-1 | Arestoteles: the overall sign-in cap can be used up by others and keep the owner out of the website login for a while (not the app) | medium | fixed, Arestoteles `93da0ea`: the owner chose to drop the shared cap (the access key is long and random); 10 tries per address stay, tracked per address with bounded memory |
 | S5-2 | Drops waiting for the Mac are in no backup, and the phone lets go of its copy once the server has it | low | accepted, documented in BACKUP.md: the database is outside the backup on purpose, files wait minutes (days while the Mac is off), and the original stays where it was shared from |
 
 **Checked and fine** (so the next review can skip it): Arestemis route ownership for hunts, matches, saved, recently
@@ -85,7 +85,7 @@ existing guards does this pass?
 **Could not check:** the live Caddy configuration, firewall, environment, deployed versions and installed hooks;
 whether portals accept the input lengths some scenarios need; TestFlight binaries.
 
-## Questions for Patrik
+## Questions for the owner
 
 1. **Arestoteles website login (S3-1):** keep the overall cap? It is what limits guessing from many addresses, and
    others can use it up and keep the owner out of the website login (not the app) for a while. Advice: drop

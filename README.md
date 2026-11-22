@@ -20,7 +20,7 @@ made-up data for anyone): every app on a ring, with the chronicle of what was bu
 | **The web server** (`webauth/`) | The login gate, the hub's API, and the legal and contact pages in English and German. Python's standard library only. |
 | **Push** (`push/`) | One service that sends the notifications of the Arestemis, Aresus and Ares Empire iPhone apps through Apple's push service. [docs/PUSH.md](docs/PUSH.md) |
 | **Backups** (`backup/`) | The nightly encrypted backup of the data that cannot be rebuilt. [docs/BACKUP.md](docs/BACKUP.md) |
-| **The map** ([`EMPIRE.md`](EMPIRE.md)) | The projects, the shared design language, how the apps are built, and the chronicle. |
+| **The map** ([`EMPIRE.md`](EMPIRE.md)) | The projects, the shared design language, how the apps are built. The chronicle is [`CHRONICLE.md`](CHRONICLE.md). |
 
 ## The apps
 

@@ -1,6 +1,6 @@
 # Ares Empire — logo brief (Claude Design handoff)
 
-The empire's crown mark is a **marble bust of Ares**, the war-god figure behind Patrik's
+The empire's crown mark is a **marble bust of Ares**, the war-god figure behind the owner's
 handle. It must sit in the same family as the Arestoteles **Aristotle** bust (white marble,
 black wall, premium, photographic) while clearly out-ranking it — this is the *empire*, the
 sub-products are its members. The differentiator is martial gravitas: a **helmet, a beard,

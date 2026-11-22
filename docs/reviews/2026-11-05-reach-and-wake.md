@@ -1,6 +1,6 @@
 # Planning council: reach and wake
 
-> **Focused on the wrong question.** Patrik meant the board itself, not reaching and waking sessions. Its remarks on
+> **Focused on the wrong question.** The owner meant the board itself, not reaching and waking sessions. Its remarks on
 > the board ("Where the seats still disagree" 1 and 3) are replaced by
 > [2026-11-05-work-board.md](2026-11-05-work-board.md). The settings it asked for are on every machine since
 > 2026-11-05.
@@ -10,13 +10,13 @@ in the seats' shared brief at ares-empire `27edba0` · a planning council (`docs
 cross-check round · about 25 minutes. Builds on the first planning council over the board:
 `empire-ios/docs/reviews/2026-11-03-work-board-council.md`.
 
-**The idea:** any Claude session on any of Patrik's machines (MacBook, Windows laptop, server), and Patrik from his
+**The idea:** any Claude session on any of the owner's machines (MacBook, Windows laptop, server), and the owner from his
 iPhone, can reach any other session directly and wake it, also on a machine where no session runs. Claude's lead
 proposal before the council: use Claude Code's own Remote Control and messages between running sessions, and build
 only what they cannot do: a record that outlives sessions, Codex, the Empire app's Decisions tab, and a small
 always-on program per machine that watches the board and starts a session.
 
-**Why now:** the laptop's keyboard got a stuck key (Deskflow passed it on to the Mac too). Patrik could only type
+**Why now:** the laptop's keyboard got a stuck key (Deskflow passed it on to the Mac too). The owner could only type
 from his phone into a Mac session, which could not reach any session on the laptop: they showed as "Remote Control ·
 offline". The message went across by the clipboard instead.
 
@@ -38,9 +38,9 @@ Round 1 blind, round 2 each seat checked the other three. Full answers stay loca
   messages, three replies within about 14 minutes). **No session on the Windows laptop has ever answered a message:**
   one from 11-02 is still queued, and today failed the same way. Both times the laptop's session was running but not
   connected to Remote Control.
-- **Patrik carried messages by hand about 5 times in 10 days**, usually a minute each. Built-in messages cover all but
+- **The owner carried messages by hand about 5 times in 10 days**, usually a minute each. Built-in messages cover all but
   one once the laptop's sessions are connected.
-- **Waking a closed session or a sleeping machine: needed 0 times.** On 2026-11-01 Patrik said he does not want the
+- **Waking a closed session or a sleeping machine: needed 0 times.** On 2026-11-01 the owner said he does not want the
   sync to start a Claude session.
 - **Work that stopped and nobody noticed: 2 cases** (an interrupted turn idle for about 6 hours; the MacBook's battery
   ran out and it stayed off for about 10.5 hours). Reach or wake would have fixed neither; an alert that a machine went
@@ -71,7 +71,7 @@ Round 1 blind, round 2 each seat checked the other three. Full answers stay loca
 
 ## Settled in the cross-check
 
-- **The doorbell's mode:** Patrik's own user on the MacBook and the laptop, mode `auto` (risky steps come to the phone
+- **The doorbell's mode:** the owner's own user on the MacBook and the laptop, mode `auto` (risky steps come to the phone
   for approval; a message can never approve anything), in a trusted folder outside every synced repo, under a
   supervisor that restarts it (a LaunchAgent with KeepAlive on the Mac, a task at logon on Windows). Not the mode that
   skips permissions: an always-on doorbell in that mode would let any session misled by a web page drive another
@@ -82,7 +82,7 @@ Round 1 blind, round 2 each seat checked the other three. Full answers stay loca
 - **A second way into the laptop that does not depend on Claude:** OpenSSH, key only, home network only (A, B, D).
   Today it would have let the Mac session fix the laptop directly.
 
-## Where the seats still disagree (for Patrik)
+## Where the seats still disagree (for the owner)
 
 1. **The work board itself.** A (after round 2) and D: not justified yet. What the history shows (stale "running"
    lines, one clash over a new file's name with no work lost, one power loss, one missed question) costs minutes, and
@@ -97,12 +97,12 @@ Round 1 blind, round 2 each seat checked the other three. Full answers stay loca
 
 ## General case (all seats)
 
-Patrik is the switchboard and the only lasting memory between many short-lived agents on several machines, and no
+The owner is the switchboard and the only lasting memory between many short-lived agents on several machines, and no
 machine has a reliable way in from outside. What has worked so far is one reachable session per machine, writing
 state where the next agent looks (git), and removing dependencies between machines (the gallery drawn on the Mac),
 not a message system of our own.
 
-## Outcome: verdict for Patrik
+## Outcome: verdict for the owner
 
 **Reach and wake: don't build.** Set up what Claude Code already has (about 1–2 hours, no code), then one small
 aresync brief:
@@ -115,5 +115,5 @@ aresync brief:
   file claims until a clash costs lost work or two merge repairs in a month; a server doorbell until an incident goes
   unhandled for lack of a reachable session; a decision pickup program on C's trigger above.
 
-Open for Patrik: the three disagreements above. Once decided, the EXPAND entry in `EMPIRE.md` and
+Open for the owner: the three disagreements above. Once decided, the EXPAND entry in `EMPIRE.md` and
 `web/app/empire-data.js` change to match.

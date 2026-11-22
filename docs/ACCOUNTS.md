@@ -12,7 +12,7 @@ passwords itself.
 ## How it should work
 
 - **Sign up** with email + password on the Empire. New accounts start as *pending*.
-- **Patrik approves** each new account (e.g. a Telegram message with an approve button).
+- **The owner approves** each new account (e.g. a Telegram message with an approve button).
   Until then the account can't use anything.
 - **Web:** the hub already hands a short-lived signed token to a service (`/sso?token=…`,
   Aresium verifies it today). That stays, but carries the user's id instead of "the one user".
@@ -68,7 +68,7 @@ service on localhost, which records each notification's body for the checks. Hub
 ## Contact & support (`feedback`, 2026-10-24)
 
 Every app's Settings has "Contact & support": the person picks a kind and writes a message, the app sends it to the
-account server, and Patrik gets it by email. Migration `1793100000_feedback.js`, hook `pb_hooks/feedback.pb.js`.
+account server, and the owner gets it by email. Migration `1793100000_feedback.js`, hook `pb_hooks/feedback.pb.js`.
 
 - **Collection `feedback`:** `user` (the account; required; deleted with it), `app` (`empire`, `aresium`, `arestemis`,
   `aresus`, `arestoteles`; required), `kind` (`problem`, `idea`, `question`, `other`; required), `message` (1–5000
@@ -76,7 +76,7 @@ account server, and Patrik gets it by email. Migration `1793100000_feedback.js`,
   `de`), `created`.
 - **Rules:** create only with a login of a verified, approved account, and only as itself
   (`@request.body.user = @request.auth.id`; approval is checked again on every request, so an account switched to
-  unapproved cannot send with its old token). List, view, update and delete: superusers only. Patrik reads them in the
+  unapproved cannot send with its old token). List, view, update and delete: superusers only. The owner reads them in the
   admin UI (Collections → feedback).
 - **Rate limit:** at most 10 creates per hour per client IP (rule `feedback:create`, 3600 s, in Settings → Rate limits,
   added by the migration). The app shows "too many messages, try later" on the 429.
@@ -90,7 +90,7 @@ account server, and Patrik gets it by email. Migration `1793100000_feedback.js`,
 
 ## Website contact form (`contact`, 2026-10-25)
 
-Anyone can write to Patrik without an account at www.ares-empire.de/kontakt (German) or /contact (English); the imprint
+Anyone can write to the owner without an account at www.ares-empire.de/kontakt (German) or /contact (English); the imprint
 names it as the second quick way to reach him besides email. Since 2026-10-30 an app can have its own form, in its own
 look, which is also where people ask for the app ("Get the app" is `?topic=access`): Aresium's at aresium.de/contact and
 /kontakt (`aresium` `src/web/contact-page.ts`), and since 2026-11-01 on the hub Arestemis's at
@@ -110,14 +110,14 @@ email in `pb_hooks/lib/contact.js`.
   `kind` (`access` = get the app, `question`, `problem`, `idea`, `other`), `app_version` (≤ 40, the characters of a
   version) and `system` (≤ 80, one line) for an iPhone app.
 - **The hook's checks** (before the save, PocketBase's own 400 shape, `data.<field>.code` `validation_required`): a
-  message without text is refused unless `kind` is `access` (an email address is all Patrik needs to send the install
+  message without text is refused unless `kind` is `access` (an email address is all the owner needs to send the install
   link); `access` needs `app`.
-- **Rules:** create open to everyone; list, view, update and delete for superusers only. Patrik reads them in the admin
+- **Rules:** create open to everyone; list, view, update and delete for superusers only. The owner reads them in the admin
   UI (Collections → contact).
 - **Rate limit:** at most 5 creates per hour per visitor address (rule `contact:create`, 3600 s), shared by every form
   that posts here. The address is the visitor's: Caddy's `X-Forwarded-For`, trusted since the first migration
   (`trustedProxy`, rightmost entry).
-- **Email:** after each create the hook mails it to Patrik (`SUPPORT_TO`, `pb_hooks/lib/mail.js`) from the server's
+- **Email:** after each create the hook mails it to the owner (`SUPPORT_TO`, `pb_hooks/lib/mail.js`) from the server's
   sender, `Reply-To` the given address, a plain body (kind, app, name, email, language, version and system when given,
   the message or "(no message)", a link to the record). Subject with an app, as feedback's: `[Aresium] Question: <first
   words>`, `[Ares Empire] Other: …`, and for asking for the app `[Arestemis] Get the app: <first words, or the
@@ -171,7 +171,7 @@ what looks like personal data, and the refusal of a bank's name, in `pb_hooks/li
   ("Too Many Requests.") from the rate limit.
 - **Rate limit:** at most 5 creates per hour per sender address (rule `bank_formats:create`, 3600 s; the address as for
   the contact form).
-- **Email:** after each create the hook mails it to Patrik (`SUPPORT_TO`, `pb_hooks/lib/mail.js`), no Reply-To,
+- **Email:** after each create the hook mails it to the owner (`SUPPORT_TO`, `pb_hooks/lib/mail.js`), no Reply-To,
   subject `Aresium: bank format for <bank>`, a plain body: bank, app version, language, the layout pretty-printed, the
   command that turns it into a bank profile (`npx tsx scripts/add-shared-layout.ts bank-format-<record id>.json --name
   '<bank>' --id <id>` in `~/aresium`, the name quoted as one shell word) and a link to the record. A failed email is
@@ -184,7 +184,7 @@ what looks like personal data, and the refusal of a bank's name, in `pb_hooks/li
 ## Bank requests from Aresium (`bank_requests`, 2026-10-27)
 
 In Aresium's bank guide, someone whose bank is not listed sends its name in two taps ("Tell us about your bank"), so
-Patrik knows which banks to add. Only the name they typed, the app's version and language; no file, no payment, no
+the owner knows which banks to add. Only the name they typed, the app's version and language; no file, no payment, no
 account. Brief `empire-ios/prompts/26-bank-request-inbox.md` (the app side: brief 25); migration
 `1793600000_bank_requests.js`, hook `pb_hooks/bank-requests.pb.js`, the check of the name in
 `pb_hooks/lib/personal-data.js` (the same as a bank format's name).
@@ -209,7 +209,7 @@ account. Brief `empire-ios/prompts/26-bank-request-inbox.md` (the app side: brie
   limit.
 - **Rate limit:** at most 5 creates per hour per sender address (rule `bank_requests:create`, 3600 s; the address as
   for the contact form).
-- **Email:** after each create the hook mails it to Patrik (`SUPPORT_TO`, `pb_hooks/lib/mail.js`), no Reply-To,
+- **Email:** after each create the hook mails it to the owner (`SUPPORT_TO`, `pb_hooks/lib/mail.js`), no Reply-To,
   subject `[Aresium] Bank wish: <bank>`, a plain body: bank, app version, language, what to do and a link to the
   record. A failed email is logged (`bank request email failed`) and the record stays.
 - **Handling a request** (Claude): find how the bank's customers download their payments as a file (website and app)
@@ -221,7 +221,7 @@ account. Brief `empire-ios/prompts/26-bank-request-inbox.md` (the app side: brie
 
 ## Accounts in every app (2026-10-25)
 
-Patrik (2026-10-25): one central Ares account, creatable and controllable from every app (the first app someone gets
+The owner (2026-10-25): one central Ares account, creatable and controllable from every app (the first app someone gets
 may not be the Empire app, the least useful one for most people), and every app independently controllable: in each
 app's settings you can delete that app's data and access, or your whole Ares account. **One account, one password**
 for every app (separate accounts per app were rejected: every sign-up, approval, reset and deletion would multiply,
@@ -262,7 +262,7 @@ error says both.
   answers `200 {services, requested}`; an unknown or missing service is `400`. Leaving an app the account does not
   have changes nothing. It sends no email.
 - **The administrator cannot leave an app or delete his account from an app** (2026-10-25): only an admin gives
-  access and an admin cannot change his own `services`, so Patrik could lock himself out of the hub from the phone.
+  access and an admin cannot change his own `services`, so the owner could lock himself out of the hub from the phone.
   The leave route answers an admin account `403`, and so does `DELETE /api/collections/users/records/<own id>` with an
   admin's login (a router middleware in `accounts.pb.js` answers before the delete rule, which refuses it anyway but
   only with PocketBase's generic 404). Both in PocketBase's error shape, the sentence in the request's language
@@ -275,14 +275,14 @@ error says both.
 
 | When | To | Language |
 |---|---|---|
-| Someone signs up (not a superuser in the admin UI) | Patrik: every superuser not at example.com | English: email, name, the apps asked for, the language, a link to the account in the admin UI |
-| An approved account asks for more apps | Patrik | English: the new apps, what it has, everything it asked for, its language, the link |
+| Someone signs up (not a superuser in the admin UI) | The owner: every superuser not at example.com | English: email, name, the apps asked for, the language, a link to the account in the admin UI |
+| An approved account asks for more apps | The owner | English: the new apps, what it has, everything it asked for, its language, the link |
 | Approved for the first time, or given more apps | the account | its `language`: which apps, how to log in (and the hub's address when `empire` is among them) |
 | Confirm the email address, reset the password (PocketBase's own) | the account | English and German in one message (migration `1793300200_emails_de_en.js`) |
-| A deletion job still fails a day after the deletion | Patrik | English, once per job |
-| An access-change job still fails after a day | Patrik | English, once per job |
+| A deletion job still fails a day after the deletion | The owner | English, once per job |
+| An access-change job still fails after a day | The owner | English, once per job |
 
-The texts are in `pb_hooks/lib/mail.js`, the one mail module of every hook. "Patrik" here means the superusers
+The texts are in `pb_hooks/lib/mail.js`, the one mail module of every hook. "The owner" here means the superusers
 (`superusers()`: whoever can approve in the admin UI), not `SUPPORT_TO`, the address for what people write to him
 (feedback, the contact form). A failed email is logged (`approval request email failed`, `access request
 email failed`, `approved email failed`, `account deletion alert email failed`) and never fails the request.
@@ -297,8 +297,8 @@ Next to three of the emails, `pb_hooks/accounts.pb.js` sends a notification to t
 |---|---|---|
 | Approved for the first time, or given more apps | the account | "<apps> is/are ready", "Open the Empire app to start." |
 
-English with German in `localized.de` (the push service picks per device). Sign-ups and access requests reach Patrik
-by email only, not as notifications (Patrik, 2026-10-26). A member never learns anything about another account. A notification that fails (the push service down, refusing, slow) is logged
+English with German in `localized.de` (the push service picks per device). Sign-ups and access requests reach the owner
+by email only, not as notifications (owner, 2026-10-26). A member never learns anything about another account. A notification that fails (the push service down, refusing, slow) is logged
 (`push failed`, with the thread and the account id, never the texts) and never fails or undoes the request. Until
 Apple's push key exists the push service runs as a dry run and only keeps them in its outbox.
 
@@ -307,21 +307,21 @@ Apple's push key exists the push service runs as a dry run and only keeps them i
 - After a `users` record is deleted (by the account itself, by an admin declining it, in the admin UI),
   `pb_hooks/deletions.pb.js` writes one job per service that keeps data per account into **`deletions`** (`account`,
   `service`, `attempts`, `done`, `last_error`, `reported`, `created`, `updated`; superusers only; migration
-  `1793300100_deletions.js`). **CONTRACT ADDITION:** `reported` remembers that Patrik was mailed about the job.
+  `1793300100_deletions.js`). **CONTRACT ADDITION:** `reported` remembers that the owner was mailed about the job.
   Migration `1793800000_access_jobs.js` adds `operation`, `app`, `generation`, `superseded`, and `next_attempt`;
   existing jobs become `operation: delete`. Account deletion and its jobs commit in one transaction.
 - The cron **`empire-deletions`** (every 5 minutes; run by hand: admin UI → Settings → Crons) selects up to 200 due
   jobs independently per service, ordered by `next_attempt,created`:
   `DELETE http://127.0.0.1:<port>/internal/accounts/<id>`. 2xx or 404 → `done`; anything else →
   `attempts + 1`, `last_error`, tried again on the next run. A service that does not answer at all is not called
-  again in that run. A job still failing a day after the deletion is mailed to Patrik once.
+  again in that run. A job still failing a day after the deletion is mailed to the owner once.
   Failed and skipped jobs receive `next_attempt` five minutes later; newly due jobs progress before those retries.
 - Today's services: **Arestemis** `127.0.0.1:8097` (settings, hunts, matches with their applications, rejected
   listings; [Arestemis API.md](https://github.com/Ares-Empire/Arestemis/blob/main/docs/API.md)) and the **push
   service** `127.0.0.1:8096` (devices of every app and outbox rows; [PUSH.md](PUSH.md)). `ARESTEMIS_INTERNAL_URL` and
   `PUSH_INTERNAL_URL` in PocketBase's environment override them (only the tests do). The account server's own
   `feedback` goes by cascade.
-- Single-owner services (Aresium, Aresus, Arestoteles: only Patrik's data) have no deletion route; leaving them
+- Single-owner services (Aresium, Aresus, Arestoteles: only the owner's data) have no deletion route; leaving them
   removes the access and the data on the phone only.
 - **A new service with per-account data** needs: `DELETE /internal/accounts/<id>` on localhost, never routed by
   Caddy, `204` also when there is nothing (the account server takes a 404 as done, so deploy the service first);
@@ -392,14 +392,14 @@ To complete a stuck access job manually, apply its `operation`, `app`, and `gene
 `POST /api/empire/approvals/<id>` `{approve: true}` sends `{approved: true, "services+": <the requests>}`;
 `{decline: true}` deletes an unapproved account or sends `{"requested-": <the requests>}` for an approved one. "The
 requests" are those the hub reads just before its write; when the app also sends `requested` (the apps the card
-showed, 2026-10-25), only those of them. So a request made after Patrik looked stays waiting, and the `+`/`-` forms
+showed, 2026-10-25), only those of them. So a request made after the owner looked stays waiting, and the `+`/`-` forms
 keep one made between the hub's read and its write as well. A first approval grants everything left in `requested`
-(the hook above), so for a sign-up the hub also sends `"requested-"` with the requests Patrik did not see. The answer
+(the hook above), so for a sign-up the hub also sends `"requested-"` with the requests the owner did not see. The answer
 carries the fresh list, `{ok, approvals, pending}`. [API-EMPIRE.md](API-EMPIRE.md).
 
 The hub's "+" (`POST /api/empire/request` `{service}`, 2026-10-25) asks for an app the same way an app does, with the
 account's own token: it reads the account (`fields=id,services,requested`) and sends `{"requested+": [service]}`; only
-apps `open` in the hub's catalog. The hooks above then mail and notify Patrik.
+apps `open` in the hub's catalog. The hooks above then mail and notify the owner.
 
 ## Website flow
 
@@ -423,13 +423,13 @@ the service's name. Cache the answer for a few minutes per token.
 The hub's `GET /api/empire` (provinces, ideas, chronicle) takes the same Bearer token, for an Empire app.
 Reference implementation: `aresium/src/web/empire-auth.ts` (also limits access to the user ids in
 `EMPIRE_ALLOWED_USERS` while Aresium holds only one person's data). Aresus and Arestoteles do the same since
-2026-10-25: they hold only Patrik's data and are never opened to others, while any account can ask for their service
+2026-10-25: they hold only the owner's data and are never opened to others, while any account can ask for their service
 and an approval grants it. Empty or unset means nobody gets in; others get the same 403 as "no access".
 
 ## Open questions (decide when building)
 
 - Settled 2026-10-25: other people's Aresium data (transactions, accounts, rules, categories) stays on their iPhone,
-  not on the server (EMPIRE.md → Now and next).
+  not on the server (EMPIRE.md → Now).
 
 ## Phone lost or token leaked
 

@@ -1,6 +1,6 @@
 # Aresus on the phone — decision record
 
-**Decided 2026-10-24** with Patrik. Server: the new `aresus` repo (API contract: `docs/API.md`
+**Decided 2026-10-24** with the owner. Server: the new `aresus` repo (API contract: `docs/API.md`
 there); app: `empire-ios/Aresus`. Push: [PUSH.md](PUSH.md).
 
 **Status (2026-10-24): built.** Server live (`aresus.service`, `/api/aresus/*`), the MacBook and the server report
@@ -19,11 +19,11 @@ Aresus, the watchtower province, combined with Aresync in one **iPhone app** (no
 
 ## Decisions
 
-- **Aresus decides from its own checks**, never from the hub's status words (those are unreliable for now, Patrik
+- **Aresus decides from its own checks**, never from the hub's status words (those are unreliable for now, the owner
   2026-10-24). Each province declares in `checks.yaml` whether it is meant to run: off on purpose (Arestoteles,
   Aresis) is **Inactive**; meant to run but failing is an **Issue**. A check must fail twice in a row (about 2 minutes)
   before it counts, so a restart does not wake anyone.
-- **Arestemis's outages go to Patrik through Aresus** (Patrik, 2026-10-31: its Telegram bot is retired and its users
+- **Arestemis's outages go to the owner through Aresus** (owner, 2026-10-31: its Telegram bot is retired and its users
   never get outage messages). Aresus reads from Arestemis's `/health` (`field` checks) each portal (four with
   ImmoScout24), the AI check (`ai`) and whether scans still finish (`scan`: late after 20 minutes without one; 20 more
   minutes before a push, since a slow but working scan takes up to about 50 minutes; Arestemis brief 65, 2026-11-01).
@@ -42,9 +42,9 @@ Aresus, the watchtower province, combined with Aresync in one **iPhone app** (no
 - **Aresync reports every run** to Aresus (`POST /api/aresus/sync/runs`, one token per machine, never failing the
   sync itself). The server syncs every 5 minutes, so the tab shows the machines first and then only runs that did
   something or failed; quiet runs collapse into one line per machine and day.
-- **Server deploys through Aresync** (Patrik approved auto-deploy, 2026-10-24): the server's Aresync also pulls
+- **Server deploys through Aresync** (the owner approved auto-deploy, 2026-10-24): the server's Aresync also pulls
   `Arestemis`, `aresus` and `aresync` and runs a hook that restarts the service, plus the missing hook for the hub.
-- **Who may use it:** accounts with the `aresus` service (Patrik decides) whose id is in Aresus's
+- **Who may use it:** accounts with the `aresus` service (the owner decides) whose id is in Aresus's
   `EMPIRE_ALLOWED_USERS`, its owner (2026-10-25; empty = nobody). Pushes go to those accounts only.
 - **Accent colour: lightning blue** (Zeus), only as an accent, which also keeps green and red free for the status
   words. Icon: the Zeus bust on black; the Aresync tab uses the Janus bust.

@@ -6,7 +6,7 @@
 row here, then the pages (`web/legal/`), then the app's `PrivacyInfo.xcprivacy`.
 
 Facts the code cannot show (server settings, providers) were confirmed by the lead on 2026-10-24/25; the AVV with
-netcup was concluded by Patrik on 2026-10-25. The pages went live on 2026-10-25 after Patrik read them. A page is not
+netcup was concluded by the owner on 2026-10-25. The pages went live on 2026-10-25 after the owner read them. A page is not
 served while it contains `[lead to confirm]` or `[ADDRESS]` (`webauth/legal.py`): keep that marker for anything unconfirmed.
 
 ## Owner file
@@ -27,18 +27,18 @@ an owner email change: it validates the same file and writes only the email as `
 that variable. The installer restarts `empire-accounts`. Tests use temporary made-up files via `ARES_OWNER_FILE`;
 account rule tests use a made-up `ARES_OWNER_EMAIL`, never the real file.
 
-## What the public pages cover (Patrik, 2026-10-25)
+## What the public pages cover (owner, 2026-10-25)
 
 This file is the full internal inventory. The public policy covers only processing that concerns people other than
-Patrik, as a normal, neutral German policy: impersonal statements ("Daten werden gespeichert", "die App fragt ab"), as few pronouns as possible, no "ich"/"du"; "Sie" only where the reader has to act, as in the rights section (Patrik, 2026-10-27); English the same:
+the owner, as a normal, neutral German policy: impersonal statements ("Daten werden gespeichert", "die App fragt ab"), as few pronouns as possible, no "ich"/"du"; "Sie" only where the reader has to act, as in the rights section (owner, 2026-10-27); English the same:
 visiting the websites (server logs), Empire accounts (sign-up, approval,
 emails, login notices, logs), the website contact form, and in the apps only login, contact & support and push
-registration; recipients, third-country transfers, storage periods, rights, BayLDA. Provinces that hold only Patrik's
-data (Arestemis, Aresus, Arestoteles, Aresync; checked 2026-10-25: the account server has only Patrik's two accounts
+registration; recipients, third-country transfers, storage periods, rights, BayLDA. Provinces that hold only the owner's
+data (Arestemis, Aresus, Arestoteles, Aresync; checked 2026-10-25: the account server has only the owner's two accounts
 with a province service) are documented below and named nowhere in the public pages. Aresium is named for other
-people's use (phone mode, section 6 → "Aresium"); Patrik's own server data stays out of the public pages.
+people's use (phone mode, section 6 → "Aresium"); the owner's own server data stays out of the public pages.
 
-**Rule:** when a province is opened to other accounts (its service given to anyone but Patrik, or `open` in the hub
+**Rule:** when a province is opened to other accounts (its service given to anyone but the owner, or `open` in the hub
 catalog), its section is added to the public policy, in German and English, **before** that happens; if it brings a new
 kind of data (beyond the categories below), the AV contract with netcup is updated too (customer panel → Stammdaten →
 AV-Vertrag).
@@ -46,17 +46,17 @@ AV-Vertrag).
 ## Facts that hold everywhere
 
 - **Controller:** the details in the [owner file](#owner-file). A private project, no company; no data
-  protection officer needed (§ 38 BDSG: fewer than 20 people process data). Patrik chose the address (2026-10-25); the
+  protection officer needed (§ 38 BDSG: fewer than 20 people process data). The owner chose the address (2026-10-25); the
   public pages show it only in the policy's controller line and the imprint.
 - **Supervisory authority:** Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach,
   www.lda.bayern.de (checked 2026-10-24).
 - **Host:** one netcup VPS in Germany runs every service below (lead, 2026-10-24); Caddy in front, TLS everywhere.
-  Processing agreement (AVV) with netcup concluded in the customer panel (Patrik, 2026-10-25). Declared there: affected persons: Interessenten (contact and support messages), visitors of the
+  Processing agreement (AVV) with netcup concluded in the customer panel (owner, 2026-10-25). Declared there: affected persons: Interessenten (contact and support messages), visitors of the
   websites, users of the websites and apps (registered accounts); data: Personenstammdaten (name, optional; email),
   Kommunikationsdaten (email, messages), access and usage data (login data, IP addresses, server logs, push device
   ids), content data of the applications (settings, search profiles, notes); no special categories (Art. 9). No bank,
   payment or financial data: Aresium for other people keeps its data on their iPhone (decided 2026-10-25), and
-  Patrik's own Aresium data on the server is his private data, not processed for anyone else. No device location.
+  the owner's own Aresium data on the server is his private data, not processed for anyone else. No device location.
 - **DNS:** Hetzner (lead). Hetzner answers name lookups for our domains; it receives no account data.
 - **No tracking** in the apps: no analytics, ads, crash-reporting or other third-party SDKs (lead; the Xcode projects
   have no packages). The websites set one cookie, the login (`empire_session`), and nothing for analytics.
@@ -73,9 +73,9 @@ AV-Vertrag).
 |---|---|
 | **Data** | Email, password (PocketBase stores only a hash), `name` (optional; the apps' sign-up asks for it, the website's does not), `verified`, `approved`, `services`, `requested` (the apps an account asked for and does not have yet), `language` (`en`/`de`, for later emails), `admin`, created/updated. The saved hub ring (`ring`) was dropped on 2026-10-25 with what it held (migration `1793400000_drop_ring.js`): the ring is now the account's `services`. |
 | **Where** | `/var/lib/empire-accounts/pb_data` (SQLite). |
-| **How long** | Until the account is deleted. Unapproved sign-ups stay until Patrik approves or deletes them (no automatic clean-up). |
+| **How long** | Until the account is deleted. Unapproved sign-ups stay until the owner approves or deletes them (no automatic clean-up). |
 | **Emails** (Resend) | Confirmation link, password reset, "login from a new location" alert (PocketBase built-in), "approved" mail to the person; to the superusers an approval request naming the new account's email (`pb_hooks/accounts.pb.js`). |
-| **Notifications** (push service, since 2026-10-25) | To the account itself: that its apps are ready (none to Patrik about other accounts: he gets sign-ups and requests by email, 2026-10-26) (`pb_hooks/lib/push.js`). Through Apple once the APNs key exists (push service below). |
+| **Notifications** (push service, since 2026-10-25) | To the account itself: that its apps are ready (none to the owner about other accounts: he gets sign-ups and requests by email, 2026-10-26) (`pb_hooks/lib/push.js`). Through Apple once the APNs key exists (push service below). |
 | **Logs** | PocketBase's request log, with the visitor's IP (Caddy's `X-Forwarded-For`, `trustedProxy` in the first migration). Settings → Logs on the server (lead, 2026-10-24): `maxDays` 5, `logIP` true, `logAuthId` false, so 5 days, with IP, without the account. |
 | **New-location alerts** | `_authOrigins` rows: `collectionRef`, `recordRef` (the account), `fingerprint`, `created`, `updated`. PocketBase 0.40.6 (`apis/record_helpers.go`, `authAlert`): `fingerprint = MD5(ip + userAgent)`, the user agent cut to 200 characters; no plain IP is stored. Made or refreshed at each login (password, OTP, OAuth2; not at a token refresh); at most 5 per account (`maxAuthOrigins`, the oldest go); deleted when the password changes or the account is deleted (`core/auth_origin_model.go`). A login with a new fingerprint (not the first login) emails the person the time, IP and user agent. |
 | **Admins** | See the email, name, creation time, requested apps and whether the email is confirmed of accounts waiting for approval and of approved accounts that asked for another app, to decide them (`admin-visibility.pb.js`, hub `GET /api/empire/approvals`). |
@@ -117,12 +117,12 @@ AV-Vertrag).
 | **Data** | Per account: hunts (since 2026-11-01 several, up to 30, each with an optional name; a flat search: kinds, people, places, areas, sizes, rents, move-in dates, sublets, portals, the free "extras" text; a thing search (brief 116): the search words, words to leave out, price range and VB allowance, condition, pickup places and radius or shipping, private sellers only, sites, the extras text; a page watch (brief 130): the page address, the change to look for in the user's words, how often; a Preismonitor (brief 134): the product page's address, whether to keep its price history and the alarm's limit), active/paused and times; settings (`application_mode`, `own_text` ≤ 5000 chars, `about_me` ≤ 2000 chars, notification switches); matches (listing, state new/saved/applied/dismissed, the AI's reason and warnings, the contact name from a flat listing, the application text and how it was made, whether it was found when the hunt started, how far a VB price lies over the maximum); filtered-out listings with reasons. Listings themselves are public portal data (title, rent or price, size or condition, address, district or place and distance, description, photo link); a flat listing can name a landlord or flatmate. **For things no seller name is stored** (brief 116: `contact` stays empty, the facts hold only the listing's attributes); the description is stored and sent to the model as written, so a name a seller writes into it is kept like any public listing text (security sweep 2026-11-07). For a page watch (brief 130) the server keeps the page's latest readable text (to compare the next read with), the AI's one line on what the page says now, and for each found change the changed lines; pages are public, and a page could name someone the way any public page can. |
 | **"About you"** | Free text the AI uses ("22, Informatics at TUM, non-smoker"). The app's caption suggests gender and age (STATUS.md 05:27, because listings restrict on them). Nothing in it is required. |
 | **Where** | `data/arestemis.db` in `/root/Arestemis`. |
-| **How long** | Hunt, matches, rejected and seen rows: deleted with the hunt (`DELETE /hunts/{id}`, cascade). Asking-price records of thing searches (`item_price_records`, schema 26, Arestemis brief 254, 2026-11-07): per hunt only site, a hashed listing key, a hashed offer key, the EUR amount, fixed/negotiable and the first-seen time, no title, text, link or seller; 365 days, deleted with the hunt and the account, restarted when the search's words or limits change; public policy line added 2026-11-07. Rejected: 7 days. Listings no match needs: 30 days. Seen listing ids: 180 days. Settings: no delete route; they stay until the account is deleted, which today Patrik does by hand on request (the policy promises it; to-do below). |
+| **How long** | Hunt, matches, rejected and seen rows: deleted with the hunt (`DELETE /hunts/{id}`, cascade). Asking-price records of thing searches (`item_price_records`, schema 26, Arestemis brief 254, 2026-11-07): per hunt only site, a hashed listing key, a hashed offer key, the EUR amount, fixed/negotiable and the first-seen time, no title, text, link or seller; 365 days, deleted with the hunt and the account, restarted when the search's words or limits change; public policy line added 2026-11-07. Rejected: 7 days. Listings no match needs: 30 days. Seen listing ids: 180 days. Settings: no delete route; they stay until the account is deleted, which today the owner does by hand on request (the policy promises it; to-do below). |
 | **Groq** (Groq, Inc., USA) | Each flat listing that passes the exact checks: the search, `about_me`, the listing (`types/flat/prompts.py` `verify_messages`). Each thing listing that passes them: the thing search and the listing, **without `about_me`** (`types/item/prompts.py`). Each page watch's read that changed the page: the watch's description, its last "now" line and the changed lines (at most about 6,000 characters); when a watch is saved or its address or description changes, the page's text (at most about 14,000 characters), **without `about_me`** (brief 130). AI applications: the listing, `own_text`, `about_me`, the contact name. "Describe it": the sentence typed (not stored by Arestemis). The spelling check (brief 177): a thing search's search words when it is saved, and a Preismonitor "Überall"'s product words when nothing fits (kept only in the server's memory for up to 24 hours). A page watch's first read also sends up to 12 of the page's own links (address and link text) whose words match the description (brief 177). Groq is not certified under the DPF; the safeguard is the Standard Contractual Clauses in Groq's customer data processing addendum, part of its terms (lead, 2026-10-24). The policy names no Groq retention period: Groq processes the data only to give the answer, under that addendum. |
-| **Cloudflare** (Cloudflare, Inc., USA; Workers AI) | Live since 2026-11-07 (`CLOUDFLARE_AI=live`, Arestemis brief 236). Only thing checks that Groq cannot answer (its free daily allowance used up, or Groq failing: error, network, unreadable answer): the thing search and the listing, **without `about_me`**, the same request as to Groq (`types/item/prompts.py`). Never flats, applications, page watches, prices, the spelling check or "describe it". Cloudflare's Workers AI data page: it does not use the content to train models and does not keep inputs or outputs after they are no longer needed (only metadata such as times and token counts). Cloudflare is certified under the EU-U.S. Data Privacy Framework, with Standard Contractual Clauses as the fallback; its data processing addendum is part of the Self-Serve Subscription Agreement without any step (Cloudflare GDPR page, checked 2026-11-07). The account is Patrik's free account; no other Cloudflare service sees Arestemis data. |
-| **Telegram** | Only for the account in `TELEGRAM_FALLBACK_USER` (Patrik): a copy of each new match to his own chat, until push works. No other account's data. |
+| **Cloudflare** (Cloudflare, Inc., USA; Workers AI) | Live since 2026-11-07 (`CLOUDFLARE_AI=live`, Arestemis brief 236). Only thing checks that Groq cannot answer (its free daily allowance used up, or Groq failing: error, network, unreadable answer): the thing search and the listing, **without `about_me`**, the same request as to Groq (`types/item/prompts.py`). Never flats, applications, page watches, prices, the spelling check or "describe it". Cloudflare's Workers AI data page: it does not use the content to train models and does not keep inputs or outputs after they are no longer needed (only metadata such as times and token counts). Cloudflare is certified under the EU-U.S. Data Privacy Framework, with Standard Contractual Clauses as the fallback; its data processing addendum is part of the Self-Serve Subscription Agreement without any step (Cloudflare GDPR page, checked 2026-11-07). The account is the owner's free account; no other Cloudflare service sees Arestemis data. |
+| **Telegram** | Only for the account in `TELEGRAM_FALLBACK_USER` (owner): a copy of each new match to his own chat, until push works. No other account's data. |
 | **Portals** | The server reads WG-Gesucht, Kleinanzeigen, Immowelt and ImmoScout24 (no user data sent). For a thing hunt it sends each chosen site the search as a search there would; no account or person is named anywhere. Kleinanzeigen (brief 116): the search words, the price range, the place and radius, private sellers or not, shipping or not. MTB-News Bikemarkt (brief 122): the search words, Germany-wide. mydealz (brief 120): nothing (one shared feed of all new deals, filtered on the server). eBay (brief 118, through eBay's official Browse API; keys since 2026-11-02, registered as storing no eBay user data): the search words, price, condition, and for pickup the town's postcode and radius. IKEA Preowned (brief 126): the search words and the town's coordinates and radius. Vinted (briefs 127/128): the search words, price and condition. On the phone, listing photos load straight from the portal's image server (`AsyncImage(image_url)`), so the portal sees the phone's IP; "Open listing" opens the portal page. **Watched pages and Preismonitors** (briefs 130, 134, 136): the server reads the address a watch or monitor names, with a real Chrome on the server when the page needs one (its own user, able to reach only the public internet). The site sees the server, not the person. A Preismonitor keeps the product's price and stock over time (public shop data, a year), shared by everyone watching the same page. |
-| **Place coordinates** (OpenStreetMap Foundation, UK; Nominatim) | Approved by Patrik 2026-11-02 (brief 125). When a thing search is saved, the server looks up each of its places that has none yet: the town's name and federal state, from the server's address, with an Arestemis User-Agent; never while someone types, never for places used only by flat hunts. Kept: the town's coordinates and postcode, on the place record (towns are shared between accounts, not personal data). The UK has an adequacy decision; a town name identifies no one. Attribution "© OpenStreetMap contributors (ODbL)" in the app's Fonts & licences page. |
+| **Place coordinates** (OpenStreetMap Foundation, UK; Nominatim) | Approved by the owner 2026-11-02 (brief 125). When a thing search is saved, the server looks up each of its places that has none yet: the town's name and federal state, from the server's address, with an Arestemis User-Agent; never while someone types, never for places used only by flat hunts. Kept: the town's coordinates and postcode, on the place record (towns are shared between accounts, not personal data). The UK has an adequacy decision; a town name identifies no one. Attribution "© OpenStreetMap contributors (ODbL)" in the app's Fonts & licences page. |
 | **Proxy provider** | Some sites are read through a proxy provider. The connection is HTTPS through the proxy, so the provider sees which site the server connects to and how much data moves, not the search or the answers. |
 | **Logs** | uvicorn's access log (journald) with the visitor's IP (uvicorn trusts `X-Forwarded-For` from 127.0.0.1 by default), method, path and status; the query string (`?q=` of the place search) is dropped since 2026-10-25 (`main.py`, `_NoQueryInAccessLog`). Journald keeps 14 days since 2026-10-25 (`deploy/journald/retention.conf`). |
 | **Basis** | Art. 6(1)(b) (the AI check and applications are the service asked for). |
@@ -131,12 +131,12 @@ AV-Vertrag).
 
 | | |
 |---|---|
-| **Data** | About Patrik's server and machines, not about app users: check results, incidents (30 days after resolved), uptime per day (14 days), server vitals, last deploy per repo (commit hash, subject, date), Aresync run reports per machine (machine name, OS, times, counts, log lines with repo names and commits, problems, alerts; 30 days). Machine tokens only as SHA-256. |
-| **Users** | Accounts with the `aresus` service (Patrik decides). Their account and push data are covered above. |
-| **Telegram** | None since 2026-11-01: Aresync's alerts reach Patrik as Aresus pushes (its Telegram copy retired). |
+| **Data** | About the owner's server and machines, not about app users: check results, incidents (30 days after resolved), uptime per day (14 days), server vitals, last deploy per repo (commit hash, subject, date), Aresync run reports per machine (machine name, OS, times, counts, log lines with repo names and commits, problems, alerts; 30 days). Machine tokens only as SHA-256. |
+| **Users** | Accounts with the `aresus` service (the owner decides). Their account and push data are covered above. |
+| **Telegram** | None since 2026-11-01: Aresync's alerts reach the owner as Aresus pushes (its Telegram copy retired). |
 | **Logs** | uvicorn access log with IP, without the query string, as Arestemis. |
 
-### Demo pages (`aresium.de/demo`, `www.ares-empire.de/demo`; Patrik, 2026-10-27)
+### Demo pages (`aresium.de/demo`, `www.ares-empire.de/demo`; the owner, 2026-10-27)
 
 - Public pages without an account that show a made-up sample (Aresium: `app/dashboard.sample.json`, a seeded generated
   account; the hub: `app/samples/empire.demo.json`, a made-up guest, `tools/empire_samples.py --web`). No real data,
@@ -144,12 +144,12 @@ AV-Vertrag).
   change; the hub's demo runs its sample mode in memory. The real data and every API stay behind the login.
 - Processing: only the request itself (IP address, time, URL), as for any page; neither server writes an access log
   (the hub's log lines carry Caddy's address, Aresium logs only errors), Caddy's error entries keep 14 days.
-- The public policy covers them since 2026-10-27 (Patrik: aresium.de and every demo page): its first sentence names
+- The public policy covers them since 2026-10-27 (owner: aresium.de and every demo page): its first sentence names
   "the websites www.ares-empire.de and aresium.de, the demo pages of the Ares apps", section 2 says the demos show
   made-up data and store nothing. A new demo page fits that sentence as long as it, too, stores nothing; one that
   would store something gets its own section first.
 
-### patrikbreeck.com (Patrik's personal site, repo `Ares-Empire/ares` in `~/ares`; public since 2026-11-02)
+### patrikbreeck.com (the owner's personal site, repo `Ares-Empire/ares` in `~/ares`; public since 2026-11-02)
 
 - Static pages served by Caddy from `/srv/ares` (no login, no forms, no API). Its own privacy policy and imprint are on
   the site (`content/legal/`, English and German), with the controller's facts from `content/site.json`, the same as
@@ -165,14 +165,14 @@ AV-Vertrag).
 
 ### Aresium (`aresium.service`, `aresium.de`, `~/aresium`)
 
-- Patrik's own bank (VR Bank CAMT/CSV) and PayPal transactions: date, amount, balance, description, counterparty
+- The owner's own bank (VR Bank CAMT/CSV) and PayPal transactions: date, amount, balance, description, counterparty
   (names of people and shops), category, city/country, trip, the raw export row; categories, rules, corrections.
   Postgres in `aresium-db-1`. Imports through the app or website are parsed and not kept as files.
-- **Only Patrik:** `EMPIRE_ALLOWED_USERS` lets in only listed account ids, even with the `aresium` service.
+- **Only the owner:** `EMPIRE_ALLOWED_USERS` lets in only listed account ids, even with the `aresium` service.
 - Manual scripts only (`npm run ai`, `npm run places`, not the import route): transactions (description,
   counterparty, amount, date, place) to Groq for categories; merchant name + city to OpenStreetMap Nominatim.
-- Telegram bot and reminders (`src/bot/`) talk only to Patrik's chat (`TELEGRAM_CHAT_ID`).
-- The above is Patrik's own data (server mode, the owner list): personal use by one person (Art. 2(2)(c) GDPR), not
+- Telegram bot and reminders (`src/bot/`) talk only to the owner's chat (`TELEGRAM_CHAT_ID`).
+- The above is the owner's own data (server mode, the owner list): personal use by one person (Art. 2(2)(c) GDPR), not
   described in the public pages.
 - **Everyone else: phone mode, no account** (built 2026-10-27, briefs 15, 18, 22; D7 in
   [ARESIUM-FOR-OTHERS.md](ARESIUM-FOR-OTHERS.md); `empire-ios/CLAUDE.md` → "Aresium phone mode"). Aresium opens without
@@ -181,7 +181,7 @@ AV-Vertrag).
   the iPhone: SwiftData, one store per iPhone (`Application Support/Aresium/local/`), file protection complete, not
   excluded from the person's device backups. Sorting uses the bundled shop list and the person's corrections; no AI,
   no network. Only when a login with the `aresium` service exists does the app ask `GET /api/mode` (the token checked
-  with the account server; no cache entry, no log line); the server keeps nothing about anyone but Patrik.
+  with the account server; no cache entry, no log line); the server keeps nothing about anyone but the owner.
 - The data belongs to the iPhone, not to a login: logging in or out, leaving Aresium and deleting the Ares account
   never touch it. Deleted by Settings → "Delete Aresium data on this iPhone" (also any older per-account store left by
   the move-over), the lock's "Forgot the code?", removing the app. Widgets: the current month's totals in the App
@@ -199,12 +199,12 @@ AV-Vertrag).
   the app, its version, iOS and the topic (the collection has fields for them since 2026-10-30, `app`, `app_version`,
   `system`, `kind`, which a later build can send instead; the account server reads the footer either way). Sharing a bank's format: "Bank formats shared from Aresium" below.
 - Public policy: section 6 → "Aresium" (German and English). No change to the netcup AVV: no financial data of
-  anyone but Patrik reaches the server.
+  anyone but the owner reaches the server.
 
 ### Arestoteles (`arestoteles.service`, `~/Arestoteles`; vault `carlsenares/opinions`)
 
-- Patrik's Weltbild vault (his notes, including political views). The `arestoteles` service gives access to his
-  vault and is given only to Patrik and the test account (ARESTOTELES-APP.md).
+- The owner's Weltbild vault (his notes, including political views). The `arestoteles` service gives access to his
+  vault and is given only to the owner and the test account (ARESTOTELES-APP.md).
 - Edits from the app are committed as "the [owner file](#owner-file) (Arestoteles app)" and pushed to GitHub (GitHub, Inc., USA;
   private repo). GitHub is an active EU–US DPF participant (dataprivacyframework.gov participant 6174, next
   certification due 2027-08-03; checked 2026-10-24).
@@ -214,7 +214,7 @@ AV-Vertrag).
   Spotlight (on the device); all deleted at logout.
 - Discuss: copies a prompt to the clipboard and opens `claude.ai/code`, only when tapped; Anthropic then gets what
   the user pastes, under their own Claude account.
-- The website arestoteles.de keeps its own single password (Patrik only) and, like the hub, serves its fonts and
+- The website arestoteles.de keeps its own single password (the owner only) and, like the hub, serves its fonts and
   scripts itself.
 
 ### Contact & support in the apps (brief E5)
@@ -242,11 +242,11 @@ AV-Vertrag).
   It stays in the browser, is never sent, holds nothing about the person, and is set only when the visitor switches.
   Section 3 of the public policy names both since 2026-11-01 (a stored setting the visitor asked for, § 25(2) no. 2
   TDDDG; To do 8).
-- Asking for an app: the email address is used to send the link for installing it (a TestFlight link Patrik sends
-  himself). If Patrik instead invites people by email in App Store Connect, their address goes to Apple: the policy
+- Asking for an app: the email address is used to send the link for installing it (a TestFlight link the owner sends
+  himself). If the owner instead invites people by email in App Store Connect, their address goes to Apple: the policy
   must name that first. Arestemis and the Ares Empire app also need an Ares account (created in the app; the policy's
   account section covers it). A request is only a contact message. The public policy has its Arestemis section since 2026-11-07 (section 6 "Arestemis", Groq and Cloudflare
-  in sections 7 and 8; Patrik: "lets update now, be safe"), so the `arestemis` service may go to other people.
+  in sections 7 and 8; the owner: "lets update now, be safe"), so the `arestemis` service may go to other people.
 - A hook mails each message through Resend to `the [owner file](#owner-file)` (IONOS), Reply-To the given address.
 - IP address: in the account server's request log for 5 days (as every request), and in PocketBase's in-memory rate
   limiter (5 per hour per address); not stored with the message.
@@ -275,7 +275,7 @@ AV-Vertrag).
 ### Bank requests from Aresium (brief 26, 2026-10-27)
 
 - Anyone using Aresium, no account needed (the app sends no login). When their bank is not in Aresium's bank guide,
-  they can send its name so Patrik knows which banks to add: the bank's name they type, the app's version and
+  they can send its name so the owner knows which banks to add: the bank's name they type, the app's version and
   language (optional), created. No file, payment or account. Collection `bank_requests` on the account server;
   superusers only can read it ([ACCOUNTS.md](ACCOUNTS.md) → Bank requests from Aresium).
 - No personal data in the record: the app refuses to send a name that looks like an IBAN or account number, an email
@@ -299,7 +299,7 @@ Framework; its DPA also has the SCCs; stored data (sent-mail logs) is in the US 
 
 - **Nightly backup** since 2026-10-25 ([BACKUP.md](BACKUP.md)): every service's data that cannot be rebuilt
   (accounts, Arestemis, Aresus, push, Aresium, the hub's data, the `.env` files). Kept 7 days on the server (plain,
-  root only) and up to about 6 months on Patrik's MacBook (encrypted with age; only the Mac has the key). No new
+  root only) and up to about 6 months on the owner's MacBook (encrypted with age; only the Mac has the key). No new
   provider: the server copies are covered by the netcup AVV, the Mac is the controller's own device. Data deleted
   in a service leaves the backups when their copies expire (at most about 6 months).
 - The one-off copies made during the builds of 2026-10-24/25 (`pb_data.before-*`, `/root/arestemis-backup-*`,
@@ -308,7 +308,7 @@ Framework; its DPA also has the SCCs; stored data (sent-mail logs) is in the US 
 
 ## Published
 
-2026-10-25: Patrik approved the text, the AVV with netcup is concluded, journald keeps 14 days
+2026-10-25: the owner approved the text, the AVV with netcup is concluded, journald keeps 14 days
 (`deploy/journald/retention.conf`), the address is filled in (his choice), the imprint's second contact route is the
 contact form.
 
@@ -317,21 +317,21 @@ contact form.
 controller's notice about sign-ups and access requests stays an email (no push notification), so that passage is
 unchanged.
 
-2026-10-27 (Aresium): section 6 → "Aresium" added to both policies (Patrik approved the text with his notes); section
+2026-10-27 (Aresium): section 6 → "Aresium" added to both policies (the owner approved the text with his notes); section
 5's first sentence names Aresium as usable without an account; section 7's Resend line names bank formats and bank
 names; section 11 names Aresium's contact form. Published by merging to main; the account server's bank_formats and
 bank_requests inboxes and the "[Aresium]" contact email were deployed the same day.
 
 2026-10-28 (Aresium receipts): section 6 → "Aresium", one paragraph on receipts in both policies (camera or photo
-library, read on the iPhone, photo discarded, what is stored, nothing transmitted); Patrik approved the text.
+library, read on the iPhone, photo discarded, what is stored, nothing transmitted); the owner approved the text.
 
 2026-11-01 (the hub's contact pages): section 4 of both policies names the contact forms on www.ares-empire.de
 (among them /contact, /kontakt) and aresium.de, the chosen topic and the install link for a request for an app;
 section 3 names the look remembered in the browser by the switch on aresium.de and on the hub's contact pages
-(localStorage, § 25(2) no. 2 TDDDG). Patrik approved both texts; published with the pages.
+(localStorage, § 25(2) no. 2 TDDDG). The owner approved both texts; published with the pages.
 
 2026-11-02 (patrikbreeck.com public): the site's own policy (section 4: the companions on the home and apps pages,
-section 5: the contact forms it links) and imprint; Patrik approved those sections, the rest follows this file's facts,
+section 5: the contact forms it links) and imprint; the owner approved those sections, the rest follows this file's facts,
 checked against the server the same day. Password and noindex removed (Caddyfile, `content/site.json` `public`).
 
 ## To do (follow-up builds)
@@ -348,14 +348,14 @@ checked against the server the same day. Password and noindex removed (Caddyfile
 4. ~~**Links.**~~ Done 2026-10-25: the login pages, the apps' Settings, and the signed-in hub, aresium.de and
    arestoteles.de (a quiet "Privacy · Imprint" line, desktop and phone) link the privacy policy and imprint.
 5. ~~**Backups.**~~ Done 2026-10-25: the one-off copies are deleted, the nightly backup runs ([BACKUP.md](BACKUP.md)),
-   and the policy's section 9 (Speicherdauer / Storage period) names it and its periods (Patrik approved the text
+   and the policy's section 9 (Speicherdauer / Storage period) names it and its periods (the owner approved the text
    2026-10-25).
 6. ~~**Aresium for other people, before it opens**~~: done 2026-10-27. The public policy's section 6 → "Aresium"
-   (German and English, approved by Patrik with his notes: no PayPal, no "no AI", no account talk): the bank data,
+   (German and English, approved by the owner with his notes: no PayPal, no "no AI", no account talk): the bank data,
    categories and sorting stay on the iPhone and never reach our servers; deleting, export and device backups, the
    lock, sending a bank's format or a missing bank's name ("Bank formats" and "Bank requests" sections above), and
    contact through the contact form's route. Section 5 says Aresium works without an account. The netcup AVV needs no
-   change. **Rule that keeps the text true:** the `aresium` service stays with Patrik's own accounts (the hub catalog
+   change. **Rule that keeps the text true:** the `aresium` service stays with the owner's own accounts (the hub catalog
    has Aresium as "coming-soon", so nobody can ask for it). If anyone else ever gets it, the app asks `GET /api/mode`
    for them, and the policy must name that request again before. The legal check of the server route (AVV entries,
    Groq, transfers, Art. 9, Art. 30, DPIA) is kept on branch `codex/03-aresium-privacy` in case server sorting comes
@@ -363,9 +363,9 @@ checked against the server the same day. Password and noindex removed (Caddyfile
 7. ~~**Aresium's own contact form (aresium.de/contact, /kontakt), before it goes live**~~: done 2026-10-31 (section 4
    names it, the topic and the install link; section 11 says "contact forms").
 8. ~~**The hub's contact pages (Ares Empire, Arestemis; 2026-11-01), with or before them going live:**~~ done 2026-11-01
-   (Patrik approved section 4 and the optional section 3 sentence; published with the pages). Before: section 4 of both
+   (the owner approved section 4 and the optional section 3 sentence; published with the pages). Before: section 4 of both
    policies says the topic is processed "on aresium.de" only; the hub's pages send it too, and the app. Drafted on
    ares-empire branch `contact-pages-privacy` (section 4: the contact forms on www.ares-empire.de and aresium.de, the
-   chosen topic, a request for an app), **needs Patrik's OK**. Optional, his call: a sentence in section 3 on the look
+   chosen topic, a request for an app), **needs the owner's OK**. Optional, his call: a sentence in section 3 on the look
    remembered in the browser by the switch on aresium.de and the hub's contact pages. Set "Last updated" / "Stand" to
    the day it is published. No new recipient, no change to the netcup AVV (the same collection, server and mailbox).
