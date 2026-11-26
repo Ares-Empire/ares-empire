@@ -72,10 +72,10 @@ answer is no.
    mark each claim as checked or assumed. Each finding takes the form: what is wrong · why it matters · what to change
    · blocks or not.
 3. **Round 1, blind:** run the seats in parallel. Claude agents with the Agent tool (general-purpose, in the
-   background); Codex as one read-only `codex-job` per seat, each with `--wait` in its own background command, and
-   its answer saved with `codex-job report <label> > <file>` (`~/aresync/TOOLS.md` → codex-job).
+   background); Codex as one read-only `codex-job` per seat (`--effort high`), each with `--wait` in its own background
+   command, and its answer saved as `~/aresync/TOOLS.md` → "Saving a report" says.
 4. **Round 2, cross-check:** give each seat the other seats' answers. Continue the same agent (SendMessage; a Codex seat:
-   `codex-job continue <label>`) so it keeps what it read. Each seat checks: claims that are wrong or unchecked (it opens the source), where it disagrees and
+   `codex-job continue <label> "<round-2 prompt>" --wait`) so it keeps what it read. Each seat checks: claims that are wrong or unchecked (it opens the source), where it disagrees and
    why, what the others found that changes its own verdict, and what everyone missed. This round is short.
 5. **Claude reconciles:** what the seats agree on, the disagreements that matter, and the verdict. Where seats still
    disagree on substance, or a seat says the subject is the wrong thing to build, the owner gets the disagreement in a few
