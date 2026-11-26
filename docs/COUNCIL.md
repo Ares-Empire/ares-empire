@@ -42,8 +42,8 @@ drop the seat.
 | **3–4** | login, tokens, money or personal data, a planning council over a new expansion |
 | **5** (maximum) | before other people get it, or before going public |
 
-Mix vendors when the owner agrees: Claude agents plus Codex (`codex exec -s read-only -m <model>`, usually `gpt-6-astra`;
-pick per task as the global CLAUDE.md says). Different models
+Mix vendors when the owner agrees: Claude agents plus Codex (read-only `codex-job` seats, `~/aresync/TOOLS.md`; model
+picked per task as the global CLAUDE.md says). Different models
 miss different things. When he asks for Claude agents, use only Claude.
 
 ## Roles to pick from
@@ -72,10 +72,11 @@ answer is no.
    mark each claim as checked or assumed. Each finding takes the form: what is wrong · why it matters · what to change
    · blocks or not.
 3. **Round 1, blind:** run the seats in parallel. Claude agents with the Agent tool (general-purpose, in the
-   background); Codex with `/opt/homebrew/bin/codex exec -s read-only -m gpt-6-astra -c
-   model_reasoning_effort=high -o <file>`.
-4. **Round 2, cross-check:** give each seat the other seats' answers. Continue the same agent (SendMessage) so it keeps
-   what it read. Each seat checks: claims that are wrong or unchecked (it opens the source), where it disagrees and
+   background); Codex as one read-only `codex-job` per seat (`--effort high`), each with `--wait` in its own background
+   command. Save the answers (`~/aresync/TOOLS.md` → "Saving a report") only once every seat has finished.
+4. **Round 2, cross-check:** give each seat the other seats' answers. Continue the same agent (SendMessage; a Codex seat:
+   `codex-job continue <label> "<round-2 prompt>" --wait`; a seat started with TOOLS.md's raw fallback resumes its
+   thread with `codex exec resume`) so it keeps what it read. Each seat checks: claims that are wrong or unchecked (it opens the source), where it disagrees and
    why, what the others found that changes its own verdict, and what everyone missed. This round is short.
 5. **Claude reconciles:** what the seats agree on, the disagreements that matter, and the verdict. Where seats still
    disagree on substance, or a seat says the subject is the wrong thing to build, the owner gets the disagreement in a few
