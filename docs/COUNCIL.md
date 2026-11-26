@@ -73,7 +73,7 @@ answer is no.
    · blocks or not.
 3. **Round 1, blind:** run the seats in parallel. Claude agents with the Agent tool (general-purpose, in the
    background); Codex as one read-only `codex-job` per seat (`--effort high`), each with `--wait` in its own background
-   command, and its answer saved as `~/aresync/TOOLS.md` → "Saving a report" says.
+   command. Save the answers (`~/aresync/TOOLS.md` → "Saving a report") only once every seat has finished.
 4. **Round 2, cross-check:** give each seat the other seats' answers. Continue the same agent (SendMessage; a Codex seat:
    `codex-job continue <label> "<round-2 prompt>" --wait`) so it keeps what it read. Each seat checks: claims that are wrong or unchecked (it opens the source), where it disagrees and
    why, what the others found that changes its own verdict, and what everyone missed. This round is short.
