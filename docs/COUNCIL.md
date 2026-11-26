@@ -75,7 +75,8 @@ answer is no.
    background); Codex as one read-only `codex-job` per seat (`--effort high`), each with `--wait` in its own background
    command. Save the answers (`~/aresync/TOOLS.md` → "Saving a report") only once every seat has finished.
 4. **Round 2, cross-check:** give each seat the other seats' answers. Continue the same agent (SendMessage; a Codex seat:
-   `codex-job continue <label> "<round-2 prompt>" --wait`) so it keeps what it read. Each seat checks: claims that are wrong or unchecked (it opens the source), where it disagrees and
+   `codex-job continue <label> "<round-2 prompt>" --wait`; a seat started with TOOLS.md's raw fallback resumes its
+   thread with `codex exec resume`) so it keeps what it read. Each seat checks: claims that are wrong or unchecked (it opens the source), where it disagrees and
    why, what the others found that changes its own verdict, and what everyone missed. This round is short.
 5. **Claude reconciles:** what the seats agree on, the disagreements that matter, and the verdict. Where seats still
    disagree on substance, or a seat says the subject is the wrong thing to build, the owner gets the disagreement in a few
