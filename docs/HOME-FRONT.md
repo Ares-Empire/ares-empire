@@ -269,12 +269,14 @@ If acceptance reports `REVOCATION UNCONFIRMED`, terminate the dedicated `tunnel-
 If a server phase is killed (a dropped SSH connection sends it SIGHUP), the front can be left half-changed, with a
 fixture route still served. Recover before anything else, in this order:
 - Terminate the dedicated `tunnel-test` SSH session on the Mac, so nothing answers behind the fixture routes.
-- As root, make sure the phase is gone: `pgrep -af 'python3 - |home-front'` lists the phase (`python3 - <phase>`) and
-  its `home-front` children. Stop what it lists and check again until it lists nothing.
+- As root, make sure the phase is gone: `pgrep -af 'python3 - |home-front|systemctl'` lists the phase
+  (`python3 - <phase>`) and its `home-front` and `systemctl` children. Stop what it lists and check again until it lists
+  nothing, and until `systemctl list-jobs haproxy.service` shows no job.
 - `chattr -i /etc/home-front/routes`; remove `/run/systemd/system/haproxy.service.d/zz-home-front-acceptance.conf` and
   `/root/home-front-acceptance-*`; run `systemctl daemon-reload`, then `systemctl reset-failed haproxy.service` (if it
   says the unit is not loaded, go on).
-- Run `home-front off` and require `CLOSED (verified)` (with or without the front locked), then `home-front reconcile`.
+- Run `home-front off` and require `CLOSED (verified)` (with or without the front locked); if it reports
+  `REVOCATION UNCONFIRMED`, repeat the previous check and run it again. Then run `home-front reconcile`.
 - Reconnect the Mac tunnel and start that phase again from its preparation step.
 
 1. On the Mac, run `bash home-front/acceptance-front.sh mac-fixture` (set `OPENSSL=` to pick the `openssl` that makes its certificate).
