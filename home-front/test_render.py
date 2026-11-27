@@ -195,9 +195,10 @@ elif command == "useradd":
     assert mode == "new-account" and args[-1] == "jump-test"
     assert (root / "var/lib/home-front/in-progress").is_file()
     assert not (root / "etc/ssh/home-tunnel/jump-test.keys").exists()
-    assert args[args.index("--expiredate") + 1] == "1970-01-02"
+    assert "--expiredate" not in args
     (root / "jump-policy").write_text(args[args.index("--comment") + 1])
-    (root / "expiry-jump-test").write_text("1")
+    # Like Debian's useradd --system: no aging fields, so the account starts without an expiry.
+    (root / "expiry-jump-test").write_text("")
 elif command == "usermod":
     option, expiry, name = args
     assert option == "--expiredate"

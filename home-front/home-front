@@ -720,8 +720,9 @@ class Server:
             self.run("groupadd", "--system", GROUP)
             group = self.lookup("group", GROUP)
         self.run("useradd", "--system", "--no-create-home", "--gid", GROUP, "--home-dir", HOME,
-                 "--shell", SHELL, "--password", "!", "--expiredate", "1970-01-02",
-                 "--comment", machine.account_policy, machine.name)
+                 "--shell", SHELL, "--password", "!", "--comment", machine.account_policy, machine.name)
+        # useradd gives system accounts no aging fields, so it would drop --expiredate; set the expiry afterwards.
+        self.run("usermod", "--expiredate", "1", machine.name)
         account = self.lookup("passwd", machine.name)
         if self.check_account(machine.name, account, group)[7] != "1" or account[4] != machine.account_policy:
             raise Error(f"{machine.name}: new account did not retain its expiry and policy")
