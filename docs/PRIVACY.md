@@ -64,6 +64,7 @@ AV-Vertrag).
   (HttpOnly, Secure, SameSite=Lax). Apps: one Keychain item shared by the Empire apps, readable only while the phone
   is unlocked, never synced off the device (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`). Services keep a 60 s
   cache keyed by the token's SHA-256, never the token.
+- **Home-front SSH:** The owner's own SSH connections are logged with source IP addresses in the server journal for 14 days.
 
 ## Per service
 

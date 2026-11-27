@@ -1,0 +1,925 @@
+#!/usr/bin/env python3
+"""Manage the home-front SSH policy on the server."""
+
+import argparse
+import base64
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+import fcntl
+import ipaddress
+import os
+from pathlib import Path
+import re
+import shlex
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+
+
+CONFIG = "/etc/ssh/sshd_config"
+MATCH = "/etc/ssh/home-tunnel/match.conf"
+MACHINES = "/etc/home-front/machines"
+SOURCES = "/etc/home-front/admin-sources"
+STATE = "/var/lib/home-front"
+BACKUPS = f"{STATE}/backup"
+IN_PROGRESS = f"{STATE}/in-progress"
+LOCK = "/run/home-front.lock"
+DROPINS = "/etc/ssh/sshd_config.d"
+DEBIAN_INCLUDE = f"Include {DROPINS}/*.conf"
+PROGRAM = "/usr/local/sbin/home-front"
+INCLUDE = f"Include {MATCH}"
+MARKER = "# home-front managed include"
+SHELL = "/usr/sbin/nologin"
+GROUP = "hometunnel"
+HOME = "/nonexistent"
+SERVICE = "ssh.service"
+NAME = re.compile(r"[a-z][a-z0-9_-]{0,31}")
+PROBES = (("probe.example.net", "192.0.2.1"), ("localhost", "127.0.0.1"))
+
+
+class Error(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class Machine:
+    name: str
+    kind: str
+    ports: tuple
+    interval: int
+    count: int
+
+    @property
+    def key_file(self):
+        return f"/etc/ssh/home-tunnel/{self.name}.keys"
+
+    @property
+    def endpoints(self):
+        return [f"127.0.0.1:{port}" for port in self.ports]
+
+    @property
+    def account_policy(self):
+        return f"home-front {self.kind} " + " ".join(map(str, self.ports))
+
+    def settings(self):
+        endpoints = " ".join(self.endpoints)
+        return {
+            "AuthorizedKeysFile": self.key_file,
+            "AuthenticationMethods": "publickey",
+            "AllowTcpForwarding": "remote" if self.kind == "listen" else "local",
+            "PermitListen": endpoints if self.kind == "listen" else "none",
+            "PermitOpen": endpoints if self.kind == "open" else "none",
+            "GatewayPorts": "no",
+            "AllowStreamLocalForwarding": "no",
+            "PermitTunnel": "no",
+            "X11Forwarding": "no",
+            "AllowAgentForwarding": "no",
+            "PermitTTY": "no",
+            "PermitUserRC": "no",
+            "MaxSessions": "0",
+            "ForceCommand": SHELL,
+            "ClientAliveInterval": str(self.interval),
+            "ClientAliveCountMax": str(self.count),
+        }
+
+    def authorized_key(self, key):
+        option = "permitlisten" if self.kind == "listen" else "permitopen"
+        bounds = ",".join(f'{option}="{endpoint}"' for endpoint in self.endpoints)
+        return f'restrict,port-forwarding,{bounds},command="{SHELL}" {key} {self.name}\n'
+
+
+def rows(contents):
+    for number, line in enumerate(contents.splitlines(), 1):
+        fields = line.partition("#")[0].split()
+        if fields:
+            yield number, fields
+
+
+def parse_machines(contents):
+    machines = {}
+    listeners = set()
+    for number, fields in rows(contents):
+        where = f"{MACHINES}:{number}"
+        if len(fields) not in (3, 4):
+            raise Error(f"{where}: expected account, kind, ports and optional alive=secondsxcount")
+        name, kind, port_list = fields[:3]
+        if not NAME.fullmatch(name) or name == "root" or name in machines:
+            raise Error(f"{where}: invalid or duplicate account {name!r}")
+        if kind not in ("listen", "open"):
+            raise Error(f"{where}: expected kind listen or open")
+        if not re.fullmatch(r"[0-9]{5}(?:,[0-9]{5})*", port_list):
+            raise Error(f"{where}: invalid port list")
+        ports = tuple(sorted(map(int, port_list.split(","))))
+        if len(set(ports)) != len(ports) or any(
+            not (20001 <= port <= 20099 or 20101 <= port <= 20199) for port in ports
+        ):
+            raise Error(f"{where}: duplicate port or port outside 20001–20099 and 20101–20199")
+        if kind == "listen":
+            if listeners.intersection(ports):
+                raise Error(f"{where}: a listen port already belongs to another account")
+            listeners.update(ports)
+        alive = re.fullmatch(r"alive=([1-9][0-9]{0,9})x([1-9][0-9]{0,9})", fields[3]) if len(fields) == 4 else None
+        if len(fields) == 4 and (not alive or any(int(value) > 2147483647 for value in alive.groups())):
+            raise Error(f"{where}: expected alive=secondsxcount with positive integers")
+        interval, count = map(int, alive.groups()) if alive else (5, 3)
+        machines[name] = Machine(name, kind, ports, interval, count)
+    return machines
+
+
+def render(machines):
+    blocks = ["# Managed by home-front. Edit /etc/home-front/machines."]
+    for machine in machines.values():
+        settings = "\n".join(f"    {key} {value}" for key, value in machine.settings().items())
+        blocks.append(f"Match User {machine.name}\n{settings}")
+    return "\n\n".join(blocks) + "\n"
+
+
+def parse_sources(contents):
+    sources = []
+    for number, fields in rows(contents):
+        if len(fields) == 2 and re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9.-]*", fields[0]):
+            try:
+                address = ipaddress.ip_address(fields[1])
+                if "%" not in fields[1]:
+                    sources.append((fields[0], str(address)))
+                    continue
+            except ValueError:
+                pass
+        raise Error(f"{SOURCES}:{number}: expected hostname and IP address")
+    if not sources:
+        raise Error(f"{SOURCES}: list at least one admin source")
+    return sources
+
+
+def read_public_key(path):
+    fields = path.read_text().strip().splitlines()
+    parts = fields[0].split(maxsplit=2) if len(fields) == 1 else []
+    return public_key(parts)
+
+
+def public_key(parts):
+    if len(parts) >= 2 and parts[0] == "ssh-ed25519":
+        try:
+            blob = base64.b64decode(parts[1], validate=True)
+        except ValueError:
+            blob = b""
+        if len(blob) == 51 and blob.startswith(b"\x00\x00\x00\x0bssh-ed25519\x00\x00\x00\x20"):
+            return "ssh-ed25519 " + base64.b64encode(blob).decode("ascii")
+    raise Error("expected one plain ssh-ed25519 public key")
+
+
+def effective_values(output):
+    settings = {}
+    for line in output.splitlines():
+        key, sep, value = line.partition(" ")
+        if sep:
+            settings[key] = f"{settings[key]} {value}" if key in settings else value
+    return settings
+
+
+def config_keyword(line, path):
+    line = line.lstrip()
+    if not line or line.startswith("#"):
+        return ""
+    keyword = re.split(r"[\s=]", line, maxsplit=1)[0]
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*", keyword):
+        raise Error(f"{path}: quoted or noncanonical sshd keyword {keyword!r}")
+    return keyword
+
+
+def account_processes(name, uid):
+    # A named authentication worker may still be root or use the privilege-separation UID.
+    title = rf"^sshd(-session|-auth)?: {name} \[(priv|preauth|net)\]$"
+    return (("-u", uid), ("-f", "--", title))
+
+
+def ssh_pattern(value, pattern):
+    return re.fullmatch(re.escape(pattern).replace(r"\*", ".*").replace(r"\?", "."), value) is not None
+
+
+def root_matches(pattern, host, address):
+    user, separator, hosts = pattern.rpartition("@")
+    if not separator:
+        return ssh_pattern("root", pattern)
+    if not ssh_pattern("root", user):
+        return False
+    matched = False
+    for item in hosts.split(","):
+        value = item.removeprefix("!")
+        if "/" in value:
+            address_matches = ipaddress.ip_address(address) in ipaddress.ip_network(value)
+        else:
+            address_matches = ssh_pattern(address, value)
+        if address_matches or ssh_pattern(host.lower(), value.lower()):
+            if item.startswith("!"):
+                return False
+            matched = True
+    return matched
+
+
+def sync_directory(path):
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def interrupted(signum, frame):
+    raise KeyboardInterrupt
+
+
+@dataclass(frozen=True)
+class File:
+    data: bytes
+    mode: int
+    owner: tuple
+    times: tuple | None = field(default=None, compare=False)
+
+    @classmethod
+    def read(cls, path):
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            return None
+        if not stat.S_ISREG(info.st_mode):
+            raise Error(f"{path}: expected a regular file")
+        return cls(path.read_bytes(), stat.S_IMODE(info.st_mode), (info.st_uid, info.st_gid),
+                   (info.st_atime_ns, info.st_mtime_ns))
+
+    def write(self, path):
+        with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as temp:
+            temporary = Path(temp.name)
+            try:
+                temp.write(self.data)
+                os.fchown(temp.fileno(), *self.owner)
+                os.fchmod(temp.fileno(), self.mode)
+                temp.flush()
+                if self.times is not None:
+                    os.utime(temp.fileno(), ns=self.times)
+                os.fsync(temp.fileno())
+                temporary.replace(path)
+                sync_directory(path.parent)
+            finally:
+                temporary.unlink(missing_ok=True)
+
+class Server:
+    def __init__(self, root="/", runner=None):
+        self.root = Path(root).resolve()
+        self.runner = runner
+        self.owner = (0, 0) if self.root == Path("/") else (os.geteuid(), os.getegid())
+        if self.root != Path("/") and not runner:
+            raise Error("HOME_FRONT_ROOT requires HOME_FRONT_RUNNER")
+
+    def path(self, path):
+        return self.root / path.lstrip("/")
+
+    def run(self, *argv, allowed=(0,), timeout=30):
+        if self.runner:
+            command = [self.runner, *argv]
+        elif argv[0] == "sshd":
+            command = ["/usr/sbin/sshd", *argv[1:]]
+        else:
+            command = argv
+        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout,
+                                env={**os.environ, "LC_ALL": "C"})
+        if result.returncode not in allowed:
+            detail = result.stderr.strip() or result.stdout.strip()
+            raise Error(f"{argv[0]} exited {result.returncode}" + (f": {detail}" if detail else ""))
+        return result
+
+    @contextmanager
+    def locked(self, *, shared=False):
+        with self.path(LOCK).open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_SH if shared else fcntl.LOCK_EX)
+            yield
+
+    def storage(self, path, mode):
+        directory = self.path(path)
+        directory.mkdir(mode=mode, parents=True, exist_ok=True)
+        info = directory.lstat()
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != self.owner[0]
+                or stat.S_IMODE(info.st_mode) & ~mode):
+            raise Error(f"{path}: expected a directory owned by the operator with mode at most {mode:04o}")
+        return directory
+
+    def private_text(self, path):
+        record = File.read(self.path(path))
+        if record is None:
+            raise Error(f"{path}: missing")
+        if record.owner[0] != self.owner[0] or record.mode != 0o600:
+            raise Error(f"{path}: expected an operator-owned file with mode 0600")
+        return record.data.decode()
+
+    def machines(self):
+        return parse_machines(self.private_text(MACHINES))
+
+    def sources(self):
+        return parse_sources(self.private_text(SOURCES))
+
+    def main_config(self, installing):
+        original = File.read(self.path(CONFIG))
+        if original is None:
+            raise Error(f"{CONFIG}: missing")
+        config = original.data.decode()
+        lines = config.splitlines()
+        managed = lines[-2:] == [MARKER, INCLUDE]
+        if lines.count(MARKER) != int(managed):
+            raise Error(f"{CONFIG}: misplaced or duplicated home-front marker")
+        if not managed:
+            if not installing:
+                raise Error(f"{CONFIG}: missing final home-front Include")
+            config = config.rstrip("\n") + f"\n{MARKER}\n{INCLUDE}\n"
+        return original, config
+
+    def scan_config(self, main):
+        dropins = self.path(DROPINS)
+        try:
+            entries = sorted(os.listdir(os.fsencode(dropins)))
+        except FileNotFoundError:
+            entries = []
+        global_lines = []
+        for entry in entries:
+            if not re.fullmatch(rb"[A-Za-z0-9._-]+", entry):
+                raise Error(f"{dropins}: unsupported filename {entry!r}; use plain ASCII names")
+            if not entry.endswith(b".conf"):
+                continue
+            path = dropins / entry.decode("ascii")
+            if path.resolve() == self.path(MATCH).resolve():
+                raise Error(f"{path}: unexpected alias of the managed Match file")
+            contents = path.read_text().splitlines()
+            for line in contents:
+                keyword = config_keyword(line, path)
+                if keyword.lower() in ("match", "include"):
+                    raise Error(f"{path}: unexpected {keyword} directive")
+            if not entry.startswith(b"."):
+                global_lines.extend(contents)
+
+        lines = main.splitlines()
+        result = []
+        seen_debian = False
+        for number, line in enumerate(lines):
+            keyword = config_keyword(line, CONFIG).lower()
+            if keyword not in ("include", "match"):
+                result.append(line)
+            elif keyword == "match":
+                raise Error(f"{CONFIG}: existing Match directive")
+            elif line == DEBIAN_INCLUDE and not seen_debian:
+                result.extend(global_lines)
+                seen_debian = True
+            elif line == INCLUDE and number == len(lines) - 1 and lines[number - 1] == MARKER:
+                continue
+            else:
+                raise Error(f"{CONFIG}: unexpected Include directive: {line.strip()}")
+        return "\n".join(result) + "\n"
+
+    def effective(self, config, name, source):
+        host, address = source
+        return self.run("sshd", "-T", "-f", str(config), "-C",
+                        f"user={name},host={host},addr={address}").stdout
+
+    def check_service_args(self):
+        keys = ("ExecStart", "Environment", "EnvironmentFiles", "PassEnvironment", "PAMName")
+        output = self.run("systemctl", "show", SERVICE, "-p", "ExecStart", "-p", "Environment",
+                          "-p", "EnvironmentFiles", "-p", "PassEnvironment", "-p", "PAMName").stdout
+        properties = {}
+        for line in output.splitlines():
+            key, _, value = line.partition("=")
+            if key not in keys or key in properties:
+                raise Error("ssh.service has unsupported or multiple command or environment settings")
+            properties[key] = value
+        entry = re.fullmatch(
+            r"\{\s*path=/usr/sbin/sshd\s*;\s*argv\[\]=([^;]+);\s*ignore_errors=(?:yes|no)\s*;[^{}]*\}\s*",
+            properties.get("ExecStart", ""),
+        )
+        args = entry[1].split() if entry else []
+        safe_flags = {"-D", "-e"}
+        if args[:1] != ["/usr/sbin/sshd"] or set(args[1:]) - safe_flags - {"$SSHD_OPTS"}:
+            raise Error("ssh.service ExecStart has unsupported sshd arguments")
+        if "$SSHD_OPTS" not in args:
+            return
+        env_files = properties.get("EnvironmentFiles", "").strip()
+        if env_files not in ("", "/etc/default/ssh (ignore_errors=yes)", "/etc/default/ssh (ignore_errors=no)"):
+            raise Error("ssh.service uses an unsupported EnvironmentFile for SSHD_OPTS")
+        if ("SSHD_OPTS" in properties.get("PassEnvironment", "").split()
+                or "SSHD_OPTS=" in properties.get("Environment", "") or properties.get("PAMName")):
+            raise Error("ssh.service SSHD_OPTS must come from /etc/default/ssh")
+        defaults = File.read(self.path("/etc/default/ssh"))
+        if defaults:
+            for line in defaults.data.decode().splitlines():
+                line = line.strip()
+                if not line or line.startswith(("#", ";")):
+                    continue
+                key, sep, value = line.partition("=")
+                if not sep or "\\" in line:
+                    raise Error("/etc/default/ssh: unsupported environment assignment")
+                words = " ".join(shlex.split(value)).split()
+                if key.strip() == "SSHD_OPTS" and set(words) - safe_flags:
+                    raise Error("ssh.service SSHD_OPTS has unsupported sshd arguments")
+
+    def root_baseline(self, sources):
+        baseline = {}
+        groups = None
+        for source in sources:
+            host, address = source
+            output = self.effective(self.path(CONFIG), "root", source)
+            settings = effective_values(output)
+            methods = settings.get("authenticationmethods", "").replace(",", " ").split()
+            if settings.get("pubkeyauthentication") != "yes" or settings.get("permitrootlogin", "no") == "no":
+                raise Error(f"root baseline cannot use public-key login from {host} {address}")
+            if not {"any", "publickey"}.intersection(methods):
+                raise Error(f"root baseline AuthenticationMethods excludes publickey from {host} {address}")
+            lookup_host = host if settings.get("usedns") == "yes" else address
+            for directive in ("DenyUsers", "AllowUsers", "DenyGroups", "AllowGroups"):
+                patterns = settings.get(directive.lower(), "").split()
+                if not patterns:
+                    continue
+                if directive.endswith("Users"):
+                    matched = any(root_matches(pattern, lookup_host, address) for pattern in patterns)
+                else:
+                    if groups is None:
+                        groups = self.run("id", "-Gn", "root").stdout.split()
+                    if not groups:
+                        raise Error("root baseline group membership could not be checked")
+                    matched = any(ssh_pattern(group, pattern) for group in groups for pattern in patterns)
+                if matched != directive.startswith("Allow"):
+                    raise Error(f"root baseline {directive} excludes root from {host} {address}")
+            baseline[source] = output
+        return baseline
+
+    def check_admin(self, config, baseline):
+        for source, before in baseline.items():
+            if self.effective(config, "root", source) != before:
+                raise Error(f"root effective sshd settings changed for {source[0]} {source[1]}")
+
+    def check_machine(self, config, machine, admin):
+        expected = {key.lower(): value for key, value in machine.settings().items()}
+        expected.update(pubkeyauthentication="yes", disableforwarding="no",
+                        authorizedkeyscommand="none", trustedusercakeys="none")
+        for source in (*PROBES, admin):
+            effective = effective_values(self.effective(config, machine.name, source))
+            for key, value in expected.items():
+                actual = effective.get(key)
+                if actual != value:
+                    raise Error(f"{machine.name} at {source[1]}: {key} is {actual!r}, expected {value!r}")
+
+    def check_existing_keys(self, machines):
+        for path in self.path("/etc/ssh/home-tunnel").glob("*.keys"):
+            name = path.stem
+            if name not in machines:
+                raise Error(f"{path}: declare the account and remove it before dropping its machines row")
+            record = File.read(path)
+            if record.owner != self.owner or record.mode != 0o644:
+                raise Error(f"{path}: expected an operator-owned key file with mode 0644")
+            lines = record.data.decode().strip().splitlines()
+            fields = lines[0].split(maxsplit=3) if len(lines) == 1 else []
+            if len(fields) != 4 or not fields[0].startswith("restrict,port-forwarding,") or fields[3] != name:
+                raise Error(f"{path}: expected a home-front key line")
+            key = public_key(fields[1:3])
+            if record.data != machines[name].authorized_key(key).encode():
+                raise Error(f"{path}: kind and ports are fixed for this account; use a new account name")
+
+    def check_fallback(self, baseline):
+        # The global config applies to these accounts if the trailing Include disappears.
+        if os.path.lexists(self.path(HOME)):
+            raise Error(f"{HOME}: dedicated account home must be absent")
+        for settings in baseline.values():
+            values = effective_values(settings)
+            key_files = values.get("authorizedkeysfile", "").split()
+            if not key_files or any(path.startswith("/") or "%" in path for path in key_files):
+                raise Error("global AuthorizedKeysFile must use literal home-relative paths or none")
+            for method in ("hostbasedauthentication", "gssapiauthentication", "kbdinteractiveauthentication"):
+                if values.get(method, "no") != "no":
+                    raise Error(f"global {method} must be disabled for home-front to fail closed")
+            for key in ("authorizedkeyscommand", "trustedusercakeys"):
+                if values.get(key, "none") != "none":
+                    raise Error(f"global {key} must be none for home-front to fail closed")
+
+    def manual_restore(self, backup):
+        restore = f"sudo bash {shlex.quote(str(backup / 'restore.sh'))}"
+        return (
+            f"Backup: {backup}\n"
+            f"{restore} && \\\n"
+            "sudo /usr/sbin/sshd -t && sudo systemctl reload ssh.service\n"
+            "Open a fresh admin SSH session from the Mac before closing the held one. Then run:\n"
+            f"{restore} --clear-marker"
+        )
+
+    def backup(self, previous):
+        parent = self.storage(BACKUPS, 0o700)
+        sync_directory(parent.parent)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-")
+        directory = Path(tempfile.mkdtemp(prefix=stamp, dir=parent))
+        actions = []
+        for name, record in reversed(tuple(previous.items())):
+            target = shlex.quote(str(self.path(name)))
+            if record is None:
+                actions.append(f"rm -f -- {target}")
+            else:
+                saved = directory / name.lstrip("/")
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                record.write(saved)
+                for ancestor in saved.parents:
+                    sync_directory(ancestor)
+                    if ancestor == directory:
+                        break
+                actions.append(f"restore_file {shlex.quote(str(saved))} {target}")
+        marker = shlex.quote(str(self.path(IN_PROGRESS)))
+        script = [
+            "set -euo pipefail",
+            f"exec 9>>{shlex.quote(str(self.path(LOCK)))}",
+            "flock -x 9",
+            f"if [[ $(cat -- {marker}) != {shlex.quote(str(directory))} ]]; then",
+            "    echo 'The in-progress marker does not name this backup.' >&2",
+            "    exit 1",
+            "fi",
+            "if [[ ${1-} == --clear-marker ]]; then",
+            f"    rm -- {marker}",
+            f"    sync -- {shlex.quote(str(parent.parent))}",
+            "    exit",
+            "fi",
+            "restore_file() {",
+            '    local tmp',
+            '    if cmp -s -- "$1" "$2" && [[ $(stat -c %a:%u:%g -- "$1") == "$(stat -c %a:%u:%g -- "$2")" ]]; then',
+            "        return",
+            "    fi",
+            '    tmp=$(mktemp -- "${2%/*}/.home-front-restore.XXXXXXXX")',
+            '    cp -p -- "$1" "$tmp"',
+            '    sync -- "$tmp"',
+            '    mv -fT -- "$tmp" "$2"',
+            '    sync -- "${2%/*}"',
+            "}",
+            *actions,
+        ]
+        File(("\n".join(script) + "\n").encode(), 0o600, self.owner).write(directory / "restore.sh")
+        sync_directory(parent)
+        return directory
+
+    def backup_marker(self, backup):
+        return File(f"{backup}\n".encode(), 0o600, self.owner)
+
+    def clear_marker(self):
+        self.path(IN_PROGRESS).unlink(missing_ok=True)
+        sync_directory(self.path(STATE))
+
+    def rollback(self, backup, previous, baseline, marker_synced):
+        path = self.path(IN_PROGRESS)
+        marker = self.backup_marker(backup)
+        try:
+            if not marker_synced or File.read(path) != marker:
+                marker.write(path)
+        except (Error, OSError, KeyboardInterrupt) as error:
+            raise Error(f"Rollback blocked before restoring files: could not durably mark backup {backup}: "
+                        f"{str(error) or 'interrupted'}") from error
+        failures = []
+        for name, saved in reversed(tuple(previous.items())):
+            path = self.path(name)
+            try:
+                if File.read(path) == saved:
+                    print(f"Unchanged {name}", flush=True)
+                    continue
+                if saved is None:
+                    path.unlink(missing_ok=True)
+                    sync_directory(path.parent)
+                else:
+                    copy = File.read(backup / name.lstrip("/"))
+                    if copy != saved:
+                        raise Error("backup copy is missing or differs from the saved version")
+                    copy.write(path)
+                print(f"Restored {name}", flush=True)
+            except (Error, OSError, KeyboardInterrupt) as error:
+                failures.append(f"Could not restore {name}: {str(error) or 'interrupted'}")
+        try:
+            self.reload(baseline)
+            print("sshd reloaded and root settings verified", flush=True)
+        except (Error, OSError, ValueError, subprocess.SubprocessError, KeyboardInterrupt) as error:
+            failures.append(f"SSH rollback unverified: {str(error) or 'interrupted'}")
+        if failures:
+            raise Error("\n".join([*failures, self.manual_restore(backup)]))
+        self.clear_marker()
+
+    def reload(self, baseline, machines=(), admin=None):
+        live = self.path(CONFIG)
+        self.run("sshd", "-t", "-f", str(live))
+        self.check_service_args()
+        self.check_admin(live, baseline)
+        self.run("systemctl", "reload", SERVICE)
+        self.check_admin(live, baseline)
+        for machine in machines:
+            self.check_machine(live, machine, admin)
+
+    def apply_policy(self, machines, sources, install=None, authorize=None):
+        original, candidate = self.main_config(installing=install is not None)
+        global_config = self.scan_config(candidate)
+        self.check_service_args()
+        baseline = self.root_baseline(sources)
+        self.check_fallback(baseline)
+        activation = None
+        new_machine = None
+        updates = {}
+        provisioned = {}
+        group = self.lookup("group", GROUP) if machines else None
+        self.check_existing_keys(machines)
+        for name, machine in machines.items():
+            account = self.lookup("passwd", name)
+            adding = authorize and name == authorize[0].name
+            if account is None and not adding:
+                continue
+            provisioned[name] = machine
+            if account is None:
+                new_machine = machine
+            else:
+                shadow = self.check_account(name, account, group)
+                if account[4] != machine.account_policy:
+                    raise Error(f"{name}: kind and ports are fixed for this account; use a new account name")
+                if adding:
+                    expiry = int(shadow[7] or "-1")
+                    # Treat the expiry day itself as active because sshd and PAM differ at that boundary.
+                    if 0 < expiry < int(time.time()) // 86400:
+                        if self.has_processes(account_processes(name, account[2])):
+                            raise Error(f"{name}: account still has processes; verify removal before re-adding")
+                        activation = (name, account[2])
+        if authorize:
+            machine, key = authorize
+            key_file = File(machine.authorized_key(key).encode(), 0o644, self.owner)
+            if new_machine or activation:
+                updates[machine.key_file] = key_file
+            elif File.read(self.path(machine.key_file)) != key_file:
+                raise Error(f"{machine.name}: active account key differs or is missing; run remove-machine first")
+
+        state = self.storage(STATE, 0o700)
+        sync_directory(state.parent)
+        history = self.storage(f"{STATE}/sshd-before", 0o700)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ-")
+        before = Path(tempfile.mkdtemp(prefix=stamp, dir=history))
+        for number, ((host, address), settings) in enumerate(baseline.items(), 1):
+            (before / f"{number:03d}-{host}-{address}.conf").write_text(settings)
+        print(f"Saved root effective settings in {before}", flush=True)
+
+        match = render(provisioned)
+        with tempfile.TemporaryDirectory(prefix="candidate-", dir=state) as scratch:
+            staged = Path(scratch) / "sshd_config"
+            staged.write_text(global_config + match)
+            self.run("sshd", "-t", "-f", str(staged))
+            self.check_admin(staged, baseline)
+            for machine in provisioned.values():
+                self.check_machine(staged, machine, sources[0])
+
+        self.storage("/etc/ssh/home-tunnel", 0o755)
+        sync_directory(self.path("/etc/ssh"))
+        updates[MATCH] = File(match.encode(), 0o644, self.owner)
+        if install is not None:
+            if not self.path(MACHINES).exists():
+                updates[MACHINES] = File(b"# account kind ports [alive=secondsxcount]\n", 0o600, self.owner)
+            self.path(PROGRAM).parent.mkdir(parents=True, exist_ok=True)
+            sync_directory(self.path(PROGRAM).parent.parent)
+            updates[PROGRAM] = File(install, 0o755, self.owner)
+        updates[CONFIG] = File(candidate.encode(), original.mode, original.owner)
+        previous = {name: File.read(self.path(name)) for name in updates}
+        if previous[CONFIG] != original:
+            raise Error(f"{CONFIG}: changed while checking the candidate")
+        updates = {name: record for name, record in updates.items()
+                   if record != previous[name] or (authorize and name == authorize[0].key_file)}
+        previous = {name: previous[name] for name in updates}
+        backup = self.backup(previous)
+        print(f"Saved previous files in {backup}", flush=True)
+        marker_synced = False
+        try:
+            self.backup_marker(backup).write(self.path(IN_PROGRESS))
+            marker_synced = True
+            if new_machine:
+                activation = self.create_account(new_machine, group)
+            for name, record in updates.items():
+                record.write(self.path(name))
+                if File.read(self.path(name)) != record:
+                    raise Error(f"{name}: installed file differs on readback")
+            self.reload(baseline, provisioned.values(), sources[0])
+        except (Error, OSError, ValueError, subprocess.SubprocessError, KeyboardInterrupt) as error:
+            try:
+                self.rollback(backup, previous, baseline, marker_synced)
+            except Error as rollback_error:
+                raise Error(f"{str(error) or 'interrupted'}\n{rollback_error}") from error
+            raise Error(f"{str(error) or 'interrupted'}; previous files restored and sshd reloaded") from error
+
+        try:
+            self.clear_marker()
+        except (OSError, KeyboardInterrupt) as error:
+            raise Error(f"SSH policy committed and verified, but clearing {IN_PROGRESS} failed: "
+                        f"{str(error) or 'interrupted'}") from error
+        # Activate only after the verified policy is beyond automatic or marker-based rollback.
+        if activation:
+            self.set_expiry(*activation, "")
+        print("SSH policy verified after reload")
+
+    def create_account(self, machine, group):
+        if group is None:
+            self.run("groupadd", "--system", GROUP)
+            group = self.lookup("group", GROUP)
+        self.run("useradd", "--system", "--no-create-home", "--gid", GROUP, "--home-dir", HOME,
+                 "--shell", SHELL, "--password", "!", "--expiredate", "1970-01-02",
+                 "--comment", machine.account_policy, machine.name)
+        account = self.lookup("passwd", machine.name)
+        if self.check_account(machine.name, account, group)[7] != "1" or account[4] != machine.account_policy:
+            raise Error(f"{machine.name}: new account did not retain its expiry and policy")
+        return machine.name, account[2]
+
+    def lookup(self, database, name):
+        result = self.run("getent", database, name, allowed=(0, 2))
+        if result.returncode == 2:
+            return None
+        return result.stdout.rstrip("\n").split(":")
+
+    def check_account(self, name, account, group):
+        if (not group or len(group) != 4 or group[0] != GROUP
+                or not account or len(account) != 7 or account[0] != name
+                or not account[2].isdigit() or int(account[2]) == 0
+                or account[3] != group[2] or account[5:] != [HOME, SHELL]):
+            raise Error(f"{name}: existing account does not have the dedicated home-front identity")
+        shadow = self.lookup("shadow", name)
+        if not shadow or len(shadow) != 9 or shadow[0] != name or not shadow[1].startswith("!"):
+            raise Error(f"{name}: account password is not locked")
+        return shadow
+
+    def set_expiry(self, name, uid, expiry):
+        account = self.lookup("passwd", name)
+        group = self.lookup("group", GROUP)
+        shadow = self.check_account(name, account, group)
+        if account[2] != uid:
+            raise Error(f"{name}: passwd UID changed during the operation")
+        if shadow[7] != expiry:
+            self.run("usermod", "--expiredate", expiry, name)
+            if self.check_account(name, account, group)[7] != expiry:
+                raise Error(f"{name}: account expiry could not be verified")
+
+    def add(self, machine, key, machines, sources):
+        for other in self.path("/etc/ssh/home-tunnel").glob("*.keys"):
+            if other != self.path(machine.key_file) and key in other.read_text():
+                raise Error(f"{other}: public key is already assigned to another account")
+        self.apply_policy(machines, sources, authorize=(machine, key))
+        print(f"Authorized {machine.name}")
+
+    def listeners(self):
+        return {line.split()[3].rsplit(":", 1)[-1] for line in
+                self.run("ss", "-H", "-ltn").stdout.splitlines() if line.strip()}
+
+    def has_processes(self, selectors, deadline=None):
+        return any(self.run("pgrep", *selector, allowed=(0, 1),
+                            timeout=30 if deadline is None else max(0, deadline - time.monotonic())).returncode == 0
+                   for selector in selectors)
+
+    def remove(self, name):
+        if not NAME.fullmatch(name) or name == "root":
+            raise Error(f"{name!r}: invalid home-front account name")
+        account = self.lookup("passwd", name)
+        if account is None:
+            raise Error(f"{name}: passwd entry missing; establish the account identity at the server console")
+        group = self.lookup("group", GROUP)
+        self.check_account(name, account, group)
+        try:
+            kind, ports = account[4].removeprefix("home-front ").split(" ", 1)
+            recorded = parse_machines(f"{name} {kind} {ports.replace(' ', ',')}")[name]
+            if recorded.account_policy != account[4]:
+                raise ValueError
+        except (Error, KeyError, ValueError):
+            raise Error(f"{name}: invalid home-front policy comment") from None
+        uid = account[2]
+        key_file = self.path(f"/etc/ssh/home-tunnel/{name}.keys")
+        failures = []
+        try:
+            self.set_expiry(name, uid, "1")
+        except (Error, OSError, subprocess.SubprocessError) as error:
+            failures.append(str(error))
+        try:
+            key_file.unlink(missing_ok=True)
+            if key_file.parent.is_dir():
+                sync_directory(key_file.parent)
+        except OSError as error:
+            failures.append(str(error))
+        selectors = account_processes(name, uid)
+        deadline = time.monotonic() + 5
+
+        def kill_pass():
+            for selector in selectors:
+                try:
+                    self.run("pkill", "-KILL", *selector, allowed=(0, 1),
+                             timeout=max(0, deadline - time.monotonic()))
+                except (Error, OSError, subprocess.SubprocessError) as error:
+                    failures.append(str(error))
+
+        kill_pass()
+        kill_pass()
+        clean = False
+        while time.monotonic() < deadline:
+            live = self.has_processes(selectors, deadline)
+            if not live and clean:
+                break
+            clean = not live
+            if live:
+                kill_pass()
+            time.sleep(min(1, max(0, deadline - time.monotonic())))
+        else:
+            failures.append(f"UID {uid} or sshd processes for {name} could not be verified gone within 5 seconds")
+        current = self.lookup("passwd", name)
+        if self.check_account(name, current, group)[7] != "1":
+            failures.append("account expiry could not be verified")
+        if current[2] != uid:
+            failures.append("passwd UID changed during removal")
+        if os.path.lexists(key_file):
+            failures.append("authorized key file is still present")
+        routes = self.path("/etc/home-front/routes")
+        if routes.exists() and any(len(fields) < 2 or fields[1] == name for _, fields in rows(routes.read_text())):
+            failures.append("public route closure requires the home-front server-front controls")
+        if failures:
+            raise Error("; ".join(failures))
+        print("CLOSED (verified)")
+
+    def status(self, machines, sources):
+        _, config = self.main_config(installing=False)
+        self.scan_config(config)
+        listeners = self.listeners() if machines else set()
+        healthy = True
+        for machine in machines.values():
+            if self.lookup("passwd", machine.name) is None:
+                print(f"{machine.name} ({machine.kind}) | not provisioned")
+                continue
+            try:
+                self.check_machine(self.path(CONFIG), machine, sources[0])
+                policy = "verified"
+            except Error as error:
+                healthy = False
+                policy = f"DIFFERS ({error})"
+            key = "present" if self.path(machine.key_file).is_file() else "absent"
+            ports = ", ".join(f"{port} {'listening' if str(port) in listeners else 'idle'}"
+                              for port in machine.ports)
+            print(f"{machine.name} ({machine.kind}) | policy {policy} | key {key} | {ports}")
+            login = self.run("journalctl", "-q", "--no-pager", "-u", SERVICE, "-o", "short-iso",
+                             "-n", "1", "--grep", f"Accepted publickey for {machine.name} from ",
+                             allowed=(0, 1)).stdout.strip()
+            print(f"  Last login: {login or 'none in the retained SSH journal'}")
+        if not machines:
+            print("SSH include in place. No machines declared.")
+        return 0 if healthy else 1
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    add = commands.add_parser("add-machine")
+    add.add_argument("account")
+    add.add_argument("pubkey", type=Path)
+    commands.add_parser("remove-machine").add_argument("account")
+    commands.add_parser("render")
+    commands.add_parser("status")
+    commands.add_parser("_install", help=argparse.SUPPRESS)
+    args = parser.parse_args()
+    signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGHUP, interrupted)
+    try:
+        server = Server(os.environ.get("HOME_FRONT_ROOT", "/"), os.environ.get("HOME_FRONT_RUNNER"))
+        if server.root == Path("/") and os.geteuid() != 0:
+            raise Error("run home-front as root")
+        with server.locked(shared=args.command == "status"):
+            if os.path.lexists(server.path(IN_PROGRESS)):
+                backup = Path(server.private_text(IN_PROGRESS).strip())
+                if backup.parent != server.path(BACKUPS):
+                    raise Error(f"{IN_PROGRESS}: invalid backup path {backup!s}")
+                removing = args.command == "remove-machine"
+                prefix = "REVOCATION UNCONFIRMED" if removing else "home-front"
+                print(f"{prefix}: previous run interrupted; restore from the held admin session or console\n"
+                      f"{server.manual_restore(backup)}", file=sys.stderr)
+                return 3 if removing else 1
+            if args.command == "_install":
+                sources = server.sources()
+                machines = server.machines() if os.path.lexists(server.path(MACHINES)) else {}
+                server.apply_policy(machines, sources, install=Path(__file__).read_bytes())
+            elif args.command == "remove-machine":
+                server.remove(args.account)
+            else:
+                machines = server.machines()
+                if args.command == "add-machine":
+                    if args.account not in machines:
+                        raise Error(f"{args.account!r}: account is not declared in {MACHINES}")
+                    server.add(machines[args.account], read_public_key(args.pubkey), machines, server.sources())
+                elif args.command == "render":
+                    server.apply_policy(machines, server.sources())
+                else:
+                    return server.status(machines, server.sources())
+        return 0
+    except (Error, OSError, ValueError, subprocess.SubprocessError, KeyboardInterrupt) as error:
+        if isinstance(error, KeyboardInterrupt):
+            error = "interrupted"
+        if args.command == "remove-machine":
+            print(f"REVOCATION UNCONFIRMED: {error}. From the server console, check the account and rerun removal. "
+                  "To close the home tunnel directly, stop home-tunnel on the home machine. "
+                  "For the public service, stop flat-remote on the home machine.")
+            return 3
+        print(f"home-front: {error}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
