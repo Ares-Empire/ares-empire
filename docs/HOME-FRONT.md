@@ -267,7 +267,7 @@ Run on the lead's dedicated fixture front with the two `tunnel-test` ports confi
 wildcard DNS records in place. The server phases use intentional route and render faults and require reboots.
 If acceptance reports `REVOCATION UNCONFIRMED`, terminate the dedicated `tunnel-test` SSH session on the Mac before investigating.
 
-1. On the Mac, run `OPENSSL=/path/to/openssl bash home-front/acceptance-front.sh mac-fixture` with OpenSSL 3.
+1. On the Mac, run `bash home-front/acceptance-front.sh mac-fixture` (set `OPENSSL=` to pick the `openssl` that makes its certificate).
    Hold the SSH forwards printed by the script using the disposable `tunnel-test` key, and reconnect them after
    each server reboot. Keep the TLS fixture running while switching the Mac to the phone hotspot.
 2. As root on the server, run `bash home-front/acceptance-front.sh prepare`, then `normal` and `overlap` as

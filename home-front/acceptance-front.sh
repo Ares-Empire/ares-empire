@@ -8,7 +8,6 @@ from contextlib import ExitStack, contextmanager
 import os
 from pathlib import Path
 import runpy
-import select
 import shlex
 import socket
 import socketserver
@@ -132,43 +131,33 @@ def positive(address, name, port=PORT):
 
 
 def mac_fixture():
-    # Each s_server handles one session at a time. Fork one per connection on a private Unix socket
-    # so the idle TLS session and the streaming session can both handshake on the same route.
+    # Python's TLS server handles each connection in its own thread, so the idle TLS session and the
+    # streaming session can both handshake on the same route. Like `openssl s_server -rev`, it answers
+    # each line reversed. (s_server cannot listen on a Unix socket on macOS.)
     openssl = os.environ.get("OPENSSL", "openssl")
     with tempfile.TemporaryDirectory(prefix="b347-mac-") as directory, ExitStack() as stack:
         key = Path(directory) / "key.pem"
         cert = Path(directory) / "cert.pem"
         run(openssl, "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj",
             "/CN=probe.example.net", "-keyout", str(key), "-out", str(cert))
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(cert, key)
 
-        class Relay(socketserver.BaseRequestHandler):
+        class Reverse(socketserver.BaseRequestHandler):
             def handle(self):
-                with tempfile.TemporaryDirectory(prefix="b347-", dir="/tmp") as private:
-                    endpoint = str(Path(private) / "tls")
-                    command = [openssl, "s_server", "-unix", endpoint, "-cert", str(cert), "-key", str(key),
-                               "-quiet", "-rev", "-naccept", "1"]
-                    with subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL) as child:
-                        try:
-                            wait_for(lambda: Path(endpoint).exists() or child.poll() is not None,
-                                     "openssl s_server did not start")
-                            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as backend:
-                                backend.connect(endpoint)
-                                peers = {backend: self.request, self.request: backend}
-                                while True:
-                                    ready, _, _ = select.select(list(peers), [], [], 70)
-                                    if not ready:
-                                        break
-                                    for conn in ready:
-                                        data = conn.recv(16384)
-                                        if not data:
-                                            return
-                                        peers[conn].sendall(data)
-                        finally:
-                            if child.poll() is None:
-                                child.terminate()
+                self.request.settimeout(70)
+                try:
+                    with context.wrap_socket(self.request, server_side=True) as conn:
+                        pending = b""
+                        while chunk := conn.recv(16384):
+                            *lines, pending = (pending + chunk).split(b"\n")
+                            for line in lines:
+                                conn.sendall(line[::-1] + b"\n")
+                except OSError:
+                    pass  # Closed routes, refusals and idle timeouts end sessions abruptly.
 
         for port in (20443, 20444):
-            server = stack.enter_context(socketserver.ThreadingTCPServer(("127.0.0.1", port), Relay))
+            server = stack.enter_context(socketserver.ThreadingTCPServer(("127.0.0.1", port), Reverse))
             server.daemon_threads = True
             threading.Thread(target=server.serve_forever, daemon=True).start()
             stack.callback(server.shutdown)
@@ -305,7 +294,9 @@ class Acceptance:
         drop_in = Path(self.cli["FRONT_ACCEPTANCE_DROP_IN"])
         drop_in.parent.mkdir(parents=True, exist_ok=True)
         require(not drop_in.exists(), f"Remove the previous acceptance drop-in {drop_in} first.")
-        with tempfile.TemporaryDirectory(prefix="home-front-acceptance-", dir="/run") as private:
+        # The shim must be executable, and Debian mounts /run noexec. If a run is interrupted, the directory
+        # stays inert: only the PATH drop-in in /run points at it, and a reboot removes that.
+        with tempfile.TemporaryDirectory(prefix="home-front-acceptance-", dir="/root") as private:
             private = Path(private)
             wrapper = private / "render.py"
             wrapper.write_text(f"""
@@ -348,6 +339,7 @@ fi
 exec /usr/bin/python3 "$@"
 """)
             shim.chmod(0o700)
+            run(str(shim), "-c", "pass")  # Fail clearly if the shim cannot run.
             previous = os.environ.get("HOME_FRONT_ACCEPTANCE")
             try:
                 drop_in.write_text(f"[Service]\nEnvironment=PATH={private}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin\n")
