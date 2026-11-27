@@ -9,10 +9,12 @@ import os
 from pathlib import Path
 import runpy
 import shlex
+import signal
 import socket
 import socketserver
 import ssl
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -314,6 +316,7 @@ fixture = Path({str(private)!r})
 def render(self, strict=False):
     files = read(self, strict)
     if {mode!r} == "fail":
+        (fixture / "failed").touch()  # Proves the restart reached this hook.
         raise cli["Error"]("acceptance: injected render failure")
     if not (fixture / "paused").exists():
         # A replacement restart can stop the pre-start hook. Hold it until the test sees the manager's job.
@@ -389,11 +392,13 @@ exec /usr/bin/python3 "$@"
         with tls("127.0.0.1", names["probe"]) as stream, ExitStack() as stack:
             echo(stream)
             if mode == "render":
-                stack.enter_context(self.render_switch("fail"))
+                private = stack.enter_context(self.render_switch("fail"))
             else:
                 run("chattr", "+i", str(ROUTES))
                 stack.callback(run, "chattr", "-i", str(ROUTES))
             self.expect_off(None if mode == "write-all" else "probe", locked=True)
+            if mode == "render":
+                require((private / "failed").exists(), "the restart failed before the injected render failure")
             ended(stream)
             self.expect_off("probe2", locked=True)
         self.tunnel_up()
@@ -442,6 +447,9 @@ def main():
     outside.add_argument("probe2")
     outside.add_argument("caddy_url", nargs="+")
     args = parser.parse_args()
+    # Turn termination into an exception so the acceptance drop-in, shim and route attributes are cleaned up.
+    for number in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(number, lambda received, frame: sys.exit(128 + received))
     if args.phase == "mac-fixture":
         mac_fixture()
     elif args.phase == "outside":
