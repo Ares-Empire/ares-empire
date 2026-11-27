@@ -631,6 +631,8 @@ class Server:
                 continue
             provisioned[name] = machine
             if account is None:
+                if self.path(machine.key_file).exists():
+                    raise Error(f"{name}: a key file exists without its account; remove {machine.key_file} first")
                 new_machine = machine
             else:
                 shadow = self.check_account(name, account, group)
@@ -719,7 +721,9 @@ class Server:
         if group is None:
             self.run("groupadd", "--system", GROUP)
             group = self.lookup("group", GROUP)
-        self.run("useradd", "--system", "--no-create-home", "--gid", GROUP, "--home-dir", HOME,
+        # Not --system: useradd gives system accounts no aging fields and drops --expiredate. A regular account is
+        # created already expired, so it is never usable before activation.
+        self.run("useradd", "--no-create-home", "--gid", GROUP, "--home-dir", HOME,
                  "--shell", SHELL, "--password", "!", "--expiredate", "1970-01-02",
                  "--comment", machine.account_policy, machine.name)
         account = self.lookup("passwd", machine.name)

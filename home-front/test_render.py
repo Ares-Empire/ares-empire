@@ -195,6 +195,8 @@ elif command == "useradd":
     assert mode == "new-account" and args[-1] == "jump-test"
     assert (root / "var/lib/home-front/in-progress").is_file()
     assert not (root / "etc/ssh/home-tunnel/jump-test.keys").exists()
+    # Debian's useradd drops --expiredate for --system accounts; a regular account keeps it.
+    assert "--system" not in args
     assert args[args.index("--expiredate") + 1] == "1970-01-02"
     (root / "jump-policy").write_text(args[args.index("--comment") + 1])
     (root / "expiry-jump-test").write_text("1")
@@ -547,6 +549,18 @@ class ScratchTests(unittest.TestCase):
         self.assertEqual((self.root / "jump-policy").read_text(), "home-front open 20199")
         self.assertIn("Match User jump-test", match.read_text())
         self.assertEqual((self.root / "expiry-jump-test").read_text(), "")
+
+    def test_new_account_refuses_a_leftover_key_file(self):
+        installed = self.run_command(INSTALL, mode="new-account")
+        self.assertEqual(installed.returncode, 0, installed.stderr)
+        old_line = parse(FIXTURES)["jump-test"].authorized_key(self.key(0))
+        stale = self.write("etc/ssh/home-tunnel/jump-test.keys", old_line)
+        key = self.write("jump.pub", self.key(1))
+        result = self.cli("add-machine", "jump-test", key, mode="new-account")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("a key file exists without its account", result.stdout + result.stderr)
+        self.assertEqual(stale.read_text(), old_line)
+        self.assertFalse(any(call[1] == "useradd" for call in self.calls()))
 
     def test_reauthorization_failure_leaves_expiry_and_old_key_in_place(self):
         installed = self.run_command(INSTALL)
