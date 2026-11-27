@@ -266,8 +266,19 @@ injected command runner. `HOME_FRONT_ROOT` redirects managed paths, including th
 Run on the lead's dedicated fixture front with the two `tunnel-test` ports configured as above and with the
 wildcard DNS records in place. The server phases use intentional route and render faults and require reboots.
 If acceptance reports `REVOCATION UNCONFIRMED`, terminate the dedicated `tunnel-test` SSH session on the Mac before investigating.
+If a server phase is killed (a dropped SSH connection sends it SIGHUP), the front can be left half-changed, with a
+fixture route still served and some of the phase's commands still running. Recover before anything else, in this order:
+- Terminate the dedicated `tunnel-test` SSH session on the Mac, so nothing answers behind the fixture routes.
+- Reboot the server. That ends every surviving command of the phase and its pending HAProxy jobs, and removes the
+  `/run` acceptance drop-in, without hunting for processes.
+- As root: `chattr -i /etc/home-front/routes`; remove `/root/home-front-acceptance-*`; run
+  `systemctl reset-failed haproxy.service` (if it says the unit is not loaded, go on).
+- Run `home-front off` and require `CLOSED (verified)` (with or without the front locked); if it reports
+  `REVOCATION UNCONFIRMED`, wait until `systemctl list-jobs haproxy.service` shows no job and run it again. Then run
+  `home-front reconcile`.
+- Reconnect the Mac tunnel and start that phase again from its preparation step.
 
-1. On the Mac, run `OPENSSL=/path/to/openssl bash home-front/acceptance-front.sh mac-fixture` with OpenSSL 3.
+1. On the Mac, run `bash home-front/acceptance-front.sh mac-fixture` (set `OPENSSL=` to pick the `openssl` that makes its certificate).
    Hold the SSH forwards printed by the script using the disposable `tunnel-test` key, and reconnect them after
    each server reboot. Keep the TLS fixture running while switching the Mac to the phone hotspot.
 2. As root on the server, run `bash home-front/acceptance-front.sh prepare`, then `normal` and `overlap` as
