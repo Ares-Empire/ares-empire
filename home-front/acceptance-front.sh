@@ -9,12 +9,10 @@ import os
 from pathlib import Path
 import runpy
 import shlex
-import signal
 import socket
 import socketserver
 import ssl
 import subprocess
-import sys
 import tempfile
 import threading
 import time
@@ -447,9 +445,6 @@ def main():
     outside.add_argument("probe2")
     outside.add_argument("caddy_url", nargs="+")
     args = parser.parse_args()
-    # Turn termination into an exception so the acceptance drop-in, shim and route attributes are cleaned up.
-    for number in (signal.SIGTERM, signal.SIGHUP):
-        signal.signal(number, lambda received, frame: sys.exit(128 + received))
     if args.phase == "mac-fixture":
         mac_fixture()
     elif args.phase == "outside":
