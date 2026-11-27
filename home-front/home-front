@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""Manage the home-front SSH policy on the server."""
+"""Manage the home-front SSH policy and public TCP front on the server."""
 
 import argparse
 import base64
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 import fcntl
 import ipaddress
 import os
 from pathlib import Path
 import re
+import secrets
 import shlex
 import signal
+import socket
+import ssl
 import stat
 import subprocess
 import sys
@@ -37,12 +40,76 @@ SHELL = "/usr/sbin/nologin"
 GROUP = "hometunnel"
 HOME = "/nonexistent"
 SERVICE = "ssh.service"
+ROUTES = "/etc/home-front/routes"
+FRONT_CONFIG = "/etc/home-front/config"
+FRONT_LOCK = f"{STATE}/front-locked"
+FRONT_LOCK_TEXT = b"all routes off\n"
+FRONT_UNIT = "haproxy.service"
+FRONT_CGROUP = f"/system.slice/{FRONT_UNIT}"
+FRONT_FRAGMENT = f"/usr/lib/systemd/system/{FRONT_UNIT}"
+FRONT_LOCAL_UNIT = f"/etc/systemd/system/{FRONT_UNIT}"
+FRONT_DROP_IN = f"{FRONT_LOCAL_UNIT}.d/home-front.conf"
+FRONT_ACCEPTANCE_DROP_IN = f"/run/systemd/system/{FRONT_UNIT}.d/zz-home-front-acceptance.conf"
+HAPROXY_CONFIG = "/etc/haproxy/haproxy.cfg"
+HAPROXY_MAP = "/etc/haproxy/home.map"
+FRONT_COMMANDS = {
+    "ExecStartPre": [f"{PROGRAM} render --for-start"],
+    "ExecStart": [f"/usr/sbin/haproxy -Ws -f {HAPROXY_CONFIG} -p /run/haproxy.pid"],
+    "ExecReload": [f"{PROGRAM} render --for-reload", f"{PROGRAM} _reload-front ${{MAINPID}}"],
+}
+# The installer stages this same drop-in. Keep the check available in the standalone installed CLI.
+FRONT_DROP_IN_CONTENT = (
+    "[Service]\n"
+    + "".join(f"{name}=\n" + "".join(f"{name}={command}\n" for command in commands)
+              for name, commands in FRONT_COMMANDS.items())
+    + "KillMode=control-group\n"
+).encode()
+FRONT_HOOK_ERROR = ("HAProxy's managed start and reload hooks are not effective. Check the unit and drop-in paths, "
+                    "and whether systemd needs a daemon reload. Run the installer if the start hook is missing")
+FRONT_PORT = 8443
+LABEL = re.compile(r"[a-z2-7]{16}")
 NAME = re.compile(r"[a-z][a-z0-9_-]{0,31}")
 PROBES = (("probe.example.net", "192.0.2.1"), ("localhost", "127.0.0.1"))
+ACCOUNT_FILES = {"passwd": ("/etc/passwd", 7), "shadow": ("/etc/shadow", 9), "group": ("/etc/group", 4)}
 
 
 class Error(Exception):
     pass
+
+
+class RouteDenied(Error):
+    pass
+
+
+FRONT_ERRORS = (Error, OSError, ValueError, subprocess.SubprocessError)
+
+
+@dataclass(frozen=True)
+class Route:
+    label: str
+    account: str
+    port: int
+    service: str
+    state: str
+
+    def hostname(self, zone):
+        return f"{self.label}.{zone}"
+
+
+@dataclass(frozen=True)
+class Closure:
+    code: int = 0
+    detail: str = ""
+
+    def report(self):
+        if self.code == 0:
+            print("CLOSED (verified)")
+        elif self.code == 2:
+            print("CLOSED (verified): all routes; the front is locked")
+            print(f"Cause: {self.detail}", flush=True)
+        else:
+            print(f"REVOCATION UNCONFIRMED: {self.detail}. Stop flat-remote on the home machine.", flush=True)
+        return self.code
 
 
 @dataclass(frozen=True)
@@ -136,6 +203,108 @@ def render(machines):
         settings = "\n".join(f"    {key} {value}" for key, value in machine.settings().items())
         blocks.append(f"Match User {machine.name}\n{settings}")
     return "\n\n".join(blocks) + "\n"
+
+
+def parse_routes(contents):
+    routes = {}
+    labels = set()
+    for number, fields in rows(contents):
+        where = f"{ROUTES}:{number}"
+        if len(fields) != 5:
+            raise Error(f"{where}: expected label, account, port, service and state")
+        label, account, port, service, state = fields
+        if not LABEL.fullmatch(label) or label in labels:
+            raise Error(f"{where}: invalid or duplicate route label")
+        if (not NAME.fullmatch(account) or not re.fullmatch(r"[1-9][0-9]{0,4}", port)
+                or not NAME.fullmatch(service) or service in routes or state not in ("on", "off")):
+            raise Error(f"{where}: invalid account, port, service or state")
+        routes[service] = Route(label, account, int(port), service, state)
+        labels.add(label)
+    return routes
+
+
+def parse_zone(contents):
+    lines = [line.partition("#")[0].strip() for line in contents.splitlines()]
+    lines = [line for line in lines if line]
+    label = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+    setting = re.fullmatch(rf"zone\s*=\s*({label}(?:\.{label})+)", lines[0]) if len(lines) == 1 else None
+    if not setting or len(setting[1]) > 236:
+        raise Error(f"{FRONT_CONFIG}: expected zone = home.example.net")
+    return setting[1]
+
+
+def recorded_machine(name, comment):
+    try:
+        kind, ports = comment.removeprefix("home-front ").split(" ", 1)
+        machine = parse_machines(f"{name} {kind} {ports.replace(' ', ',')}")[name]
+        if machine.account_policy == comment:
+            return machine
+    except (Error, KeyError, ValueError):
+        pass
+    raise Error(f"{name}: invalid home-front policy comment")
+
+
+def render_front(routes, zone, map_path):
+    mapping = "\n".join(f"{route.hostname(zone)} {route.service}" for route in routes)
+    lookup = f"req.ssl_sni,lower,map({map_path})"
+    acl_lookup = lookup
+    if re.search(r"[^a-zA-Z0-9/_.-]", str(map_path)):
+        lookup = f'req.ssl_sni,lower,map("{map_path}")'
+        acl_lookup = f"'{lookup}'"
+        lookup = f"'%[{lookup}]'"
+    else:
+        lookup = f"%[{lookup}]"
+    config = f"""\
+# Managed by home-front.
+global
+    user haproxy
+    group haproxy
+    log stdout format raw local0
+    hard-stop-after 10m
+defaults
+    mode tcp
+    timeout connect 3s
+    timeout client 10m
+    timeout server 10m
+frontend home
+    bind :{FRONT_PORT}
+    bind :::{FRONT_PORT} v6only
+    maxconn 128
+    log global
+    stick-table type ipv6 size 64k expire 10m store conn_cur,conn_rate(10s)
+    tcp-request connection track-sc0 src,ipmask(32,64)
+    tcp-request connection reject if {{ sc0_conn_cur gt 8 }} || {{ sc0_conn_rate gt 30 }}
+    tcp-request inspect-delay 5s
+    tcp-request content reject unless {{ req.ssl_hello_type 1 }}
+    tcp-request content reject unless {{ {acl_lookup} -m found }}
+    use_backend {lookup}
+    log-format "%ci %b %Tw/%Tc/%Tt %U/%B %ts"
+"""
+    for route in routes:
+        config += f"""
+backend {route.service}
+    retries 1
+    server s 127.0.0.1:{route.port} maxconn 32
+"""
+    return config.encode(), (mapping + "\n" if mapping else "").encode()
+
+
+def tls_answer(address, name):
+    # Generate a ClientHello, then read the raw TCP reply. Even a TLS alert counts as an answer.
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.check_hostname = False
+    outgoing = ssl.MemoryBIO()
+    client = context.wrap_bio(ssl.MemoryBIO(), outgoing, server_hostname=name)
+    try:
+        client.do_handshake()
+    except ssl.SSLWantReadError:
+        pass
+    with socket.create_connection((address, FRONT_PORT), timeout=6) as connection:
+        connection.sendall(outgoing.read())
+        try:
+            return bool(connection.recv(1))
+        except ConnectionResetError:
+            return False
 
 
 def parse_sources(contents):
@@ -320,6 +489,549 @@ class Server:
 
     def sources(self):
         return parse_sources(self.private_text(SOURCES))
+
+    def present(self, path):
+        try:
+            self.path(path).lstat()
+        except FileNotFoundError:
+            return False
+        return True
+
+    def front_installed(self):
+        return self.present(FRONT_DROP_IN) or self.present(FRONT_CONFIG)
+
+    def routes(self, *, optional=False):
+        if optional and not self.present(ROUTES) and not self.front_installed():
+            return {}
+        return parse_routes(self.private_text(ROUTES))
+
+    def zone(self):
+        return parse_zone(self.private_text(FRONT_CONFIG))
+
+    def front_locked(self):
+        if self.present(FRONT_LOCK):
+            return True
+        if self.front_installed():
+            info = self.path(STATE).lstat()
+            if (not stat.S_ISDIR(info.st_mode) or info.st_uid != self.owner[0]
+                    or stat.S_IMODE(info.st_mode) & ~0o700):
+                raise Error(f"{STATE}: expected a private home-front state directory")
+        return False
+
+    def write_routes(self, routes):
+        contents = "# label account port service state\n"
+        contents += "".join(f"{r.label} {r.account} {r.port} {r.service} {r.state}\n" for r in routes.values())
+        File(contents.encode(), 0o600, self.owner).write(self.path(ROUTES))
+        if self.routes() != routes:
+            raise Error("routes file differs on readback")
+
+    def local_record(self, database, name):
+        # Read the file itself: no name service, and a missing record is a definite answer.
+        path, width = ACCOUNT_FILES[database]
+        prefix = name.encode("ascii") + b":"
+        lines = [line for line in self.path(path).read_bytes().split(b"\n") if line.startswith(prefix)]
+        if not lines:
+            return None
+        try:
+            fields = lines[0].decode("ascii").split(":")
+        except UnicodeDecodeError:
+            fields = []
+        if len(lines) != 1 or len(fields) != width:
+            raise Error(f"{path}: expected one record with {width} fields for {name}")
+        return fields
+
+    def route_denial(self, route):
+        # Any expiry field denies the route. An activated account has no expiry field.
+        account = self.local_record("passwd", route.account)
+        shadow = self.local_record("shadow", route.account)
+        group = self.local_record("group", GROUP)
+        if account is None:
+            return "is not provisioned"
+        if (group is None or shadow is None or not account[2].isdigit() or int(account[2]) == 0
+                or account[3] != group[2] or account[5:] != [HOME, SHELL] or not shadow[1].startswith("!")):
+            return "is not a dedicated home-front account"
+        if shadow[7]:
+            return "is expired or not activated"
+        try:
+            machine = recorded_machine(route.account, account[4])
+        except Error:
+            return "has no home-front policy record"
+        if machine.kind != "listen" or route.port not in machine.ports or not 20001 <= route.port <= 20099:
+            return f"cannot listen on service port {route.port}"
+        return None
+
+    def authorize_route(self, route):
+        reason = self.route_denial(route)
+        if reason:
+            raise RouteDenied(f"{route.service}: {route.account} {reason}")
+
+    def front_files(self, strict=False):
+        requested = [] if self.front_locked() else [r for r in self.routes().values() if r.state == "on"]
+        active = []
+        for route in requested:
+            try:
+                self.authorize_route(route)
+            except RouteDenied as error:
+                if strict:
+                    raise Error(f"{error}. Run home-front off {route.service}, then retry") from error
+                print(f"home-front: omitting route {route.service}: {error}", file=sys.stderr)
+            else:
+                active.append(route)
+        return self.rendered_front_files(active)
+
+    def rendered_front_files(self, active):
+        zone = self.zone() if active else None
+        config, mapping = render_front(active, zone, self.path(HAPROXY_MAP))
+        return {HAPROXY_MAP: File(mapping, 0o600, self.owner), HAPROXY_CONFIG: File(config, 0o600, self.owner)}
+
+    def check_front_hook(self):
+        if self.root == Path("/"):
+            group = self.path("/proc/self/cgroup").read_text().strip().partition("::")[2]
+            if FRONT_UNIT not in Path(group).parts:
+                raise Error("this hook must run inside haproxy.service")
+
+    def hooks_effective(self):
+        # Home-front alone manages the Debian unit and its single managed drop-in.
+        # The acceptance harness adds its runtime drop-in only while a fixture runs.
+        # Manual starts, stops, reloads and restarts are allowed only between home-front commands.
+        try:
+            drop_in = File.read(self.path(FRONT_DROP_IN))
+            if drop_in is None or drop_in.data != FRONT_DROP_IN_CONTENT:
+                return False
+            reload_needed = self.run("systemctl", "show", "-p", "NeedDaemonReload", FRONT_UNIT).stdout
+            if reload_needed.splitlines() != ["NeedDaemonReload=no"]:
+                return False
+            paths = self.run("systemctl", "show", "-p", "FragmentPath", "-p", "DropInPaths", FRONT_UNIT).stdout
+            drop_ins = [FRONT_DROP_IN]
+            if os.environ.get("HOME_FRONT_ACCEPTANCE") == "1":
+                drop_ins.append(FRONT_ACCEPTANCE_DROP_IN)
+            expected = [f"FragmentPath={FRONT_FRAGMENT}", f"DropInPaths={' '.join(drop_ins)}"]
+            if sorted(paths.splitlines()) != sorted(expected):
+                return False
+            output = self.run("systemctl", "show", "-p", "ExecStartPre", "-p", "ExecStart",
+                              "-p", "ExecReload", FRONT_UNIT).stdout
+        except FRONT_ERRORS:
+            return False
+        commands = {name: [] for name in FRONT_COMMANDS}
+        for line in output.splitlines():
+            match = re.fullmatch(r"(?P<name>\w+)=\{ path=(?P<path>[^ ;]+) ; argv\[\]=(?P<argv>[^;]+)"
+                                 r" ; ignore_errors=no ; [^{}]* \}", line)
+            if not match or match["name"] not in commands or match["path"] != match["argv"].split(" ", 1)[0]:
+                return False
+            commands[match["name"]].append(match["argv"])
+        return commands == FRONT_COMMANDS
+
+    def render_for_start(self, strict=False):
+        self.check_front_hook()
+        self.write_front_files(self.front_files(strict))
+        self.run("haproxy", "-c", "-q", "-f", str(self.path(HAPROXY_CONFIG)))
+
+    def write_front_files(self, files):
+        for path, record in files.items():
+            record.write(self.path(path))
+
+    def verify_front_files(self, files):
+        if any(File.read(self.path(path)) != record for path, record in files.items()):
+            raise Error("HAProxy files do not match the current routes and front lock")
+
+    def front_processes(self):
+        group = self.run("systemctl", "show", "--value", "-p", "ControlGroup", FRONT_UNIT).stdout.strip()
+        if group not in ("", FRONT_CGROUP):
+            raise Error("unexpected HAProxy control group")
+        parent = self.path("/sys/fs/cgroup") / Path(FRONT_CGROUP).parent.name
+        if not stat.S_ISDIR(parent.stat().st_mode):
+            raise Error(f"{parent}: expected the system slice's control group")
+        top = parent / FRONT_UNIT
+        for _ in range(20):
+            try:
+                top.lstat()
+            except FileNotFoundError:
+                return {}  # The kernel removes a cgroup only when it has no member and no child.
+            try:
+                return self.cgroup_members(top)
+            except FileNotFoundError:
+                time.sleep(0.05)  # A cgroup was removed during the walk. Look again from the top.
+        raise Error("the HAProxy control group kept changing")
+
+    def cgroup_members(self, top):
+        processes = {}
+        pending = [top]
+        while pending:
+            directory = pending.pop()
+            with os.scandir(directory) as entries:
+                pending.extend(Path(entry.path) for entry in entries if entry.is_dir(follow_symlinks=False))
+            for pid in (directory / "cgroup.procs").read_text().split():
+                number = int(pid)
+                try:
+                    # Field 22 is start time in clock ticks since boot. The comm field can contain spaces.
+                    fields = self.path(f"/proc/{number}/stat").read_text().rpartition(") ")[2].split()
+                except (FileNotFoundError, ProcessLookupError):
+                    continue  # The process exited after we listed it.
+                if len(fields) < 20:
+                    raise Error("could not read an HAProxy cgroup process start time")
+                processes[number] = int(fields[19])
+        return processes
+
+    def restart_front(self, *, enable=False):
+        # Every process of the front must belong to a start that began after this call.
+        before = self.front_processes()
+        if enable:
+            self.run("systemctl", "enable", FRONT_UNIT)
+            # Enabling reloads systemd's unit definitions. Verify what the restart will use.
+            if not self.hooks_effective():
+                self.refuse_front_mismatch()
+        clock = time.CLOCK_BOOTTIME if hasattr(time, "CLOCK_BOOTTIME") else time.CLOCK_MONOTONIC
+        start = time.clock_gettime_ns(clock) * os.sysconf("SC_CLK_TCK") // 10**9
+        self.run("systemctl", "restart", FRONT_UNIT)
+        now = self.front_processes()
+        if not now or any(tick < start or before.get(pid) == tick for pid, tick in now.items()):
+            raise Error("HAProxy cgroup did not fully restart")
+        named = self.run("pgrep", "-x", "haproxy", allowed=(0, 1)).stdout.split()
+        if any(not pid.isdigit() or int(pid) not in now for pid in named):
+            raise Error("an HAProxy process exists outside the front's control group")
+        if self.front_active() != "active":
+            raise Error("HAProxy is not active")
+        self.verify_front_files(self.front_files())
+
+    def reload_front_worker(self, master):
+        self.check_front_hook()
+        # Keep the systemd reload job running until a new worker owns both listening sockets.
+        # Debian's stock ExecReload returns as soon as it sends the signal.
+        before = self.front_processes()
+        if master <= 1 or master not in before:
+            raise Error("HAProxy master is missing from its control group")
+        self.run("kill", "-USR2", str(master))
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            listeners = self.run("ss", "-H", "-ltnp", f"sport = :{FRONT_PORT}").stdout
+            owners = {}
+            for line in listeners.splitlines():
+                fields = line.split()
+                if len(fields) < 5:
+                    raise Error("could not read HAProxy listeners from ss")
+                address = fields[3]
+                owners.setdefault(address, set()).update(map(int, re.findall(r"\bpid=([0-9]+)", line)))
+            ipv4 = owners.get(f"0.0.0.0:{FRONT_PORT}", set())
+            ipv6 = owners.get(f"[::]:{FRONT_PORT}", set())
+            now = self.front_processes()
+            old_listeners = {pid for pid in ipv4 | ipv6 if pid != master and pid in before and now.get(pid) == before[pid]}
+            new_workers = {pid for pid in ipv4 & ipv6 if pid in now and now[pid] != before.get(pid)}
+            if now.get(master) == before[master] and new_workers and not old_listeners:
+                return
+            time.sleep(0.05)
+        raise Error("HAProxy reload did not bring up a new worker on both listeners")
+
+    def front_enabled(self):
+        return self.run("systemctl", "is-enabled", FRONT_UNIT, allowed=(0, 1, 3, 4)).stdout.strip()
+
+    def front_active(self):
+        return self.run("systemctl", "is-active", FRONT_UNIT, allowed=(0, 3, 4)).stdout.strip()
+
+    def check_route_closed(self, routes):
+        zone = self.zone() if routes else None
+        names = [r.hostname(zone) for r in routes] or [None]
+        probes = ((address, name) for name in names for address in ("127.0.0.1", "::1"))
+        for index, (address, name) in enumerate(probes):
+            # Space every connection apart to stay below HAProxy's ten-second rate limit.
+            if index:
+                time.sleep(0.5)
+            if self.runner:
+                result = self.run("tls-client-hello", address, str(FRONT_PORT), name or "", allowed=(0, 1))
+                answered = result.returncode == 1
+            else:
+                answered = tls_answer(address, name)
+            if answered:
+                raise Error("HAProxy returned bytes to a TLS ClientHello for a closed route")
+
+    def verify_front_stopped(self):
+        if self.front_enabled() != "disabled":
+            raise Error("HAProxy is not disabled")
+        if self.front_active() not in ("inactive", "failed"):
+            raise Error("HAProxy is not stopped")
+        if self.front_processes() or self.has_processes((("-x", "haproxy"),)):
+            raise Error("an HAProxy process still exists")
+        if str(FRONT_PORT) in self.listeners():
+            raise Error(f"port {FRONT_PORT} still has a listener")
+
+    def lock_front(self):
+        # Returns only when the lock's directory entry is on disk.
+        directory = self.storage(STATE, 0o700)
+        sync_directory(directory.parent)
+        path = self.path(FRONT_LOCK)
+        record = File(FRONT_LOCK_TEXT, 0o600, self.owner)
+        if File.read(path) == record:
+            sync_directory(directory)  # An earlier run may have renamed it without a successful sync.
+        else:
+            record.write(path)
+        if File.read(path) != record:
+            raise Error("front lock differs on readback")
+
+    def stop_front(self, diagnostics, *, kill=False):
+        actions = [("stop",), ("disable",)]
+        if kill:
+            actions.append(("kill", "-s", "KILL"))
+        for args in actions:
+            action = " ".join(args)
+            try:
+                result = self.run("systemctl", *args, FRONT_UNIT)
+            except FRONT_ERRORS as error:
+                diagnostics.append(f"{action}: {error}")
+            else:
+                diagnostics.append(f"systemctl {action} exited {result.returncode}")
+
+    def refuse_front_mismatch(self):
+        diagnostics = []
+        self.stop_front(diagnostics)
+        try:
+            self.verify_front_stopped()
+        except FRONT_ERRORS as error:
+            details = "; ".join([*diagnostics, str(error)])
+            raise Error(f"{FRONT_HOOK_ERROR}. HAProxy shutdown could not be verified: {details}") from error
+        raise Error(FRONT_HOOK_ERROR)
+
+    def disable_front(self, cause):
+        # The CLI reports one outcome and exits. Ignore these signals through that report.
+        for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+            signal.signal(signum, signal.SIG_IGN)
+        diagnostics = [cause]
+        verified = True
+        try:
+            self.lock_front()
+        except FRONT_ERRORS as error:
+            verified = False
+            diagnostics.append(f"front lock: {error}")
+        self.stop_front(diagnostics, kill=True)
+        stopped_before_write = False
+        try:
+            self.verify_front_stopped()
+        except FRONT_ERRORS as error:
+            verified = False
+            diagnostics.append(f"shutdown before render: {error}")
+        else:
+            stopped_before_write = True
+            # This is the only CLI write outside the systemd hooks. The front is
+            # verified stopped, and both files must contain zero routes.
+            files = self.rendered_front_files([])
+            for path, record in files.items():
+                try:
+                    record.write(self.path(path))
+                except FRONT_ERRORS as error:
+                    verified = False
+                    diagnostics.append(f"{path}: {error}")
+            try:
+                self.verify_front_files(files)
+            except FRONT_ERRORS as error:
+                verified = False
+                diagnostics.append(f"empty front: {error}")
+
+        try:
+            self.verify_front_stopped()
+        except FRONT_ERRORS as error:
+            diagnostics.append(f"shutdown after render: {error}")
+            if stopped_before_write:
+                self.stop_front(diagnostics, kill=True)
+                try:
+                    self.verify_front_stopped()
+                except FRONT_ERRORS as retry_error:
+                    verified = False
+                    diagnostics.append(f"shutdown after retry: {retry_error}")
+            else:
+                verified = False
+        if not self.hooks_effective():
+            verified = False
+            if cause != FRONT_HOOK_ERROR:
+                diagnostics.append(FRONT_HOOK_ERROR)
+        return Closure(2 if verified else 3, "; ".join(diagnostics))
+
+    def close_routes(self, original, selected):
+        updated = {name: replace(route, state="off") if name in selected else route
+                   for name, route in original.items()}
+        try:
+            self.write_routes(updated)
+            if not self.hooks_effective():
+                raise Error(FRONT_HOOK_ERROR)
+            if not self.front_locked():
+                self.restart_front()
+                routes = [updated[name] for name in selected]
+                for port in sorted({route.port for route in routes}):
+                    target = f"( dst 127.0.0.1 and dport = :{port} )"
+                    if self.run("ss", "-H", "-tn", "state", "established", target).stdout.strip():
+                        raise Error(f"an established connection remains to 127.0.0.1:{port}")
+                self.check_route_closed(routes)
+                return Closure()
+        except FRONT_ERRORS as error:
+            return self.disable_front(str(error))
+        return self.disable_front("the front was already locked")
+
+    def off(self, service):
+        try:
+            routes = self.routes()
+        except FRONT_ERRORS as error:
+            return self.disable_front(str(error))
+        if service is not None and service not in routes:
+            return Closure(3, f"{service}: route not found")
+        return self.close_routes(routes, [service] if service is not None else list(routes))
+
+    def reload_denials(self):
+        try:
+            routes = self.routes()
+        except FRONT_ERRORS as error:
+            return [f"Could not re-check recorded routes. {error}"]
+        diagnostics = []
+        for route in routes.values():
+            if route.state != "on":
+                continue
+            try:
+                self.authorize_route(route)
+            except RouteDenied as error:
+                diagnostics.append(f"{error}. Run home-front off {route.service}, then retry.")
+            except FRONT_ERRORS as error:
+                diagnostics.append(f"Could not re-check {route.service}. {error}")
+        return diagnostics
+
+    def change_route(self, service, account=None, port=None):
+        if not self.hooks_effective():
+            raise Error(FRONT_HOOK_ERROR)
+        if self.front_locked():
+            raise Error("the front is locked. Run home-front reconcile")
+        routes = self.routes()
+        zone = self.zone()
+        if account is None:
+            if service not in routes:
+                raise Error(f"{service}: route not found")
+            route = replace(routes[service], state="on")
+        else:
+            if not NAME.fullmatch(service) or service in routes:
+                raise Error(f"{service!r}: invalid or duplicate service name")
+            labels = {route.label for route in routes.values()}
+            label = base64.b32encode(secrets.token_bytes(10)).decode("ascii").lower()
+            while label in labels:
+                label = base64.b32encode(secrets.token_bytes(10)).decode("ascii").lower()
+            route = Route(label, account, port, service, "off")
+        self.authorize_route(route)
+        if self.front_active() != "active":
+            raise Error("HAProxy must be running to reload the front. Start it or run home-front reconcile")
+        if account is None:
+            reload_attempted = False
+            try:
+                self.write_routes({**routes, service: route})
+                reload_attempted = True
+                self.run("systemctl", "reload", FRONT_UNIT)
+            except (*FRONT_ERRORS, KeyboardInterrupt) as error:
+                summary = ("route may be recorded on and its reload is unconfirmed. "
+                           f"Run home-front off {service} to verify closure. {str(error) or 'Interrupted'}")
+                diagnostics = self.reload_denials() if reload_attempted else []
+                raise Error("\n".join([summary, *diagnostics])) from error
+            return
+        try:
+            self.write_routes({**routes, service: route})
+            self.run("systemctl", "reload", FRONT_UNIT)
+        except FRONT_ERRORS:
+            if self.routes() != routes:
+                self.write_routes(routes)
+            raise
+        print(f"https://{route.hostname(zone)}:{FRONT_PORT}", flush=True)
+
+    def reconcile(self):
+        if not self.hooks_effective():
+            raise Error(FRONT_HOOK_ERROR)
+        routes = self.routes()
+        locked = self.front_locked()
+        if not locked and any(route.state == "on" for route in routes.values()):
+            raise Error("the front is unlocked and routes are on")
+        if locked:
+            self.write_routes({name: replace(route, state="off") for name, route in routes.items()})
+        self.restart_front(enable=True)
+        if self.front_enabled() != "enabled":
+            raise Error("HAProxy is not enabled")
+        if any(route.state != "off" for route in self.routes().values()):
+            raise Error("a route is not off on readback")
+        self.check_route_closed(list(routes.values()))
+        if locked:
+            self.path(FRONT_LOCK).unlink()
+        sync_directory(self.path(STATE))
+        self.run("systemctl", "reload", FRONT_UNIT)
+        print("Front enabled and active. All routes are off.")
+
+    def front_firewall_rule_exists(self):
+        for family in ("", "6"):
+            path = f"/etc/ufw/user{family}.rules"
+            if not self.present(path):
+                return False
+            rule = rf"-A ufw{family}-user-input -p tcp (?:-m tcp )?--dport {FRONT_PORT} -j ACCEPT"
+            if not any(re.fullmatch(rule, " ".join(line.split())) for line in self.path(path).read_text().splitlines()):
+                return False
+        return True
+
+    def check_package_handoff(self):
+        if not self.present(ROUTES):
+            return
+        lock = self.path(FRONT_LOCK)
+        record = File(FRONT_LOCK_TEXT, 0o600, self.owner)
+        try:
+            if File.read(lock) == record:
+                sync_directory(lock.parent.parent)
+                sync_directory(lock.parent)
+                if File.read(lock) == record:
+                    return
+        except FRONT_ERRORS:
+            pass  # All-off routes are independent proof that the start hook serves no names.
+        active = [route.service for route in self.routes().values() if route.state == "on"]
+        if active:
+            raise Error(f"HAProxy is missing and routes are still on: {', '.join(active)}. Before installing "
+                        f"HAProxy, edit {ROUTES} as root under {LOCK}, set the final field of those rows "
+                        "to off, and run the installer again")
+
+    def install_front(self, drop_in):
+        directory = self.storage(str(Path(FRONT_DROP_IN).parent), 0o755)
+        sync_directory(directory.parent)
+        File(drop_in, 0o644, self.owner).write(self.path(FRONT_DROP_IN))
+        self.run("systemctl", "daemon-reload")
+        load_state = self.run("systemctl", "show", "-p", "LoadState", FRONT_UNIT)
+        if load_state.stdout.strip() == "LoadState=masked":
+            raise Error(f"{FRONT_UNIT} is masked. Resolve the mask before running the installer again")
+        package = self.run("dpkg-query", "-W", "-f=${db:Status-Status}", "haproxy", allowed=(0, 1))
+        if package.stdout.strip() != "installed":
+            self.check_package_handoff()
+            print("HAProxy is missing. The home-front program and systemd drop-in are installed.")
+            print(f"As root, run systemctl show -p DropInPaths -p FragmentPath {FRONT_UNIT}. "
+                  f"FragmentPath must be empty or {FRONT_FRAGMENT}. The only drop-in must be {FRONT_DROP_IN}.")
+            print("Run the pre-APT scan in docs/HOME-FRONT.md entirely as root. Stop on any inspection error.")
+            print("Once the checks pass, run apt-get install haproxy, then run the installer again.")
+            print("On a fresh setup the package's start runs the home-front render hook. Until the routes and "
+                  "config files are created, the render fails and HAProxy stays down.")
+            return
+        if not self.hooks_effective():
+            self.refuse_front_mismatch()
+        self.storage("/etc/home-front", 0o700)
+        for path, data in ((ROUTES, b"# label account port service state\n"),
+                           (FRONT_CONFIG, b"zone = home.example.net\n")):
+            if not self.present(path):
+                File(data, 0o600, self.owner).write(self.path(path))
+            self.private_text(path)
+        locked = self.front_locked()
+        routes = self.routes()
+        all_off = all(route.state == "off" for route in routes.values())
+        if locked:
+            self.run("systemctl", "disable", "--now", FRONT_UNIT)
+            self.verify_front_stopped()
+            print("front locked: run reconcile")
+        elif all_off:
+            self.restart_front(enable=True)
+            if self.front_enabled() != "enabled":
+                raise Error("HAProxy is not enabled")
+            self.check_route_closed(list(routes.values()))
+        else:
+            print("routes are on. Leaving the running front as it is")
+        if self.front_firewall_rule_exists():
+            return
+        if not (locked or all_off):
+            raise Error("routes are recorded on. Run home-front off and verify closure before opening 8443")
+        ufw = self.path("/etc/default/ufw").read_text()
+        settings = re.findall(r"^\s*IPV6=(.*)$", ufw, re.MULTILINE)
+        if len(settings) != 1 or shlex.split(settings[0], comments=True) != ["yes"]:
+            raise Error("set IPV6=yes in /etc/default/ufw before opening port 8443")
+        self.run("ufw", "allow", f"{FRONT_PORT}/tcp")
 
     def main_config(self, installing):
         original = File.read(self.path(CONFIG))
@@ -767,8 +1479,13 @@ class Server:
         print(f"Authorized {machine.name}")
 
     def listeners(self):
-        return {line.split()[3].rsplit(":", 1)[-1] for line in
-                self.run("ss", "-H", "-ltn").stdout.splitlines() if line.strip()}
+        ports = set()
+        for line in self.run("ss", "-H", "-ltn").stdout.splitlines():
+            fields = line.split()
+            if len(fields) < 5 or fields[0] != "LISTEN":
+                raise Error("could not read TCP listeners from ss")
+            ports.add(fields[3].rsplit(":", 1)[-1])
+        return ports
 
     def has_processes(self, selectors, deadline=None):
         return any(self.run("pgrep", *selector, allowed=(0, 1),
@@ -783,16 +1500,19 @@ class Server:
             raise Error(f"{name}: passwd entry missing; establish the account identity at the server console")
         group = self.lookup("group", GROUP)
         self.check_account(name, account, group)
-        try:
-            kind, ports = account[4].removeprefix("home-front ").split(" ", 1)
-            recorded = parse_machines(f"{name} {kind} {ports.replace(' ', ',')}")[name]
-            if recorded.account_policy != account[4]:
-                raise ValueError
-        except (Error, KeyError, ValueError):
-            raise Error(f"{name}: invalid home-front policy comment") from None
+        recorded = recorded_machine(name, account[4])
         uid = account[2]
         key_file = self.path(f"/etc/ssh/home-tunnel/{name}.keys")
         failures = []
+        try:
+            routes = self.routes(optional=True)
+        except FRONT_ERRORS as error:
+            closure = self.disable_front(str(error))
+        else:
+            selected = [route.service for route in routes.values() if route.account == name]
+            closure = self.close_routes(routes, selected) if selected else Closure()
+        if closure.code == 3:
+            failures.append(closure.detail)
         try:
             self.set_expiry(name, uid, "1")
         except (Error, OSError, subprocess.SubprocessError) as error:
@@ -834,17 +1554,19 @@ class Server:
             failures.append("passwd UID changed during removal")
         if os.path.lexists(key_file):
             failures.append("authorized key file is still present")
-        routes = self.path("/etc/home-front/routes")
-        if routes.exists() and any(len(fields) < 2 or fields[1] == name for _, fields in rows(routes.read_text())):
-            failures.append("public route closure requires the home-front server-front controls")
+        if recorded.kind == "listen" and set(map(str, recorded.ports)) & self.listeners():
+            failures.append("a port assigned to the listen account is still listening")
         if failures:
+            if closure.code == 2:
+                failures.insert(0, f"the public front is locked after {closure.detail}")
             raise Error("; ".join(failures))
-        print("CLOSED (verified)")
+        return closure.report()
 
     def status(self, machines, sources):
         _, config = self.main_config(installing=False)
         self.scan_config(config)
-        listeners = self.listeners() if machines else set()
+        routes = self.routes(optional=True)
+        listeners = self.listeners() if machines or routes else set()
         healthy = True
         for machine in machines.values():
             if self.lookup("passwd", machine.name) is None:
@@ -866,6 +1588,13 @@ class Server:
             print(f"  Last login: {login or 'none in the retained SSH journal'}")
         if not machines:
             print("SSH include in place. No machines declared.")
+        locked = self.front_locked()
+        print("Front locked (recorded states below are not served)" if locked else "Front unlocked")
+        for route in routes.values():
+            port = "listening" if str(route.port) in listeners else "idle"
+            denial = None if locked or route.state == "off" else self.route_denial(route)
+            state = "off" if locked else route.state + (f" (not served: {route.account} {denial})" if denial else "")
+            print(f"{route.service} | {state} | {route.account} | {route.port} {port}")
         return 0 if healthy else 1
 
 
@@ -876,9 +1605,22 @@ def main():
     add.add_argument("account")
     add.add_argument("pubkey", type=Path)
     commands.add_parser("remove-machine").add_argument("account")
-    commands.add_parser("render")
+    render_parser = commands.add_parser("render")
+    hook = render_parser.add_mutually_exclusive_group()
+    hook.add_argument("--for-start", action="store_true")
+    hook.add_argument("--for-reload", action="store_true")
     commands.add_parser("status")
-    commands.add_parser("_install", help=argparse.SUPPRESS)
+    route = commands.add_parser("route")
+    route.add_argument("service")
+    route.add_argument("account")
+    route.add_argument("port", type=int)
+    commands.add_parser("on").add_argument("service")
+    commands.add_parser("off").add_argument("service", nargs="?")
+    commands.add_parser("reconcile")
+    commands.add_parser("_reload-front", help=argparse.SUPPRESS).add_argument("master", type=int)
+    default_drop_in = Path(__file__).resolve().parents[1] / "deploy/systemd/haproxy-home-front.conf"
+    commands.add_parser("_install", help=argparse.SUPPRESS).add_argument("drop_in", nargs="?", type=Path,
+                                                                        default=default_drop_in)
     args = parser.parse_args()
     signal.signal(signal.SIGTERM, interrupted)
     signal.signal(signal.SIGHUP, interrupted)
@@ -886,7 +1628,24 @@ def main():
         server = Server(os.environ.get("HOME_FRONT_ROOT", "/"), os.environ.get("HOME_FRONT_RUNNER"))
         if server.root == Path("/") and os.geteuid() != 0:
             raise Error("run home-front as root")
+        if args.command == "render" and (args.for_start or args.for_reload):
+            server.render_for_start(strict=args.for_reload)
+            return 0
+        if args.command == "_reload-front":
+            server.reload_front_worker(args.master)
+            return 0
         with server.locked(shared=args.command == "status"):
+            if args.command == "off":
+                return server.off(args.service).report()
+            if args.command == "reconcile":
+                server.reconcile()
+                return 0
+            if args.command in ("route", "on"):
+                if args.command == "route":
+                    server.change_route(args.service, args.account, args.port)
+                else:
+                    server.change_route(args.service)
+                return 0
             if os.path.lexists(server.path(IN_PROGRESS)):
                 backup = Path(server.private_text(IN_PROGRESS).strip())
                 if backup.parent != server.path(BACKUPS):
@@ -900,8 +1659,9 @@ def main():
                 sources = server.sources()
                 machines = server.machines() if os.path.lexists(server.path(MACHINES)) else {}
                 server.apply_policy(machines, sources, install=Path(__file__).read_bytes())
+                server.install_front(args.drop_in.read_bytes())
             elif args.command == "remove-machine":
-                server.remove(args.account)
+                return server.remove(args.account)
             else:
                 machines = server.machines()
                 if args.command == "add-machine":
@@ -915,7 +1675,11 @@ def main():
         return 0
     except (Error, OSError, ValueError, subprocess.SubprocessError, KeyboardInterrupt) as error:
         if isinstance(error, KeyboardInterrupt):
+            if args.command == "off":
+                return 130
             error = "interrupted"
+        if args.command == "off":
+            return Closure(3, str(error)).report()
         if args.command == "remove-machine":
             print(f"REVOCATION UNCONFIRMED: {error}. From the server console, check the account and rerun removal. "
                   "To close the home tunnel directly, stop home-tunnel on the home machine. "
