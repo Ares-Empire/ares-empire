@@ -13,8 +13,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-
 HERE = Path(__file__).resolve().parent
+CONTENDED_COMMAND = runpy.run_path(str(HERE / "test_front.py"))["CONTENDED_COMMAND"]
 INSTALL = HERE.parent / "deploy/install-home-front.sh"
 POLICY = runpy.run_path(str(HERE / "home-front"))
 parse = POLICY["parse_machines"]
@@ -36,6 +36,27 @@ gssapiauthentication no
 kbdinteractiveauthentication no
 """
 
+REMOVAL_CLOCK = r"""
+import runpy
+import sys
+import time
+from types import SimpleNamespace
+
+sys.argv.pop(0)
+cli = runpy.run_path(sys.argv[0])
+elapsed = 0
+
+def advance(seconds):
+    global elapsed
+    elapsed += seconds
+
+# Only advance the removal deadline when home-front waits between fake censuses.
+cli["main"].__globals__["time"] = SimpleNamespace(
+    **{**vars(time), "monotonic": lambda: elapsed, "sleep": advance}
+)
+sys.exit(cli["main"]())
+"""
+
 RUNNER = r'''#!/usr/bin/env python3
 from pathlib import Path
 import json
@@ -52,6 +73,13 @@ mode = os.environ.get("TEST_MODE", "")
 command, *args = sys.argv[1:]
 with (root / "calls").open("a") as log:
     log.write(json.dumps([identity, command, *args]) + "\n")
+
+if (command in ("dpkg-query", "ufw", "haproxy", "kill", "tls-client-hello")
+        or (command == "systemctl" and ("haproxy.service" in args or args == ["daemon-reload"]))
+        or (command == "ss" and args != ["-H", "-ltn"])
+        or (command == "pgrep" and args == ["-x", "haproxy"])):
+    script = os.environ["TEST_FRONT_SCRIPT"]
+    os.execv(sys.executable, [sys.executable, script, "--runner", command, *args])
 
 if command == "systemctl":
     if args[0] == "show":
@@ -276,12 +304,18 @@ class ScratchTests(unittest.TestCase):
         scratch = self.enterContext(tempfile.TemporaryDirectory(prefix="home front test-"))
         self.root = Path(scratch).resolve()
         (self.root / "run").mkdir()
+        (self.root / "sys/fs/cgroup/system.slice").mkdir(parents=True)
+        (self.root / "etc/haproxy").mkdir(parents=True)
+        (self.root / "etc/home-front").mkdir(mode=0o700)
         self.main = self.write("etc/ssh/sshd_config", POLICY["DEBIAN_INCLUDE"] + "\n# local settings\n")
         self.dropin = self.write("etc/ssh/sshd_config.d/10-local.conf", "# comment with Match\n")
         self.write("etc/home-front/admin-sources", "".join(f"{host} {ip}\n" for host, ip in ADMIN), 0o600)
         self.write("etc/home-front/machines", FIXTURES, 0o600)
+        self.write("etc/default/ufw", "IPV6=yes\n")
         runner = self.write("runner", RUNNER, 0o700)
         self.env = {**os.environ, "HOME_FRONT_ROOT": str(self.root), "HOME_FRONT_RUNNER": str(runner),
+                    "TEST_FRONT_SCRIPT": str(HERE / "test_front.py"),
+                    "TEST_PROGRAM": str(HERE / "home-front"),
                     "TEST_MODE": "", "TEST_COMMAND": ""}
 
     def write(self, relative, contents, mode=0o644):
@@ -299,7 +333,10 @@ class ScratchTests(unittest.TestCase):
         return [json.loads(line) for line in (self.root / "calls").read_text().splitlines()]
 
     def cli(self, *args, mode=""):
-        return self.run_command(sys.executable, HERE / "home-front", *args, mode=mode)
+        command = [sys.executable]
+        if args[0] == "remove-machine":
+            command.extend(("-c", REMOVAL_CLOCK))
+        return self.run_command(*command, HERE / "home-front", *args, mode=mode)
 
     def refused_install(self, diagnostic, mode=""):
         result = self.run_command(INSTALL, mode=mode)
@@ -380,6 +417,232 @@ class ScratchTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(parse(machines.read_text()), {})
         self.assertEqual(machines.stat().st_mode & 0o777, 0o600)
+
+    def test_missing_package_stages_drop_in_and_rerun_completes_setup(self):
+        self.env["FRONT_FAULTS"] = "missing-package"
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("apt-get install haproxy, then run the installer again", result.stdout)
+        self.assertIn("render fails and HAProxy stays down", result.stdout)
+        self.assertIn("FragmentPath must be empty or /usr/lib/systemd/system/haproxy.service", result.stdout)
+        self.assertIn("entirely as root. Stop on any inspection error", result.stdout)
+        self.assertTrue((self.root / "usr/local/sbin/home-front").is_file())
+        installed = self.root / "etc/systemd/system/haproxy.service.d/home-front.conf"
+        self.assertEqual(installed.read_bytes(), (HERE.parent / "deploy/systemd/haproxy-home-front.conf").read_bytes())
+        calls = self.calls()
+        self.assertLess(calls.index(["", "systemctl", "daemon-reload"]),
+                        calls.index(["", "systemctl", "show", "-p", "LoadState", "haproxy.service"]))
+        self.assertFalse(any(call[1] in ("apt-get", "ufw") or
+                             (call[1] == "systemctl" and call[2] in ("enable", "start", "restart", "disable"))
+                             for call in calls))
+        for relative in ("etc/home-front/config", "etc/home-front/routes", "etc/haproxy/haproxy.cfg"):
+            self.assertFalse((self.root / relative).exists(), relative)
+
+        # Model the vendor unit appearing and trying to start after the operator installs the package.
+        self.env["FRONT_FAULTS"] = "start-limit-on-render-failure"
+        runner = self.env["HOME_FRONT_RUNNER"]
+        reload = self.run_command(runner, "systemctl", "daemon-reload")
+        self.assertEqual(reload.returncode, 0, reload.stderr)
+        start = self.run_command(runner, "systemctl", "start", "haproxy.service")
+        self.assertNotEqual(start.returncode, 0)
+        self.assertIn("/etc/home-front/routes: missing", (self.root / "unit-journal").read_text())
+        state = self.run_command(runner, "systemctl", "show", "-p", "Result", "haproxy.service")
+        self.assertEqual((state.returncode, state.stdout.strip()), (0, "Result=start-limit-hit"))
+        status = self.run_command(runner, "systemctl", "is-active", "haproxy.service")
+        self.assertEqual((status.returncode, status.stdout.strip()), (3, "failed"))
+
+        self.env["FRONT_FAULTS"] = ""
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("start-limit-hit", result.stderr)
+        self.assertEqual((self.root / "etc/home-front/config").read_text(), "zone = home.example.net\n")
+        self.assertEqual((self.root / "etc/home-front/routes").read_text(), "# label account port service state\n")
+        self.assertFalse((self.root / "unit-map").exists())
+        self.assertNotIn(["", "ufw", "allow", "8443/tcp"], self.calls())
+
+        reset = self.run_command(runner, "systemctl", "reset-failed", "haproxy.service")
+        self.assertEqual(reset.returncode, 0, reset.stderr)
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((self.root / "unit-map").read_text(), "")
+        self.assertEqual(self.calls()[-1], ["", "ufw", "allow", "8443/tcp"])
+
+    def test_missing_package_requires_a_verified_lock_or_all_retained_routes_off(self):
+        self.env["FRONT_FAULTS"] = "missing-package"
+        routes = ("abcdefghijklmnop tunnel-test 20099 probe on\n"
+                  "qrstuvwxyz234567 tunnel-test 20097 probe2 on\n")
+        path = self.write("etc/home-front/routes", routes, 0o600)
+        lock = "var/lib/home-front/front-locked"
+        for record in (None, "bad lock\n"):
+            with self.subTest(record=record):
+                if record is not None:
+                    self.write(lock, record, 0o600)
+                result = self.run_command(INSTALL)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertNotIn("apt-get", result.stdout)
+                self.assertIn("routes are still on: probe, probe2", result.stderr)
+                self.assertIn("edit /etc/home-front/routes as root under /run/home-front.lock", result.stderr)
+                self.assertEqual(path.read_text(), routes)
+
+        self.write(lock, "all routes off\n", 0o600)
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("apt-get install haproxy", result.stdout)
+        self.assertEqual(path.read_text(), routes)
+
+        (self.root / lock).unlink()
+        path.write_text(routes.replace(" on\n", " off\n"))
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("apt-get install haproxy", result.stdout)
+
+    def test_installer_preserves_routes_and_zone(self):
+        config = self.write("etc/home-front/config", "zone = edge.example.net\n", 0o600)
+        routes = self.write("etc/home-front/routes", "# private fixture\n", 0o600)
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        calls = self.calls()
+        enable = calls.index(["", "systemctl", "enable", "haproxy.service"])
+        restart = calls.index(["", "systemctl", "restart", "haproxy.service"])
+        self.assertLess(enable, restart)
+        for host in ("127.0.0.1", "::1"):
+            self.assertLess(restart, calls.index(["", "tls-client-hello", host, "8443", ""]))
+        self.assertEqual(calls[-1], ["", "ufw", "allow", "8443/tcp"])
+        self.assertEqual(config.read_text(), "zone = edge.example.net\n")
+        self.assertEqual(routes.read_text(), "# private fixture\n")
+        routes.write_text("abcdefghijklmnop tunnel-test 20099 probe on\n")
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        second = self.calls()[len(calls):]
+        self.assertNotIn(["", "systemctl", "restart", "haproxy.service"], second)
+        self.assertNotIn(["", "systemctl", "reload", "haproxy.service"], second)
+        self.assertNotIn(["", "ufw", "allow", "8443/tcp"], second)
+        self.assertIn("routes are on", result.stdout)
+        self.assertIn("probe on", routes.read_text())
+
+        (self.root / "etc/ufw/user6.rules").unlink()
+        start = len(self.calls())
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("Run home-front off and verify closure before opening 8443", result.stderr)
+        self.assertNotIn(["", "systemctl", "restart", "haproxy.service"], self.calls()[start:])
+        self.assertNotIn(["", "ufw", "allow", "8443/tcp"], self.calls()[start:])
+
+    def test_installer_finishes_empty_front_setup_when_firewall_rules_already_exist(self):
+        for family in ("", "6"):
+            self.write(f"etc/ufw/user{family}.rules",
+                       f"-A ufw{family}-user-input -p tcp --dport 8443 -j ACCEPT\n")
+        runner = self.env["HOME_FRONT_RUNNER"]
+        for query, state in (("is-enabled", "disabled"), ("is-active", "inactive")):
+            result = self.run_command(runner, "systemctl", query, "haproxy.service")
+            self.assertEqual(result.stdout.strip(), state)
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for query, state in (("is-enabled", "enabled"), ("is-active", "active")):
+            result = self.run_command(runner, "systemctl", query, "haproxy.service")
+            self.assertEqual((result.returncode, result.stdout.strip()), (0, state))
+        self.assertEqual((self.root / "unit-map").read_text(), "")
+        for host in ("127.0.0.1", "::1"):
+            self.assertIn(["", "tls-client-hello", host, "8443", ""], self.calls())
+        self.assertNotIn(["", "ufw", "allow", "8443/tcp"], self.calls())
+
+    def test_installer_stops_locked_front_before_opening_ingress(self):
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        (self.root / "etc/ufw/user6.rules").unlink()
+        self.write("var/lib/home-front/front-locked", "all routes off\n", 0o600)
+        runner = self.env["HOME_FRONT_RUNNER"]
+        stopped = self.run_command(runner, "systemctl", "disable", "--now", "haproxy.service")
+        self.assertEqual(stopped.returncode, 0, stopped.stdout + stopped.stderr)
+        manual = self.run_command(runner, "systemctl", "start", "haproxy.service")
+        self.assertEqual(manual.returncode, 0, manual.stdout + manual.stderr)
+        start = len(self.calls())
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("front locked: run reconcile", result.stdout)
+        calls = self.calls()[start:]
+        for op in ("start", "restart", "enable", "reload"):
+            self.assertFalse(any(row[1:3] == ["systemctl", op] and "haproxy.service" in row for row in calls))
+        self.assertLess(calls.index(["", "systemctl", "disable", "--now", "haproxy.service"]),
+                        calls.index(["", "ss", "-H", "-ltn"]))
+        self.assertLess(calls.index(["", "ss", "-H", "-ltn"]), calls.index(["", "ufw", "allow", "8443/tcp"]))
+
+    def test_installer_leaves_a_masked_unit_untouched(self):
+        mask = self.root / "etc/systemd/system/haproxy.service"
+        mask.parent.mkdir(parents=True, exist_ok=True)
+        mask.symlink_to("/dev/null")
+        for faults in ("", "missing-package"):
+            with self.subTest(faults=faults):
+                self.env["FRONT_FAULTS"] = faults
+                result = self.run_command(INSTALL)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("haproxy.service is masked", result.stderr)
+                self.assertEqual(mask.readlink(), Path("/dev/null"))
+        calls = self.calls()
+        changes = ("start", "restart", "enable", "disable", "mask", "unmask")
+        self.assertFalse(any(call[1] == "systemctl" and call[2] in changes for call in calls))
+
+    def test_installer_refuses_ingress_when_restarted_empty_front_answers_tls(self):
+        self.env["FRONT_FAULTS"] = "tls-answer"
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("returned bytes", result.stderr)
+        self.assertNotIn(["", "ufw", "allow", "8443/tcp"], self.calls())
+
+    def test_installer_stops_and_disables_on_hook_mismatch_including_a_held_package(self):
+        for family in ("", "6"):
+            self.write(f"etc/ufw/user{family}.rules",
+                       f"-A ufw{family}-user-input -p tcp --dport 8443 -j ACCEPT\n")
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        runner = self.env["HOME_FRONT_RUNNER"]
+        for state, faults in (("off", "override-hook"), ("on", "held-package,override-hook")):
+            with self.subTest(state=state, faults=faults):
+                self.env["FRONT_FAULTS"] = ""
+                result = self.run_command(runner, "systemctl", "enable", "--now", "haproxy.service")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.write("etc/home-front/routes", f"abcdefghijklmnop tunnel-test 20099 probe {state}\n", 0o600)
+                self.env["FRONT_FAULTS"] = faults
+                before = len(self.calls())
+                result = self.run_command(INSTALL)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("managed start and reload hooks are not effective", result.stderr)
+                self.assertNotIn("apt-get", result.stdout)
+                calls = self.calls()[before:]
+                self.assertIn(["", "dpkg-query", "-W", "-f=${db:Status-Status}", "haproxy"], calls)
+                stop = calls.index(["", "systemctl", "stop", "haproxy.service"])
+                disable = calls.index(["", "systemctl", "disable", "haproxy.service"])
+                self.assertLess(stop, disable)
+                self.assertLess(disable, calls.index(["", "systemctl", "is-active", "haproxy.service"]))
+                self.assertLess(disable, calls.index(["", "ss", "-H", "-ltn"]))
+                self.assertFalse(any(call[1] == "ufw" or
+                                     (call[1] == "systemctl" and call[2] in ("restart", "enable"))
+                                     for call in calls))
+                for query, status in (("is-enabled", "disabled"), ("is-active", "inactive")):
+                    check = self.run_command(runner, "systemctl", query, "haproxy.service")
+                    self.assertEqual(check.stdout.strip(), status)
+
+    def test_installer_stops_and_disables_if_hooks_fail_after_enable(self):
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        before = len(self.calls())
+        self.env["FRONT_FAULTS"] = "override-on-enable"
+        result = self.run_command(INSTALL)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("managed start and reload hooks are not effective", result.stderr)
+        self.assertNotIn("shutdown could not be verified", result.stderr)
+        calls = self.calls()[before:]
+        enable = calls.index(["", "systemctl", "enable", "haproxy.service"])
+        check = calls.index(["", "systemctl", "show", "-p", "FragmentPath", "-p", "DropInPaths", "haproxy.service"], enable)
+        stop = calls.index(["", "systemctl", "stop", "haproxy.service"])
+        disable = calls.index(["", "systemctl", "disable", "haproxy.service"])
+        self.assertLess(check, stop)
+        self.assertLess(stop, disable)
+        self.assertLess(disable, calls.index(["", "ss", "-H", "-ltn"]))
+        self.assertNotIn(["", "systemctl", "restart", "haproxy.service"], calls)
+        for query, state, code in (("is-enabled", "disabled", 1), ("is-active", "inactive", 3)):
+            result = self.run_command(self.env["HOME_FRONT_RUNNER"], "systemctl", query, "haproxy.service")
+            self.assertEqual((result.returncode, result.stdout.strip()), (code, state))
 
     def test_candidate_mismatch_leaves_live_files_untouched(self):
         before = self.main.read_bytes()
@@ -529,14 +792,6 @@ class ScratchTests(unittest.TestCase):
         self.assertEqual(result.returncode, 3)
         self.assertIn("passwd entry missing", result.stdout)
         self.assertFalse(any(call[1] in ("pkill", "pgrep") for call in self.calls()))
-
-    def test_removal_with_a_public_route_stays_unconfirmed(self):
-        self.write("etc/home-front/routes", "fixture jump-test 20199 probe on\n", 0o600)
-        key = self.write("etc/ssh/home-tunnel/jump-test.keys", "test key\n")
-        result = self.cli("remove-machine", "jump-test")
-        self.assertEqual(result.returncode, 3)
-        self.assertIn("public route closure requires the home-front server-front controls", result.stdout)
-        self.assertFalse(key.exists())
 
     def test_new_account_starts_expired_with_fixed_policy_before_key_write(self):
         installed = self.run_command(INSTALL, mode="new-account")
@@ -893,26 +1148,31 @@ sys.exit(namespace['main']())
     def test_changing_commands_serialize_for_their_whole_run(self):
         installed = self.run_command(INSTALL)
         self.assertEqual(installed.returncode, 0, installed.stderr)
-        command = [sys.executable, str(HERE / "home-front")]
 
         def launch(identity, mode, *args):
+            command = [sys.executable]
+            if identity == "second":
+                command.extend(("-c", CONTENDED_COMMAND))
             process = self.enterContext(subprocess.Popen(
-                [*command, *args], env={**self.env, "TEST_COMMAND": identity, "TEST_MODE": mode},
+                [*command, str(HERE / "home-front"), *args],
+                env={**self.env, "TEST_COMMAND": identity, "TEST_MODE": mode},
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
             ))
             self.addCleanup(lambda: process.kill() if process.poll() is None else None)
             return process
 
+        def wait_for(process, marker):
+            deadline = time.monotonic() + 6
+            while not (self.root / marker).exists():
+                self.assertIsNone(process.poll(), f"command exited before publishing {marker}")
+                self.assertLess(time.monotonic(), deadline, f"timed out waiting for {marker}")
+                time.sleep(0.01)
+
         first = launch("first", "pause", "render")
-        deadline = time.monotonic() + 4
-        while not (self.root / "paused").exists() and first.poll() is None and time.monotonic() < deadline:
-            time.sleep(0.01)
-        self.assertTrue((self.root / "paused").exists(), "first command did not reach its first policy read")
-        self.assertTrue((self.root / "run/home-front.lock").is_file())
-        second = launch("second", "", "remove-machine", "jump-test")
         try:
-            with self.assertRaises(subprocess.TimeoutExpired):
-                second.communicate(timeout=0.35)
+            wait_for(first, "paused")
+            second = launch("second", "", "remove-machine", "jump-test")
+            wait_for(second, "command-lock-blocked")
             self.assertFalse(any(call[0] == "second" for call in self.calls()))
         finally:
             (self.root / "continue").touch()
