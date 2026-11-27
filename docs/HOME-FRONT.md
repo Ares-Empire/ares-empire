@@ -266,8 +266,8 @@ injected command runner. `HOME_FRONT_ROOT` redirects managed paths, including th
 Run on the lead's dedicated fixture front with the two `tunnel-test` ports configured as above and with the
 wildcard DNS records in place. The server phases use intentional route and render faults and require reboots.
 If acceptance reports `REVOCATION UNCONFIRMED`, terminate the dedicated `tunnel-test` SSH session on the Mac before investigating.
-Run the server phases in a terminal that survives a dropped SSH connection (`tmux`). If a server phase is killed
-anyway, its leftovers keep the front closed: the acceptance drop-in makes home-front refuse to work, and an immutable
+If a server phase is killed (a dropped SSH connection sends it SIGHUP), its leftovers keep the front
+closed: the acceptance drop-in makes home-front refuse to work, and an immutable
 routes file makes route changes fail and lock the front. To recover, as root: `chattr -i /etc/home-front/routes`, remove
 `/run/systemd/system/haproxy.service.d/zz-home-front-acceptance.conf` and `/root/home-front-acceptance-*`, run
 `systemctl daemon-reload`, then `home-front reconcile`, and start that phase again from its preparation step.
