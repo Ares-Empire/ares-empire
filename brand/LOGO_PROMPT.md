@@ -73,3 +73,22 @@ Midjourney use `--no …`; for ChatGPT just say "avoid these"):
 Once `ares-bust.png` exists, update the Arestoteles header hub-link
 (`web/app/app.jsx`, `TopBar`) from the plain "Ares Empire" wordmark to **the bust mark +
 "Ares Empire"** — small (~22px) mark on the left of the existing label, same glass pill.
+
+## The coin mark (2026-11-27)
+
+A flat companion to the bust for small round places such as profile pictures: `brand/ares-coin.svg` (vector) and
+`brand/ares-coin.png` (1024 × 1024 px), black `#0b0b0c` on off-white `#f4f1e9`. At 16 px it reads only as a dark
+shape, so the favicon stays the bust.
+
+Made in two steps: Codex image generation drew a black-on-white reference from the prompt below, then the reference
+was traced into vector shapes (potrace) and fitted into a 512-unit circle. Other colours are the same shapes with
+the two fills swapped or replaced (off-white on black, gold `#e4c264` on black).
+
+> Short, compact crest. The bust starts at the upper shoulder: a muscled cuirass edge and one shoulder plate with a
+> small lion head on it. Only a few bold white engraved lines (eye, brow, helmet edge, a few beard locks), thick
+> enough to survive at small sizes. Profile facing right of the Greek god Ares as on a classical Greek coin of the
+> 5th century BC (style of the Zeus staters of Elis): a mature, majestic bearded god, calm and stern, idealised
+> classical features. Strong straight Greek nose continuing the line of the brow, deep-set eye under a defined brow,
+> high cheekbone, firm closed mouth, long beard in clear structured curly locks. Attic helmet with a pointed brow band
+> over the forehead and a box-shaped crest holder. Flat solid black on a plain white background, centred, generous
+> margin, square, composed to sit inside a circle. No text, no coin rim, no shading, no gradients, no grey.
