@@ -1,0 +1,7 @@
+# Example /etc/home-front/machines (root:root, 0600)
+# account       kind     ports (loopback only)  optional keepalive
+tunnel-box      listen   20001,20101
+jump-mac        open     20101
+tunnel-test     listen   20097,20099,20199
+jump-test       open     20199
+tunnel-mac      listen   20002                 alive=3x2
