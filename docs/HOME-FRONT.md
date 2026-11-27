@@ -266,11 +266,13 @@ injected command runner. `HOME_FRONT_ROOT` redirects managed paths, including th
 Run on the lead's dedicated fixture front with the two `tunnel-test` ports configured as above and with the
 wildcard DNS records in place. The server phases use intentional route and render faults and require reboots.
 If acceptance reports `REVOCATION UNCONFIRMED`, terminate the dedicated `tunnel-test` SSH session on the Mac before investigating.
-If a server phase is killed (a dropped SSH connection sends it SIGHUP), its leftovers keep the front
-closed: the acceptance drop-in makes home-front refuse to work, and an immutable
-routes file makes route changes fail and lock the front. To recover, as root: `chattr -i /etc/home-front/routes`, remove
-`/run/systemd/system/haproxy.service.d/zz-home-front-acceptance.conf` and `/root/home-front-acceptance-*`, run
-`systemctl daemon-reload`, then `home-front reconcile`, and start that phase again from its preparation step.
+If a server phase is killed (a dropped SSH connection sends it SIGHUP), the front can be left half-changed, with a
+fixture route still served. Recover before anything else: first terminate the dedicated `tunnel-test` SSH session on
+the Mac, so nothing answers behind the fixture routes. Then, as root: `chattr -i /etc/home-front/routes`; remove
+`/run/systemd/system/haproxy.service.d/zz-home-front-acceptance.conf` and `/root/home-front-acceptance-*`; run
+`systemctl daemon-reload` and `systemctl reset-failed haproxy.service`; run `home-front off` and require
+`CLOSED (verified)` (with or without the front locked); then run `home-front reconcile`. Start that phase again from
+its preparation step.
 
 1. On the Mac, run `bash home-front/acceptance-front.sh mac-fixture` (set `OPENSSL=` to pick the `openssl` that makes its certificate).
    Hold the SSH forwards printed by the script using the disposable `tunnel-test` key, and reconnect them after

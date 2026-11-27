@@ -121,7 +121,7 @@ def streaming(connection):
 def ended(connection):
     try:
         require(connection.recv(1) == b"", "closed stream still returned data")
-    except ConnectionResetError:
+    except (BrokenPipeError, ConnectionResetError, ssl.SSLEOFError):  # An abrupt close is a closed stream too.
         pass
 
 
