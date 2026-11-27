@@ -117,3 +117,49 @@ directory for a server-side rerun. To use a different fixture key, remove the co
 `python3 -m unittest home-front/test_render.py` exercises the policy and installer with a scratch filesystem and an
 injected command runner. `HOME_FRONT_ROOT` redirects managed paths, including the lock.
 `HOME_FRONT_RUNNER` receives the command name followed by its arguments. A scratch root requires a runner.
+
+## Probe service (tests only)
+
+The iPhone gate uses a disposable flatd fixture on `127.0.0.1:8799`. Point the test tunnel at that port and replace
+`probe.example.net:8443` with the public test route. Create the identity directory once, then paste the A pairing
+JSON into Arestia.
+
+```bash
+probe_dir="$HOME/.flatd-probe"
+python3 home-front/client/probe_service.py make-identities "$probe_dir" --url https://probe.example.net:8443
+python3 home-front/client/probe_service.py pairing-code "$probe_dir" --key a
+
+probe_run() {
+    local run_dir
+    run_dir=$(mktemp -d "$probe_dir/run.XXXXXX") || return
+    printf 'Probe log %s\n' "$run_dir/probe.log"
+    python3 home-front/client/probe_service.py serve --dir "$probe_dir" --log "$run_dir/probe.log" "$@"
+}
+probe_run --key a
+```
+
+Use a fresh log for every serve run. `probe_run` creates a new log path each time, and `--log` refuses an existing
+file. For the wrong-key run, stop the probe to close its live connections and run `probe_run --key b`, keeping
+the A pairing on the phone. Run the direct WebSocket test and direct pinned POST test one at a time. Check the
+new log entries after each test for its own fresh `tcp_accept` and a `tls_handshake` with `result: failed` for that
+peer and port. The B run must have zero `request` entries. A test without a fresh accept and failure is inconclusive.
+Stop B, run `probe_run --key a`, and confirm both direct tests succeed with the original pairing and appear in
+the new A log.
+
+The fixture uses TLS 1.2 so a client can signal certificate refusal during the handshake. Successful HTTP/1.1
+requests can share the same connection, with 60 seconds idle and 10 seconds to read each request once it starts.
+WebSocket upgrades clear the HTTP read deadline. Logs are JSON lines with a known method and decoded route or
+`<other>`, plus the Bearer verdict. Arestia's unauthenticated health check logs `bearer: missing`.
+
+Add `--delay /api/modes/cooking=20` to hold the Cooking response for 20 seconds. To time the Fans Shortcut, use
+`--delay /api/devices/fan:probe=20`. The `/test/echo` WebSocket takes the dummy Bearer token and echoes text and
+binary messages. Run `python3 home-front/client/probe_service.py --relay 8800 127.0.0.1:8799` in a separate
+terminal for a plain TCP path to the TLS probe. The relay listens on loopback.
+
+For home-route tests, add `--home-port 8801` and use
+`python3 home-front/client/probe_service.py pairing-code "$probe_dir" --key h --url https://127.0.0.1:8801`.
+With the dummy token, the H listener's `/api/remote` reads the saved URL and A certificate on each request,
+including during a B run. It returns null fields if either file is missing or invalid. The URL needs an HTTPS
+DNS name and explicit port.
+
+Run `python3 -m unittest home-front/client/test_probe.py` to check the probe.
