@@ -82,7 +82,7 @@ shape, so the favicon stays the bust.
 
 Made in two steps: Codex image generation drew a black-on-white reference from the prompt below, then the reference
 was traced into vector shapes (potrace) and fitted into a 512-unit circle. Other colours are the same shapes with
-the two fills swapped or replaced: off-white on black is `brand/ares-coin-dark.*`; gold versions, the drawing it was
+the two fills swapped or replaced: off-white on black is `brand/marks/coin-lion-white-on-black.svg`; gold versions, the drawing it was
 traced from and the other drafts are in `brand/marks/`.
 
 > Short, compact crest. The bust starts at the upper shoulder: a muscled cuirass edge and one shoulder plate with a
@@ -93,3 +93,12 @@ traced from and the other drafts are in `brand/marks/`.
 > high cheekbone, firm closed mouth, long beard in clear structured curly locks. Attic helmet with a pointed brow band
 > over the forehead and a box-shaped crest holder. Flat solid black on a plain white background, centred, generous
 > margin, square, composed to sit inside a circle. No text, no coin rim, no shading, no gradients, no grey.
+
+## The line version (2026-11-28)
+
+`brand/ares-lines-dark.svg` (vector) and `brand/ares-lines-dark.png` (1024 x 1024 px): the coin's head drawn only in its
+engraved lines, white `#ffffff` on black `#000000`, no circle. Made from the same reference drawing
+(`brand/marks/coin-lion-reference.png`): its white engraved lines plus the figure's outline, wide white areas
+hollowed to a band along their edges, then traced with potrace. For profile pictures the lines are thickened by
+about 3 px at the reference's scale, so they still read at 40 px; below that the solid coin reads better.
+
