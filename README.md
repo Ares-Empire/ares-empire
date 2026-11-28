@@ -8,7 +8,7 @@ The hub of the Ares apps: one account for all of them, the push service behind t
 at **[ares-empire.de](https://www.ares-empire.de)** (behind a login; a **[demo](https://www.ares-empire.de/demo)** on
 made-up data for anyone): every app on a ring, with the chronicle of what was built.
 
-[The apps](https://patrikbreeck.com/en/apps/) · [Their iPhone code](https://github.com/Ares-Empire/empire-ios) ·
+[Try the demo](https://www.ares-empire.de/demo) · [Their iPhone code](https://github.com/Ares-Empire/empire-ios) ·
 [The project map](EMPIRE.md)
 
 ## What lives here
