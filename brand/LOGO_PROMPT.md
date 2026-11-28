@@ -82,7 +82,8 @@ shape, so the favicon stays the bust.
 
 Made in two steps: Codex image generation drew a black-on-white reference from the prompt below, then the reference
 was traced into vector shapes (potrace) and fitted into a 512-unit circle. Other colours are the same shapes with
-the two fills swapped or replaced (off-white on black, gold `#e4c264` on black).
+the two fills swapped or replaced: off-white on black is `brand/ares-coin-dark.*`; gold versions, the drawing it was
+traced from and the other drafts are in `brand/marks/`.
 
 > Short, compact crest. The bust starts at the upper shoulder: a muscled cuirass edge and one shoulder plate with a
 > small lion head on it. Only a few bold white engraved lines (eye, brow, helmet edge, a few beard locks), thick

@@ -46,7 +46,7 @@ Inherited from Aresium + Arestoteles and elevated to the crown:
 | **Surfaces** | Glassmorphism (blurred translucent cards with a bright gradient edge), tight letter-spacing, restrained motion. |
 | **Figure** | A **monochrome marble bust** (`brand/head1.png`) stands flush at the **left edge**, blended into the wall (screen-blend + edge mask), gazing toward the circle. |
 | **Crown mark** | The **Ares bust in gilded war-gear** (`brand/ares-bust.png`) — the intro's slamming figure + the favicon. |
-| **Coin mark** | The **Ares head as a struck coin**, profile facing right, lion on the shoulder plate, black on off-white (`brand/ares-coin.svg`, 1024 px `ares-coin.png`) — the owner's profile picture since 2026-11-27, where the bust is too detailed. How it was made: `brand/LOGO_PROMPT.md` → The coin mark. |
+| **Coin mark** | The **Ares head as a struck coin**, profile facing right, lion on the shoulder plate, black on off-white (`brand/ares-coin.svg`, 1024 px `ares-coin.png`; off-white on black: `ares-coin-dark.*`) — the owner's profile picture since 2026-11-27, where the bust is too detailed. How it was made: `brand/LOGO_PROMPT.md` → The coin mark; other drafts kept in `brand/marks/`. |
 | **Signature motion** | The **slam intro**: the bust drops; fine gold fissures burst from the root **all at once** and grow outward; "ARES EMPIRE" slams in in polished gold with a single shine. |
 
 Gold is the **one premium accent** (the `.ares-word` / `--gold-text` metallic text-clip) —
