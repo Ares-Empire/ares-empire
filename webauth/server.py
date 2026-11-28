@@ -831,7 +831,7 @@ class Handler(LimitedRequestHandler, SimpleHTTPRequestHandler):
         if access["status"] == 401:
             self._redirect("/login")
         else:
-            self._send_html(page(err(access["error"]), noindex=False), access["status"])
+            self._send_html(page(err(access["error"])), access["status"])
         return False
 
     def _json_body(self) -> dict:
@@ -892,6 +892,18 @@ class Handler(LimitedRequestHandler, SimpleHTTPRequestHandler):
     def _form(self) -> dict[str, str]:
         body = self.request_body.decode("utf-8", "replace")
         return {k: v[0] for k, v in parse_qs(body).items()}
+
+    @property
+    def error_message_format(self) -> str:
+        # Request validation and unsupported methods can send HTML before the SSO access check.
+        template = super().error_message_format
+        try:
+            path = urlparse(getattr(self, "path", "")).path
+        except ValueError:
+            return template
+        if path == "/sso":
+            return template.replace("</head>", _NOINDEX + "</head>", 1)
+        return template
 
     def request_error(self, status, message):
         path = urlparse(self.path).path

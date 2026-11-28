@@ -403,14 +403,34 @@ class HubTests(OwnerTestCase):
                 self.assertEqual(pb.call_count, 2)
                 self.assertEqual(server._cache, {})
 
-    def test_web_outage_and_forbidden_preserve_status(self):
-        for upstream, expected in ((0, 503), (403, 403)):
-            with self.subTest(upstream=upstream), patch.object(server, 'pb_call', return_value=(upstream, {})):
-                server._cache.clear()
-                status, _, headers = self.request('/', token=None, headers={'Cookie': server.COOKIE_NAME + '=user-one'})
+    def test_access_gate_noindexes_forbidden_and_unavailable_html(self):
+        cookie = {'Cookie': server.COOKIE_NAME + '=user-one'}
+        for path in ('/sso', '/sso?to=aresium', '/', '/index.html', '/app/empire-data.js'):
+            for upstream, expected in ((0, 503), (403, 403)):
+                with self.subTest(path=path, status=expected), patch.object(server, 'pb_call', return_value=(upstream, {})):
+                    server._cache.clear()
+                    status, body, headers = send(path, headers=cookie)
+                    self.assertEqual(status, expected)
+                    self.assertEqual(headers['Content-Type'], 'text/html; charset=utf-8')
+                    self.assertIn(NOINDEX, body.split(b'</head>', 1)[0])
+                    self.assertNotIn('Location', headers)
+                    self.assertNotIn('Set-Cookie', headers)
+
+                    status, body, head = send(path, method='HEAD', headers=cookie)
+                    self.assertEqual((status, body), (expected, b''))
+                    self.assertEqual(head['Content-Length'], headers['Content-Length'])
+
+    def test_sso_without_a_session_redirects_without_html(self):
+        status, body, headers = send('/sso?to=aresium')
+        self.assertEqual((status, body, headers['Location']), (303, b'', '/login'))
+
+    def test_sso_noindexes_html_errors_outside_the_access_gate(self):
+        for method, raw, expected in (('POST', None, 400), ('POST', b'field=value', 404), ('OPTIONS', None, 501)):
+            with self.subTest(method=method, status=expected):
+                status, body, headers = send('/sso?to=aresium', method=method, raw=raw)
                 self.assertEqual(status, expected)
-                self.assertNotIn('Location', headers)
-                self.assertNotIn('Set-Cookie', headers)
+                self.assertTrue(headers['Content-Type'].startswith('text/html'))
+                self.assertIn(NOINDEX, body.split(b'</head>', 1)[0])
 
     def test_login_preserves_auth_statuses_and_forwards_ip(self):
         for upstream, expected in ((400, 401), (401, 401), (403, 403), (429, 503), (0, 503), (500, 503)):
