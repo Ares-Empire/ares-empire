@@ -8,10 +8,10 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from webauth.owner_fixture import OwnerTestCase
+from webauth.owner_fixture import DETAILS, OwnerTestCase
 
 from webauth import contact, legal, server
-from webauth.test_server import RESOURCE, WEB, send
+from webauth.test_server import NOINDEX, RESOURCE, WEB, send
 
 SHARED = WEB / 'shared' / 'forms'
 LOOKS = {app.slug: WEB / app.look.lstrip('/') for app in contact.APPS.values()}
@@ -134,22 +134,25 @@ class PageTests(OwnerTestCase):
                 self.assertNotRegex(contact.page(app, 'de', topic),
                                     r'(?i)\b(du|dich|dir|dein\w*|frag|schreib|gib|versuch|sende|melde)\b')
 
-    def test_the_pages_never_name_the_owner(self):
-        # A search for the owner's name brought up the contact page (owner, 2026-11-02). His name is only on the legal pages,
-        # which search engines are asked to leave out (web/legal/page.html).
-        for app in contact.APPS:
-            for language in ('en', 'de'):
-                for topic in contact.TOPICS:
-                    self.assertNotIn('Musterfrau', contact.page(app, language, topic))
+    def test_no_topic_embeds_the_owners_name_or_email(self):
+        for path, (app, language) in contact.PAGES.items():
+            for topic in contact.TOPICS:
+                with self.subTest(path=path, topic=topic):
+                    page = contact.page(app.slug, language, topic).casefold()
+                    for value in (DETAILS['name'], *DETAILS['name'].split(), DETAILS['email']):
+                        self.assertNotIn(value.casefold(), page)
+                    self.assertNotIn('mailto:', page)
 
     def test_the_privacy_policy_imprint_and_email_fallback_are_linked_in_the_pages_language(self):
-        for path, app, language, page in pages():
+        for path, _, language, page in pages():
             with self.subTest(path=path):
-                privacy, imprint = ('/privacy', '/imprint') if language == 'en' else ('/datenschutz', '/impressum')
+                privacy, imprint, label = (('/privacy', '/imprint', 'imprint') if language == 'en'
+                                           else ('/datenschutz', '/impressum', 'Impressum'))
                 self.assertEqual(count(page, f'<a href="{privacy}">'), 2)   # the note and the footer
-                self.assertIn(f'<a href="{imprint}">', page)
-                self.assertEqual(count(page, 'href="mailto:owner@example.org"'), 2)   # a failed send and <noscript>
-                self.assertRegex(page, r'data-problem="failed" hidden>[\s\S]*?mailto:owner@example\.org[\s\S]*?</p>')
+                self.assertEqual(count(page, f'<a href="{imprint}">'), 3)   # the footer and both fallbacks
+                link = re.escape(f'<a href="{imprint}">{label}</a>')
+                self.assertRegex(page, rf'data-problem="failed" hidden>[^\n]*<span>[^<]*{link}[^<]*</span></p>')
+                self.assertRegex(page, rf'<noscript><p class="note">[^<]*{link}[^<]*</p></noscript>')
 
     def test_the_empire_page_leads_home_and_arestemis_has_no_page_of_its_own(self):
         empire, arestemis = contact.page('empire', 'en'), contact.page('arestemis', 'de')
@@ -294,6 +297,7 @@ class ServingTests(OwnerTestCase):
                     self.assertEqual(answer['Cache-Control'], 'no-store')
                     self.assertNotIn('Set-Cookie', answer)
                     self.assertIn(f'<html lang="{language}"', body.decode())
+                    self.assertIn(NOINDEX, body.split(b'</head>', 1)[0])
             status, body, answer = send(path, method='HEAD')
             self.assertEqual((status, body), (200, b''))
             self.assertEqual(answer['Content-Security-Policy'], contact.CSP)

@@ -24,7 +24,7 @@ import html
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
-from webauth import legal, owner
+from webauth import legal
 
 CONTACT_ENDPOINT = "https://auth.ares-empire.de/api/collections/contact/records"
 _ACCOUNT_ORIGIN = "{0.scheme}://{0.netloc}".format(urlsplit(CONTACT_ENDPOINT))
@@ -75,7 +75,7 @@ POLICY = {"en": "/privacy", "de": "/datenschutz"}
 IMPRINT = {"en": "/imprint", "de": "/impressum"}
 
 # English is the source, German its translation. %s in sent_app is the address the visitor gave; %1 and %2 in counter
-# are the length and the limit; %e is the owner's email address, written as a mailto link. The words that name an app
+# are the length and the limit; %i is the link to the imprint in the page's language. The words that name an app
 # are the app's own (APP_WORDS below).
 WORDS = {
     "en": {
@@ -88,6 +88,7 @@ WORDS = {
         "note_answer": "The answer comes by email, to this address.",
         "email": "Email", "name": "Name (optional)",
         "privacy_lead": "How the data is used:", "privacy": "Privacy policy", "imprint": "Imprint",
+        "imprint_inline": "imprint",
         "problems": {
             "empty": "Please write a message.",
             "long": "The message is too long: at most 5,000 characters.",
@@ -95,10 +96,10 @@ WORDS = {
             "email": "This doesn't look like an email address.",
             "many": "Too many messages for now. Please try again later.",
             "offline": "No connection. Please send it again later.",
-            "failed": "It didn't go through. Please try again, or write to %e.",
+            "failed": "It didn't go through. Please try again, or write to the email address in the %i.",
         },
         "send": "Send", "sending": "Sending…", "again": "Send again", "counter": "%1 of %2 characters",
-        "noscript": "This form needs JavaScript. Messages by email go to %e.",
+        "noscript": "This form needs JavaScript. The email address for messages is in the %i.",
         "sent_title": "Thanks, it's arrived.",
         "sent_app": "The install link comes by email, to %s.",
         "sent_answer": "If it needs an answer, it comes by email.",
@@ -114,6 +115,7 @@ WORDS = {
         "note_answer": "Die Antwort kommt per E-Mail an diese Adresse.",
         "email": "E-Mail", "name": "Name (optional)",
         "privacy_lead": "Wie die Daten verarbeitet werden:", "privacy": "Datenschutzerklärung", "imprint": "Impressum",
+        "imprint_inline": "Impressum",
         "problems": {
             "empty": "Bitte eine Nachricht schreiben.",
             "long": "Die Nachricht ist zu lang: höchstens 5.000 Zeichen.",
@@ -121,10 +123,10 @@ WORDS = {
             "email": "Das sieht nicht nach einer E-Mail-Adresse aus.",
             "many": "Zu viele Nachrichten. Bitte später noch mal.",
             "offline": "Keine Verbindung. Bitte später noch mal senden.",
-            "failed": "Das hat nicht geklappt. Bitte noch mal versuchen oder an %e schreiben.",
+            "failed": "Das hat nicht geklappt. Bitte noch mal versuchen oder an die E-Mail-Adresse im %i schreiben.",
         },
         "send": "Senden", "sending": "Wird gesendet…", "again": "Erneut senden", "counter": "%1 von %2 Zeichen",
-        "noscript": "Das Formular braucht JavaScript. Nachrichten per E-Mail gehen an %e.",
+        "noscript": "Das Formular braucht JavaScript. Die E-Mail-Adresse für Nachrichten steht im %i.",
         "sent_title": "Danke, ist angekommen.",
         "sent_app": "Der Installationslink kommt per E-Mail an %s.",
         "sent_answer": "Braucht es eine Antwort, kommt sie per E-Mail.",
@@ -213,15 +215,6 @@ def icon(name: str, attributes: str = "", class_name: str = "icon") -> str:
             f'{ICON_PATHS[name]}</svg>')
 
 
-def with_email(sentence: str) -> str:
-    """A sentence, with the owner's address as a mailto link in place of %e if it has one."""
-    OWNER_EMAIL = esc(owner.get_owner()["email"])
-    if "%e" not in sentence:
-        return esc(sentence)
-    before, after = sentence.split("%e", 1)
-    return f'{esc(before)}<a href="mailto:{OWNER_EMAIL}">{OWNER_EMAIL}</a>{esc(after)}'
-
-
 def topic_from(value: str | None) -> str:
     """`?topic=` → the topic to show first; anything else → Question."""
     return value if value in TOPICS else DEFAULT_TOPIC
@@ -252,8 +245,10 @@ def page(app_slug: str, language: str, topic: str = DEFAULT_TOPIC) -> str:
         f'data-note="{esc(w["note_app"] if t == "access" else w["note_answer"])}"'
         f'{" data-optional" if t == "access" else ""}>{esc(w["topics"][t])}</option>' for t in TOPICS)
     icons = "".join(icon(t, f' data-topic-icon="{t}"{"" if t == topic else " hidden"}') for t in TOPICS)
+    imprint_link = f'<a href="{IMPRINT[language]}">{esc(w["imprint_inline"])}</a>'
     problems = "\n          ".join(
-        f'<p class="problem" data-problem="{name}" hidden>{icon("alert")}<span>{with_email(text)}</span></p>'
+        f'<p class="problem" data-problem="{name}" hidden>{icon("alert")}<span>'
+        f'{esc(text).replace("%i", imprint_link)}</span></p>'
         for name, text in w["problems"].items())
     # The band's letters, spread across the width by the stylesheet as the iPhone apps' WordmarkBand; a space between
     # two words is a narrower slot of its own.
@@ -274,6 +269,7 @@ def page(app_slug: str, language: str, topic: str = DEFAULT_TOPIC) -> str:
 <script src="/contact/appearance.js"></script>
 <title>{esc(w["page_title"])}</title>
 <meta name="description" content="{esc(w["description"])}" />
+<meta name="robots" content="noindex, follow" />
 <link rel="icon" type="image/png" href="{app.mark}" />
 <link rel="apple-touch-icon" href="{app.mark}" />
 <link rel="alternate" hreflang="{other}" href="{app.paths[other]}" />{links}
@@ -337,7 +333,7 @@ def page(app_slug: str, language: str, topic: str = DEFAULT_TOPIC) -> str:
           <button type="submit" data-sending="{esc(w["sending"])}" data-again="{esc(w["again"])}">
             <span class="spinner" aria-hidden="true"></span><span data-label>{esc(w["send"])}</span>
           </button>
-          <noscript><p class="note">{with_email(w["noscript"])}</p></noscript>
+          <noscript><p class="note">{esc(w["noscript"]).replace("%i", imprint_link)}</p></noscript>
         </form>
       </section>
 
