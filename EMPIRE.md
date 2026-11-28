@@ -140,13 +140,15 @@ repo as a top-level folder, and live services and data volumes depend on their p
 
 All empire repos live in the GitHub organization **[Ares-Empire](https://github.com/Ares-Empire)**
 (aresync follows once every laptop runs the org-aware version). Each repo keeps its own
-visibility. **Public since 2026-11-02:** `aresium`, `empire-ios`, `ares-empire`, `Arestoteles`, `ares` and `AresOS`, as fresh
+visibility. **Public since 2026-11-02:** `aresium`, `empire-ios`, `ares-empire`, `Arestoteles` and `AresOS`, as fresh
 repos with cleaned history (the old ones are private archives, `<name>-archive-2026-11`). Private: `Arestemis` (its
-sites research and server briefs stay there), `aresus`, `aresync`, `arescope` and `companions` (until it is shown).
+sites research and server briefs stay there), `aresus`, `aresync`, `arescope`, `companions` (until it is shown) and
+`ares`, the owner's personal site (private again since 2026-11-28, owner: the site links GitHub, but GitHub's public
+pages don't link back to the site, whose domain is his name; READMEs and the org front page link the demos instead).
 Public repos hold no personal data ([PRIVACY.md](docs/PRIVACY.md) → Owner file) and never say how
 Arestemis gets past a site's blocks. **Licence (owner, 2026-11-08):** every Empire repo is free for non-commercial use
 under the PolyForm Noncommercial License 1.0.0 (`LICENSE.md`, holder "Ares Empire"; companions too); `ares`
-(patrikbreeck.com) has none, so its look and texts stay all rights reserved. The organization's GitHub front page is
+(the personal site) has none, so its look and texts stay all rights reserved. The organization's GitHub front page is
 the public repo `.github` (`profile/README.md`).
 
 iPhone apps for every province live in one repo, **`empire-ios`** (name deliberately not

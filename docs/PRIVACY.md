@@ -150,7 +150,7 @@ AV-Vertrag).
   made-up data and store nothing. A new demo page fits that sentence as long as it, too, stores nothing; one that
   would store something gets its own section first.
 
-### patrikbreeck.com (the owner's personal site, repo `Ares-Empire/ares` in `~/ares`; public since 2026-11-02)
+### patrikbreeck.com (the owner's personal site, repo `Ares-Empire/ares` in `~/ares`; public 2026-11-02, private again since 2026-11-28)
 
 - Static pages served by Caddy from `/srv/ares` (no login, no forms, no API). Its own privacy policy and imprint are on
   the site (`content/legal/`, English and German), with the controller's facts from `content/site.json`, the same as
