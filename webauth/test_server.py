@@ -17,6 +17,8 @@ from urllib.parse import parse_qs, urlparse
 from tools import empire_samples as samples
 from webauth import legal, server, texts
 
+NOINDEX = b'<meta name="robots" content="noindex, follow" />'
+
 
 class Socket:
     def __init__(self, request):
@@ -301,12 +303,39 @@ class HubTests(OwnerTestCase):
                 self.assertEqual(status, 200)
                 self.assertEqual(headers['Content-Language'], 'en')
                 self.assertIn(phrase.lower().encode(), body.lower())
+                self.assertIn(NOINDEX, body.split(b'</head>', 1)[0])
         with patch.object(server, 'pb_call', return_value=(200, {'record': {'id': 'unapproved'}})):
             status, body, headers = self.request('/login', token=None, method='POST',
                 raw=b'email=fixture%40example.com&password=fixture-password', headers={'Accept-Language': 'de'})
             self.assertEqual(status, 503)  # Malformed login stays English, too.
             self.assertEqual(headers['Content-Language'], 'en')
             self.assertIn(b'Login is unavailable right now.', body)
+            self.assertIn(NOINDEX, body.split(b'</head>', 1)[0])
+
+    def test_account_submission_pages_stay_out_of_search_results(self):
+        form = b'email=fixture%40example.com&password=fixture-password'
+        with patch.object(server, 'pb_call', return_value=(200, {})):
+            for path, data, expected_status, phrase in (
+                    ('/signup', form + b'&confirm=fixture-password', 200, b'Almost there'),
+                    ('/signup', form + b'&confirm=mismatch', 400, b'Create your Empire account'),
+                    ('/forgot', form, 200, b'Check your email')):
+                with self.subTest(path=path, status=expected_status):
+                    status, body, _ = send(path, method='POST', raw=data)
+                    self.assertEqual(status, expected_status)
+                    self.assertIn(phrase, body)
+                    self.assertIn(NOINDEX, body.split(b'</head>', 1)[0])
+
+    def test_account_page_without_the_template_stays_out_of_search_results(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(server, 'WEB_ROOT', root):
+            status, body, _ = send('/login')
+        self.assertEqual(status, 200)
+        self.assertIn(NOINDEX, body.split(b'</head>', 1)[0])
+
+    def test_authenticated_handoff_has_no_robots_tag(self):
+        status, body, _ = send('/sso?to=aresium', headers={'Cookie': server.COOKIE_NAME + '=user-one'})
+        self.assertEqual(status, 200)
+        self.assertIn(b'id="handoff"', body)
+        self.assertNotIn(b'<meta name="robots"', body)
 
     def test_accounts_and_cached_records_are_isolated(self):
         first = self.request()[1]
@@ -374,14 +403,34 @@ class HubTests(OwnerTestCase):
                 self.assertEqual(pb.call_count, 2)
                 self.assertEqual(server._cache, {})
 
-    def test_web_outage_and_forbidden_preserve_status(self):
-        for upstream, expected in ((0, 503), (403, 403)):
-            with self.subTest(upstream=upstream), patch.object(server, 'pb_call', return_value=(upstream, {})):
-                server._cache.clear()
-                status, _, headers = self.request('/', token=None, headers={'Cookie': server.COOKIE_NAME + '=user-one'})
+    def test_access_gate_noindexes_forbidden_and_unavailable_html(self):
+        cookie = {'Cookie': server.COOKIE_NAME + '=user-one'}
+        for path in ('/sso', '/sso?to=aresium', '/', '/index.html', '/app/empire-data.js'):
+            for upstream, expected in ((0, 503), (403, 403)):
+                with self.subTest(path=path, status=expected), patch.object(server, 'pb_call', return_value=(upstream, {})):
+                    server._cache.clear()
+                    status, body, headers = send(path, headers=cookie)
+                    self.assertEqual(status, expected)
+                    self.assertEqual(headers['Content-Type'], 'text/html; charset=utf-8')
+                    self.assertIn(NOINDEX, body.split(b'</head>', 1)[0])
+                    self.assertNotIn('Location', headers)
+                    self.assertNotIn('Set-Cookie', headers)
+
+                    status, body, head = send(path, method='HEAD', headers=cookie)
+                    self.assertEqual((status, body), (expected, b''))
+                    self.assertEqual(head['Content-Length'], headers['Content-Length'])
+
+    def test_sso_without_a_session_redirects_without_html(self):
+        status, body, headers = send('/sso?to=aresium')
+        self.assertEqual((status, body, headers['Location']), (303, b'', '/login'))
+
+    def test_sso_noindexes_html_errors_outside_the_access_gate(self):
+        for method, raw, expected in (('POST', None, 400), ('POST', b'field=value', 404), ('OPTIONS', None, 501)):
+            with self.subTest(method=method, status=expected):
+                status, body, headers = send('/sso?to=aresium', method=method, raw=raw)
                 self.assertEqual(status, expected)
-                self.assertNotIn('Location', headers)
-                self.assertNotIn('Set-Cookie', headers)
+                self.assertTrue(headers['Content-Type'].startswith('text/html'))
+                self.assertIn(NOINDEX, body.split(b'</head>', 1)[0])
 
     def test_login_preserves_auth_statuses_and_forwards_ip(self):
         for upstream, expected in ((400, 401), (401, 401), (403, 403), (429, 503), (0, 503), (500, 503)):
@@ -1012,6 +1061,7 @@ class DemoTests(OwnerTestCase):
         status, body, _ = send('/demo')
         self.assertEqual(status, 200)
         page = body.decode()
+        self.assertNotRegex(page, r'(?i)<meta\b[^>]*\bnoindex\b')
         self.assertIn('src="app/samples/demo-empire.js"', page)
         self.assertNotIn('empire-data.js', page)
         status, _, headers = send('/demo/')

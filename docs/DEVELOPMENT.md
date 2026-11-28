@@ -42,6 +42,7 @@ python3 -m http.server 8099 --directory web    # → http://localhost:8099
   (`web/shared/forms/`, README there), are served only while the privacy policy in their language is, and post from the
   browser straight to the account server's open `contact` collection, which mails the owner
   ([docs/ACCOUNTS.md](ACCOUNTS.md) → Website contact form).
+- Contact and public account pages use `noindex, follow`. The public `/demo` is open to search engines.
 
 **Source of truth** — [`EMPIRE.md`](../EMPIRE.md) (narrative) + `web/app/empire-data.js`
 (`window.EMPIRE`, the manifest the circle renders from). Add a province by appending to both; the circle

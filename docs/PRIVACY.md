@@ -18,8 +18,8 @@ the Mac. It is never committed, copied into a repo, or printed in logs.
 
 The file is a JSON object with exactly `name`, `street`, `city` (postcode and town on one line) and `email`, each
 a non-empty string. Missing files, invalid JSON, extra or missing keys and empty values stop startup with the
-path and problem, without the values. The web services load it once at startup for the legal and contact pages.
-Restart them after changing it; legal pages must never show an empty or placeholder address.
+path and problem, without the values. The hub loads it once at startup for the legal pages.
+Restart the web services after changing it. Legal pages must always show the configured address.
 
 PocketBase runs as `empire-accounts` and cannot read root's home. Run `deploy/install-accounts.sh` as root after
 an owner email change: it validates the same file and writes only the email as `ARES_OWNER_EMAIL` to the root-only
@@ -238,6 +238,8 @@ AV-Vertrag).
   other), and the honeypot `website` (always empty from people), created. Superusers only can read it. The pages load
   nothing from other hosts; the hub's are served only while the privacy policy in their language is. A new form is
   covered by the policy's section 4 before it goes live (done for both on 2026-11-01, To do 8).
+- On the hub, the failed-send message and the note for browsers without JavaScript link to the imprint in the
+  page's language for the email address.
 - The hub's two pages remember the look chosen with their header's switch (light; dark is the default) in the
   browser's `localStorage` (`ares-empire-appearance`), as aresium.de does with its own switch (`aresium-appearance`).
   It stays in the browser, is never sent, holds nothing about the person, and is set only when the visitor switches.

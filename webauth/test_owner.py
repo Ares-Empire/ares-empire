@@ -23,7 +23,7 @@ class OwnerTests(OwnerTestCase):
             with patch.object(Path, "home", return_value=self.owner_file.parent):
                 self.assertEqual(owner.owner_path(), self.owner_file.parent / ".config/ares-empire/owner.json")
 
-    def test_every_legal_and_contact_page_uses_the_fixture_without_placeholders(self):
+    def test_legal_pages_use_the_fixture_and_contact_pages_omit_it(self):
         for path in legal.PAGES:
             with self.subTest(path=path):
                 page = legal.render(path, WEB)[0].decode()
@@ -33,25 +33,23 @@ class OwnerTests(OwnerTestCase):
         for path in contact.PAGES:
             with self.subTest(path=path):
                 page = contact.render(path, None, WEB)[0].decode()
-                self.assertNotIn(DETAILS["name"], page)   # only the legal pages name him (owner, 2026-11-02)
-                self.assertIn('href="mailto:' + DETAILS["email"] + '"', page)
+                for value in DETAILS.values():
+                    self.assertNotIn(value, page)
                 self.assertNotIn("{{OWNER_", page)
 
     def test_owner_values_are_escaped_in_html(self):
         values = {key: '<&"\'>' for key in DETAILS}
         self.owner_file.write_text(json.dumps(values))
-        imprint, contact_page = legal.render('/imprint', WEB)[0].decode(), contact.page('empire', 'en')
+        imprint = legal.render('/imprint', WEB)[0].decode()
         self.assertIn(html.escape(values['name']), imprint)
-        self.assertIn(html.escape(values['email']), contact_page)
-        for page in (imprint, contact_page):
-            self.assertNotIn(values['name'], page)
-            self.assertNotIn('&amp;lt;', page)
+        self.assertIn(html.escape(values['email']), imprint)
+        self.assertNotIn(values['name'], imprint)
+        self.assertNotIn('&amp;lt;', imprint)
 
     def test_startup_loads_once_before_opening_socket(self):
         def httpd(*args):
             self.owner_file.unlink()
             self.assertEqual(owner.get_owner(), DETAILS)
-            self.assertIn(DETAILS['email'], contact.page('empire', 'en'))
             self.assertIn(DETAILS['street'], legal.render('/imprint', WEB)[0].decode())
             return fake_httpd
 

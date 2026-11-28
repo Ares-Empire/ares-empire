@@ -676,15 +676,18 @@ def request_reset(email: str, client_ip: str) -> None:
 # ── Pages ────────────────────────────────────────────────────────────────────
 
 _SLOT = "<!-- content: filled in by webauth/server.py -->"
+_ROBOTS_SLOT = "<!-- robots: filled in by webauth/server.py -->\n"
+_NOINDEX = '<meta name="robots" content="noindex, follow" />\n'
 esc = html.escape
 
 
-def page(content: str) -> bytes:
+def page(content: str, *, noindex: bool = True) -> bytes:
+    robots = _NOINDEX if noindex else ""
     try:
         with open(os.path.join(WEB_ROOT, "login.html"), "r", encoding="utf-8") as f:
-            return f.read().replace(_SLOT, content).encode("utf-8")
+            return f.read().replace(_ROBOTS_SLOT, robots).replace(_SLOT, content).encode("utf-8")
     except OSError:
-        return (f"<!doctype html><meta charset=utf-8><title>Ares Empire</title>"
+        return (f"<!doctype html><head><meta charset=utf-8><title>Ares Empire</title>{robots}</head>"
                 f"<body style='background:#000;color:#e9c86b;font-family:sans-serif;text-align:center;padding-top:18vh'>"
                 f"<h1 style='letter-spacing:.2em'>ARES EMPIRE</h1>{content}").encode("utf-8")
 
@@ -752,7 +755,7 @@ def handoff_page(url: str, token: str) -> bytes:
       <input type="hidden" name="token" value="{esc(token)}" />
       <noscript><button type="submit">Continue</button></noscript>
     </form>
-    <script>document.getElementById("handoff").submit();</script>""")
+    <script>document.getElementById("handoff").submit();</script>""", noindex=False)
 
 
 # ── HTTP ─────────────────────────────────────────────────────────────────────
@@ -889,6 +892,18 @@ class Handler(LimitedRequestHandler, SimpleHTTPRequestHandler):
     def _form(self) -> dict[str, str]:
         body = self.request_body.decode("utf-8", "replace")
         return {k: v[0] for k, v in parse_qs(body).items()}
+
+    @property
+    def error_message_format(self) -> str:
+        # Request validation and unsupported methods can send HTML before the SSO access check.
+        template = super().error_message_format
+        try:
+            path = urlparse(getattr(self, "path", "")).path
+        except ValueError:
+            return template
+        if path == "/sso":
+            return template.replace("</head>", _NOINDEX + "</head>", 1)
+        return template
 
     def request_error(self, status, message):
         path = urlparse(self.path).path
